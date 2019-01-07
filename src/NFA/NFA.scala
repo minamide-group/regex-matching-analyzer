@@ -10,7 +10,7 @@ class NFA[Q,A](
   val finalStates: Seq[Q]
 ) {
   var delta_set = states.flatMap(q => sigma.map(a => (q,a) -> Seq[Q]())).toMap
-  delta.foreach{case (q1,a,q2) => delta_set += (q1,a) -> (q2 +: delta_set(q1,a))}
+  delta.foreach{case (q1,a,q2) => delta_set += (q1,a) -> (q2 +: delta_set((q1,a)))}
 
   def visualize(name: String) = {
     val file = File.makeFile(s"${name}.dot")

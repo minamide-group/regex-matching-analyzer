@@ -22,7 +22,7 @@ class Graph[V](
 
   def calcStrongComponents(): Seq[Seq[V]] = {
     def dfs(g: Graph[V], order: Seq[V]): Seq[Seq[V]] = {
-      var visited = MTMap[V, Boolean]()
+      val visited = MTMap[V, Boolean]()
       g.nodes.foreach(visited(_) = false)
       def dfs(v: V): Seq[V] = {
         var postRev = Seq[V]()
@@ -102,5 +102,5 @@ class LabeledGraph[V,A](
   edges: Seq[(V,V)],
   val label: Map[(V,V),A]
 ) extends Graph[V](nodes, edges) {
-  
+
 }

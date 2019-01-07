@@ -10,15 +10,15 @@ object Main {
   def main(args: Array[String]) {
     def generateRandomMorphs(domain: Seq[Char], n: Int, m: Int): Seq[Morph[Char]] = {
       val rangeGen = Random.alphanumeric.filter(domain.contains).toIterator
-
-      (1 to n).map(_ => domain.map(_ -> rangeGen.take(m).toList).toMap))
+      (1 to n).map(_ => domain.map(_ -> rangeGen.take(m).toList).toMap)
+    }
 
     val morphs = generateRandomMorphs('a' to 'j', 3, 5)
     println(isIDA(morphs))
   }
 
   def isIDA[Q](morphs: Seq[Morph[Q]]): Boolean = {
-    def morphs2NFA[Q](morphs: Seq[Morph[Q]]): NFA[Q,Int] = {
+    def morphs2NFA(morphs: Seq[Morph[Q]]): NFA[Q,Int] = {
       val states = morphs.head.keys.toSeq // assume: the domain of each Map is same
       val sigma = (1 to morphs.size).toSeq
       val delta = morphs.zipWithIndex.flatMap{ case (h,idx) =>
@@ -29,16 +29,16 @@ object Main {
       new NFA(states, sigma, delta, initialStates, finalStates)
     }
 
-    def nfa2g4[Q,A](nfa: NFA[Q,A]): Graph[(Q,Q,Q)] = {
+    def nfa2g4[A](nfa: NFA[Q,A]): Graph[(Q,Q,Q)] = {
       val nodes = nfa.states.flatMap(q1 => nfa.states.flatMap(q2 => nfa.states.map(q3 => (q1,q2,q3))))
       val e3 = Debug.time("construct E3") {
         nfa.sigma.flatMap(a =>
           nfa.states.flatMap{p1 =>
-            val qs1 = nfa.delta_set(p1,a)
+            val qs1 = nfa.delta_set((p1,a))
             nfa.states.flatMap{p2 =>
-              val qs2 = nfa.delta_set(p2,a)
+              val qs2 = nfa.delta_set((p2,a))
               nfa.states.flatMap{p3 =>
-                val qs3 = nfa.delta_set(p3,a)
+                val qs3 = nfa.delta_set((p3,a))
                 qs1.flatMap(q1 => qs2.flatMap(q2 => qs3.map(q3 =>
                   ((p1,p2,p3), (q1,q2,q3))
                 )))
