@@ -1,19 +1,12 @@
-package graph
+package transition
 
 import scala.collection.mutable.{Stack, Map => MTMap}
-
 import tool.{File, Command, Debug}
 
 class Graph[V](
   val nodes: Seq[V],
   val edges: Seq[(V,V)]
 ) {
-  val adj = MTMap[V, Seq[V]]()
-  Debug.time("calculate adj") {
-    nodes.foreach(adj(_) = Seq[V]())
-    edges.foreach{e => adj(e._1) +:= e._2}
-  }
-
   def reverse(): Graph[V] = {
     Debug.time("calculate reverse") {
       new Graph(nodes, edges.map{case (v1,v2) => (v2,v1)})
@@ -22,6 +15,12 @@ class Graph[V](
 
   def calcStrongComponents(): Seq[Seq[V]] = {
     def dfs(g: Graph[V], order: Seq[V]): Seq[Seq[V]] = {
+      val adj = MTMap[V, Seq[V]]()
+      Debug.time("calculate adj") {
+        g.nodes.foreach(adj(_) = Seq[V]())
+        g.edges.foreach{e => adj(e._1) +:= e._2}
+      }
+
       val visited = MTMap[V, Boolean]()
       g.nodes.foreach(visited(_) = false)
       def dfs(v: V): Seq[V] = {
@@ -34,7 +33,7 @@ class Graph[V](
               if (!visited(v)) {
                 visited(v) = true
                 stack.push(vs)
-                stack.push(g.adj(v).toSeq)
+                stack.push(adj(v).toSeq)
               } else {
                 stack.push(rest)
               }
@@ -55,10 +54,8 @@ class Graph[V](
       postRevs
     }
 
-    val r = reverse()
-
     Debug.time("calculate strong components") {
-      dfs(r, dfs(this, nodes).flatten)
+      dfs(reverse(), dfs(this, nodes).flatten)
     }
   }
 
@@ -99,8 +96,24 @@ class Graph[V](
 
 class LabeledGraph[V,A](
   nodes: Seq[V],
-  edges: Seq[(V,V)],
-  val label: Map[(V,V),A]
-) extends Graph[V](nodes, edges) {
+  val labeledEdges: Seq[(V,A,V)],
+) extends Graph[V](nodes, labeledEdges.map{case (v1,_,v2) => (v1,v2)}) {
+  def toG4(): Graph[(V,V,V)] = {
+    def triplize[E](es: Seq[E]): Seq[(E,E,E)] = {
+      es.flatMap(e1 => es.flatMap(e2 => es.map(e3 => (e1,e2,e3))))
+    }
 
+    val label2Edges = labeledEdges.groupBy(_._2).mapValues(_.map{case (v1,_,v2) => (v1,v2)})
+
+    val g4nodes = triplize(nodes)
+    val e4 = Debug.time("construct E3") {
+      (label2Edges.toSeq.flatMap{ case (a,es) =>
+        triplize(es).map{case ((p1,q1),(p2,q2),(p3,q3)) => ((p1,p2,p3),(q1,q2,q3))}
+      } ++ nodes.flatMap(p =>
+        nodes.collect{case q if p != q => ((p,q,q),(p,p,q))}
+      )).distinct
+    }
+
+    new Graph(g4nodes, e4)
+  }
 }

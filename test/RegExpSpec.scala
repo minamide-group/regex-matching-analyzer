@@ -111,4 +111,30 @@ class RegExpSpec extends FlatSpec with Matchers {
     r.derive[List]('d') should be (List(Some(RegExpParser("ε"))))
     r.derive[List]('e') should be (Nil)
   }
+
+
+  "calcMorphs" should "calculate morphisms correctly" in {
+    val r1 = RegExpParser("(ab)*ab")
+    val r2 = RegExpParser("εb(ab)*ab")
+    val r3 = RegExpParser("εb")
+    val r4 = RegExpParser("ε(ab)*ab")
+    val r5 = RegExpParser("ε")
+    val morphs = r1.calcMorphs()
+    morphs should contain only (
+      Map(
+        r1 -> Seq(r2,r3),
+        r2 -> Seq(),
+        r3 -> Seq(),
+        r4 -> Seq(r2,r3),
+        r5 -> Seq()
+      ),
+      Map(
+        r1 -> Seq(),
+        r2 -> Seq(r4),
+        r3 -> Seq(r5),
+        r4 -> Seq(),
+        r5 -> Seq()
+      )
+    )
+  }
 }

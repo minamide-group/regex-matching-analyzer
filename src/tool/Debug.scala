@@ -17,4 +17,11 @@ object Debug {
     println(s"[time] ${name}: ${finish - start} ms")
     a
   }
+
+  implicit class Tmp[A](a: A) {
+    def tmp(f: A => Unit): A = {
+      f(a)
+      a
+    }
+  }
 }
