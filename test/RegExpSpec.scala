@@ -85,7 +85,7 @@ class RegExpSpec extends FlatSpec with Matchers {
 
   it should "derive ab correctly" in {
     val r = RegExpParser("ab")
-    r.derive[List]('a') should be (List(Some(ConcatExp(EpsExp(), ElemExp('b')))))
+    r.derive[List]('a') should be (List(Some(ElemExp('b'))))
     r.derive[List]('b') should be (Nil)
     r.derive[List]('c') should be (Nil)
   }
@@ -99,14 +99,14 @@ class RegExpSpec extends FlatSpec with Matchers {
 
   it should "derive a* correctly" in {
     val r = RegExpParser("a*")
-    r.derive[List]('a') should be (List(Some(ConcatExp(EpsExp(), StarExp(ElemExp('a')))), None))
+    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'))), None))
     r.derive[List]('b') should be (List(None))
   }
 
   it should "derive a*(bc|d) correctly" in {
     val r = RegExpParser("a*(bc|d)")
-    r.derive[List]('a') should be (List(Some(RegExpParser("εa*(bc|d)"))))
-    r.derive[List]('b') should be (List(Some(RegExpParser("εc"))))
+    r.derive[List]('a') should be (List(Some(RegExpParser("a*(bc|d)"))))
+    r.derive[List]('b') should be (List(Some(RegExpParser("c"))))
     r.derive[List]('c') should be (Nil)
     r.derive[List]('d') should be (List(Some(RegExpParser("ε"))))
     r.derive[List]('e') should be (Nil)
@@ -114,26 +114,23 @@ class RegExpSpec extends FlatSpec with Matchers {
 
 
   "calcMorphs" should "calculate morphisms correctly" in {
-    val r1 = RegExpParser("(ab)*ab")
-    val r2 = RegExpParser("εb(ab)*ab")
-    val r3 = RegExpParser("εb")
-    val r4 = RegExpParser("ε(ab)*ab")
-    val r5 = RegExpParser("ε")
-    val morphs = r1.calcMorphs()
+    val r0 = RegExpParser("(ab)*ab")
+    val r1 = RegExpParser("b(ab)*ab")
+    val r2 = RegExpParser("b")
+    val r3 = RegExpParser("ε")
+    val morphs = r0.calcMorphs()
     morphs should contain only (
       Map(
-        r1 -> Seq(r2,r3),
+        r0 -> Seq(r1,r2),
+        r1 -> Seq(),
         r2 -> Seq(),
-        r3 -> Seq(),
-        r4 -> Seq(r2,r3),
-        r5 -> Seq()
+        r3 -> Seq()
       ),
       Map(
-        r1 -> Seq(),
-        r2 -> Seq(r4),
-        r3 -> Seq(r5),
-        r4 -> Seq(),
-        r5 -> Seq()
+        r0 -> Seq(),
+        r1 -> Seq(r0),
+        r2 -> Seq(r3),
+        r3 -> Seq()
       )
     )
   }

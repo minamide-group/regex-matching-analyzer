@@ -38,6 +38,7 @@ object RegExp {
       case EpsExp() => m(None)
       case ConcatExp(r1,r2) =>
         r1.derive[M](a) >>= {
+          case Some(EpsExp()) => m(Some(r2))
           case Some(r) => m(Some(ConcatExp(r,r2)))
           case None => r2.derive[M](a)
         }
@@ -45,6 +46,7 @@ object RegExp {
         r1.derive[M](a) ++ r2.derive[M](a)
       case StarExp(r) =>
         (r.derive[M](a) >>= {
+          case Some(EpsExp()) => m(Some(StarExp(r)))
           case Some(r1) => m(Some(ConcatExp(r1,StarExp(r))))
           case None => m(None)
         }: M[Option[RegExp[A]]]) ++ m(None)
@@ -77,6 +79,6 @@ object RegExp {
       }
     }
 
-    morphs.values.toSeq
+    morphs.values.toList
   }
 }

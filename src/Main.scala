@@ -9,8 +9,8 @@ object Main {
     println(isIDA(r))
   }
 
-  def isIDA(r: RegExp[_]): Boolean = {
-    val morphs = r.calcMorphs
+  def isIDA[A](r: RegExp[A]): Boolean = {
+    val morphs = rename(r.calcMorphs)
     Debug.info("morphs info")(
       ("|domain|", morphs.head.size),
       ("|morph|", morphs.size)
