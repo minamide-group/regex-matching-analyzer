@@ -67,43 +67,43 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
 
-  "derive" should "derive a correctly" in {
+  "derive" should "derive a" in {
     val r = RegExpParser("a")
     r.derive[List]('a') should be (List(Some(EpsExp())))
     r.derive[List]('b') should be (Nil)
   }
 
-  it should "derive ∅ correctly" in {
+  it should "derive ∅" in {
     val r = RegExpParser("∅")
     r.derive[List]('a') should be (List(Some(EmptyExp())))
   }
 
-  it should "derive ε correctly" in {
+  it should "derive ε" in {
     val r = RegExpParser("ε")
     r.derive[List]('a') should be (List(None))
   }
 
-  it should "derive ab correctly" in {
+  it should "derive ab" in {
     val r = RegExpParser("ab")
     r.derive[List]('a') should be (List(Some(ElemExp('b'))))
     r.derive[List]('b') should be (Nil)
     r.derive[List]('c') should be (Nil)
   }
 
-  it should "derive a|b correctly" in {
+  it should "derive a|b" in {
     val r = RegExpParser("a|b")
     r.derive[List]('a') should be (List(Some(EpsExp())))
     r.derive[List]('b') should be (List(Some(EpsExp())))
     r.derive[List]('c') should be (Nil)
   }
 
-  it should "derive a* correctly" in {
+  it should "derive a*" in {
     val r = RegExpParser("a*")
     r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'))), None))
     r.derive[List]('b') should be (List(None))
   }
 
-  it should "derive a*(bc|d) correctly" in {
+  it should "derive a*(bc|d)" in {
     val r = RegExpParser("a*(bc|d)")
     r.derive[List]('a') should be (List(Some(RegExpParser("a*(bc|d)"))))
     r.derive[List]('b') should be (List(Some(RegExpParser("c"))))
@@ -113,7 +113,7 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
 
-  "calcMorphs" should "calculate morphisms correctly" in {
+  "calcMorphs" should "calculate morphisms" in {
     val r0 = RegExpParser("(ab)*ab")
     val r1 = RegExpParser("b(ab)*ab")
     val r2 = RegExpParser("b")

@@ -10,6 +10,7 @@ trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
   def calcMorphs(): Seq[Morph[RegExp[A]]] = RegExp.calcMorphs(this)
+  def calcGrowthRate(): Option[Int] = morphs2Graph(rename(calcMorphs())).calcAmbiguity()
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -18,6 +19,7 @@ case class EpsExp[A]() extends RegExp[A]
 case class ConcatExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
 case class AltExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
 case class StarExp[A](r: RegExp[A]) extends RegExp[A]
+
 
 object RegExp {
   def toString[A](r: RegExp[A]): String = {
