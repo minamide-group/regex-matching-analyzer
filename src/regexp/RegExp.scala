@@ -22,15 +22,9 @@ case class StarExp[A](r: RegExp[A]) extends RegExp[A]
 case class PlusExp[A](r: RegExp[A]) extends RegExp[A]
 case class OptionExp[A](r: RegExp[A]) extends RegExp[A]
 case class DotExp[A]() extends RegExp[A]
-case class CharClassExp(cs: Seq[CharClassElem], negative: Boolean = false) extends RegExp[Char]
-
-
-sealed trait CharClassElem {
-  override def toString(): String = RegExp.toString(this)
+case class CharClassExp(cs: Seq[CharClassElem], negative: Boolean = false) extends RegExp[Char] {
+  val charSet = cs.flatMap(_.toCharSet()).toSet
 }
-
-case class SingleCharExp(c: Char) extends CharClassElem
-case class RangeExp(start: Char, end: Char) extends CharClassElem
 
 
 object RegExp {
@@ -47,13 +41,6 @@ object RegExp {
       case DotExp() => "."
       case CharClassExp(es,false) => s"[${es.mkString}]"
       case CharClassExp(es,true) => s"[^${es.mkString}]"
-    }
-  }
-
-  def toString(e: CharClassElem): String = {
-    e match {
-      case SingleCharExp(c) => c.toString
-      case RangeExp(start, end) => s"${start}-${end}"
     }
   }
 
@@ -76,6 +63,16 @@ object RegExp {
           case Some(r1) => m(Some(ConcatExp(r1,StarExp(r))))
           case None => m(None)
         }: M[Option[RegExp[A]]]) ++ m(None)
+      case PlusExp(r) =>
+        r.derive[M](a) >>= {
+          case Some(EpsExp()) => m(Some(StarExp(r)))
+          case Some(r1) => m(Some(ConcatExp(r1,StarExp(r))))
+          case None => m(None)
+        }
+      case OptionExp(r) =>
+        r.derive[M](a) ++ m(None)
+      case DotExp() => m(Some(EpsExp()))
+      case r @ CharClassExp(_,negative) => if (r.charSet.contains(a) ^ negative) m(Some(EpsExp())) else m.fail
     }
   }
 
@@ -83,10 +80,13 @@ object RegExp {
     def getElems(r: RegExp[A]): Set[A] = {
       r match {
         case ElemExp(a) => Set(a)
-        case EmptyExp() | EpsExp() => Set()
+        case EmptyExp() | EpsExp() | DotExp() => Set()
         case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
         case AltExp(r1,r2) => getElems(r1) | getElems(r2)
         case StarExp(r) => getElems(r)
+        case PlusExp(r) => getElems(r)
+        case OptionExp(r) => getElems(r)
+        case r @ CharClassExp(_,_) => r.charSet
       }
     }
 
@@ -106,5 +106,31 @@ object RegExp {
     }
 
     morphs.values.toList
+  }
+}
+
+
+sealed trait CharClassElem {
+  override def toString(): String = CharClassElem.toString(this)
+  def toCharSet(): Set[Char] = CharClassElem.toCharSet(this)
+}
+
+case class SingleCharExp(c: Char) extends CharClassElem
+case class RangeExp(start: Char, end: Char) extends CharClassElem
+
+
+object CharClassElem {
+  def toString(e: CharClassElem): String = {
+    e match {
+      case SingleCharExp(c) => c.toString
+      case RangeExp(start, end) => s"${start}-${end}"
+    }
+  }
+
+  def toCharSet(e: CharClassElem): Set[Char] = {
+    e match {
+      case SingleCharExp(c) => Set(c)
+      case RangeExp(start, end) => (start to end).toSet
+    }
   }
 }

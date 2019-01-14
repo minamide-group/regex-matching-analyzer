@@ -213,6 +213,43 @@ class RegExpSpec extends FlatSpec with Matchers {
     r.derive[List]('b') should be (List(None))
   }
 
+  it should "derive a+" in {
+    val r = RegExpParser("a+")
+    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a')))))
+    r.derive[List]('b') should be (Nil)
+  }
+
+  it should "derive a?" in {
+    val r = RegExpParser("a?")
+    r.derive[List]('a') should be (List(Some(EpsExp()), None))
+    r.derive[List]('b') should be (List(None))
+  }
+
+  it should "derive ." in {
+    val r = RegExpParser(".")
+    r.derive[List]('a') should be (List(Some(EpsExp())))
+  }
+
+  it should "derive [a-z]" in {
+    val r = RegExpParser("[a-z]")
+    r.derive[List]('a') should be (List(Some(EpsExp())))
+    r.derive[List]('h') should be (List(Some(EpsExp())))
+    r.derive[List]('z') should be (List(Some(EpsExp())))
+    r.derive[List]('A') should be (Nil)
+    r.derive[List]('H') should be (Nil)
+    r.derive[List]('Z') should be (Nil)
+  }
+
+  it should "derive [^a-z]" in {
+    val r = RegExpParser("[^a-z]")
+    r.derive[List]('a') should be (Nil)
+    r.derive[List]('h') should be (Nil)
+    r.derive[List]('z') should be (Nil)
+    r.derive[List]('A') should be (List(Some(EpsExp())))
+    r.derive[List]('H') should be (List(Some(EpsExp())))
+    r.derive[List]('Z') should be (List(Some(EpsExp())))
+  }
+
   it should "derive a*(bc|d)" in {
     val r = RegExpParser("a*(bc|d)")
     r.derive[List]('a') should be (List(Some(RegExpParser("a*(bc|d)"))))
