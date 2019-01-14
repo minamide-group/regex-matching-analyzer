@@ -6,7 +6,7 @@ import Monad._
 import transition.Morph._
 
 
-trait RegExp[A] {
+sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
   def calcMorphs(): Seq[Morph[RegExp[A]]] = RegExp.calcMorphs(this)
@@ -19,6 +19,18 @@ case class EpsExp[A]() extends RegExp[A]
 case class ConcatExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
 case class AltExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
 case class StarExp[A](r: RegExp[A]) extends RegExp[A]
+case class PlusExp[A](r: RegExp[A]) extends RegExp[A]
+case class OptionExp[A](r: RegExp[A]) extends RegExp[A]
+case class DotExp[A]() extends RegExp[A]
+case class CharClassExp(cs: Seq[CharClassElem], negative: Boolean = false) extends RegExp[Char]
+
+
+sealed trait CharClassElem {
+  override def toString(): String = RegExp.toString(this)
+}
+
+case class SingleCharExp(c: Char) extends CharClassElem
+case class RangeExp(start: Char, end: Char) extends CharClassElem
 
 
 object RegExp {
@@ -30,6 +42,18 @@ object RegExp {
       case ConcatExp(r1,r2) => s"(${r1}${r2})"
       case AltExp(r1,r2) => s"(${r1}|${r2})"
       case StarExp(r) => s"(${r})*"
+      case PlusExp(r) => s"(${r})+"
+      case OptionExp(r) => s"(${r})?"
+      case DotExp() => "."
+      case CharClassExp(es,false) => s"[${es.mkString}]"
+      case CharClassExp(es,true) => s"[^${es.mkString}]"
+    }
+  }
+
+  def toString(e: CharClassElem): String = {
+    e match {
+      case SingleCharExp(c) => c.toString
+      case RangeExp(start, end) => s"${start}-${end}"
     }
   }
 

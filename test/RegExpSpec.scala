@@ -27,24 +27,74 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExpParser("a*") should be (StarExp(ElemExp('a')))
   }
 
-  it should "parse a(b(c|d)*e)" in {
-    RegExpParser("a(b(c|d)*e)") should be (
-      ConcatExp(
-        ElemExp('a'),
+  it should "parse (a)" in {
+    RegExpParser("(a)") should be (ElemExp('a'))
+  }
+
+  it should "parse a+" in {
+    RegExpParser("a+") should be (PlusExp(ElemExp('a')))
+  }
+
+  it should "parse a?" in {
+    RegExpParser("a?") should be (OptionExp(ElemExp('a')))
+  }
+
+  it should "parse ." in {
+    RegExpParser(".") should be (DotExp())
+  }
+
+  it should "parse character class" in {
+    RegExpParser("[abc]") should be (CharClassExp(Seq(SingleCharExp('a'),SingleCharExp('b'),SingleCharExp('c'))))
+    RegExpParser("[a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z'))))
+    RegExpParser("[ab-def-h]") should be (CharClassExp(Seq(
+      SingleCharExp('a'),
+      RangeExp('b','d'),
+      SingleCharExp('e'),
+      RangeExp('f','h')
+    )))
+
+    RegExpParser("[^abc]") should be (
+      CharClassExp(Seq(SingleCharExp('a'),SingleCharExp('b'),SingleCharExp('c')), true)
+    )
+    RegExpParser("[^a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z')), true))
+  }
+
+  it should "parse complex expressions" in {
+    RegExpParser("ab|c") should be (
+      AltExp(
         ConcatExp(
+          ElemExp('a'),
+          ElemExp('b')
+        ),
+        ElemExp('c')
+      )
+    )
+
+    RegExpParser("ab*c") should be (
+      ConcatExp(
+        ConcatExp(
+          ElemExp('a'),
+          StarExp(
+            ElemExp('b')
+          )
+        ),
+        ElemExp('c')
+      )
+    )
+
+    RegExpParser("(a(bc))*") should be (
+      StarExp(
+        ConcatExp(
+          ElemExp('a'),
           ConcatExp(
             ElemExp('b'),
-            StarExp(
-              AltExp(
-                ElemExp('c'),
-                ElemExp('d')
-              )
-            )
-          ),
-          ElemExp('e')
+            ElemExp('c')
+          )
         )
       )
     )
+
+    RegExpParser("a*+?") should be (OptionExp(PlusExp(StarExp(ElemExp('a')))))
   }
 
   it should "parse escape characters" in {
@@ -53,17 +103,77 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExpParser("""\n""") should be (ElemExp('\n'))
     RegExpParser("""\ε""") should be (ElemExp('ε'))
     RegExpParser("""\∅""") should be (ElemExp('∅'))
+    RegExpParser("""\.""") should be (ElemExp('.'))
     RegExpParser("""\|""") should be (ElemExp('|'))
     RegExpParser("""\*""") should be (ElemExp('*'))
+    RegExpParser("""\+""") should be (ElemExp('+'))
+    RegExpParser("""\?""") should be (ElemExp('?'))
     RegExpParser("""\(""") should be (ElemExp('('))
     RegExpParser("""\)""") should be (ElemExp(')'))
+    RegExpParser("""\[""") should be (ElemExp('['))
+    RegExpParser("""\]""") should be (ElemExp(']'))
     RegExpParser("""\\""") should be (ElemExp('\\'))
-    RegExpParser("""a\s\*b""") should be
-      (ConcatExp(ConcatExp(ConcatExp(ElemExp('a'), ElemExp(' ')), ElemExp('*')), ElemExp('b')))
+    RegExpParser("""a\s\*b""") should be (
+      ConcatExp(ConcatExp(ConcatExp(ElemExp('a'), ElemExp(' ')), ElemExp('*')), ElemExp('b'))
+    )
+  }
+
+  it should "parse escape characters in character class" in {
+    RegExpParser("""[\s]""") should be (CharClassExp(Seq(SingleCharExp(' '))))
+    RegExpParser("""[\t]""") should be (CharClassExp(Seq(SingleCharExp('\t'))))
+    RegExpParser("""[\n]""") should be (CharClassExp(Seq(SingleCharExp('\n'))))
+    RegExpParser("""[\[]""") should be (CharClassExp(Seq(SingleCharExp('['))))
+    RegExpParser("""[\]]""") should be (CharClassExp(Seq(SingleCharExp(']'))))
+    RegExpParser("""[\-]""") should be (CharClassExp(Seq(SingleCharExp('-'))))
+    RegExpParser("""[\^]""") should be (CharClassExp(Seq(SingleCharExp('^'))))
+    RegExpParser("""[a\s^-\[]""") should be (CharClassExp(Seq(
+      SingleCharExp('a'),
+      SingleCharExp(' '),
+      RangeExp('^','[')
+    )))
   }
 
   it should "ignore spaces" in {
     RegExpParser("a \t \n b") should be (ConcatExp(ElemExp('a'), ElemExp('b')))
+  }
+
+  it should "throw exception when given illegal expressions" in {
+    a [Exception] should be thrownBy {
+      RegExpParser("ab|")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("|ab")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("*ab")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("a()b")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("(a(b)")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("a(b))")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("a[]b")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("a[bc")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("abc]")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("[ab-]")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("[-ab]")
+    }
+    a [Exception] should be thrownBy {
+      RegExpParser("[a--b]")
+    }
   }
 
 

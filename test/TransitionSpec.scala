@@ -10,11 +10,11 @@ class TransitionSpec extends FlatSpec with Matchers {
         'a' -> "ab",
         'b' -> "bcc",
         'c' -> "a"
-      ).mapValues(_.toList),
+      ).mapValues(_.toSeq),
       Map(
         'a' -> "cba",
         'b' -> "b"
-      ).mapValues(_.toList)
+      ).mapValues(_.toSeq)
     )
 
     val g = morphs2Graph(morphs)
