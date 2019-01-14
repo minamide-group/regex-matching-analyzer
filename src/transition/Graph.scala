@@ -7,24 +7,35 @@ class Graph[V](
   val nodes: Seq[V],
   val edges: Seq[(V,V)]
 ) {
+  val adj = MTMap[V, Seq[V]]()
+  nodes.foreach(adj(_) = Seq[V]())
+  edges.foreach{e => adj(e._1) +:= e._2}
+
   def this(edges: Seq[(V,V)]) {
     this(edges.flatMap{case (v1,v2) => Seq(v1,v2)}.distinct, edges)
   }
 
-  def reverse(): Graph[V] = {
-    Debug.time("calculate reverse") {
-      new Graph(nodes, edges.map{case (v1,v2) => (v2,v1)})
+  def reachableFrom(v: V): Set[V] = {
+    var visited = Set[V]()
+    val stack = Stack(v)
+
+    while (stack.nonEmpty) {
+      val v = stack.pop
+      if (!visited(v)) {
+        visited += v
+        stack.pushAll(adj(v))
+      }
     }
+
+    visited
+  }
+
+  def reverse(): Graph[V] = {
+    new Graph(nodes, edges.map{case (v1,v2) => (v2,v1)})
   }
 
   def calcStrongComponents(): Set[Set[V]] = {
     def dfs(g: Graph[V], order: Seq[V]): Seq[Seq[V]] = {
-      val adj = MTMap[V, Seq[V]]()
-      Debug.time("calculate adj") {
-        g.nodes.foreach(adj(_) = Seq[V]())
-        g.edges.foreach{e => adj(e._1) +:= e._2}
-      }
-
       var visited = Set[V]()
       def dfs(v: V): Seq[V] = {
         var postRev = Seq[V]()
@@ -36,7 +47,7 @@ class Graph[V](
               if (!visited(v)) {
                 visited += v
                 stack.push(vs)
-                stack.push(adj(v).toSeq)
+                stack.push(g.adj(v).toSeq)
               } else {
                 stack.push(rest)
               }
@@ -130,43 +141,72 @@ class LabeledGraph[V,A](
     }
 
     def calcDegree(): Int = {
-      def isIDA(): Boolean = {
-        def constructG4(): Graph[(V,V,V)] = {
-          def triplize[E](es: Seq[E]): Seq[(E,E,E)] = {
-            es.flatMap(e1 => es.flatMap(e2 => es.map(e3 => (e1,e2,e3))))
+      val scsGraphRev = scsGraph.reverse()
+
+      val degree = MTMap[Set[V], Int]()
+      def calcDegree(sc: Set[V]): Int = {
+        def isIDA(start: Set[V], passage: Set[V], end: Set[V]): Boolean = {
+          def constructG4(): Graph[(V,V,V)] = {
+            val label2EdgesStart = label2Edges.mapValues(_.filter{
+              case (v1,v2) => start.contains(v1) && start.contains(v2)
+            })
+            val label2EdgesPassage = label2Edges.mapValues(_.filter{
+              case (v1,v2) => passage.contains(v1) && passage.contains(v2)
+            })
+            val label2EdgesEnd = label2Edges.mapValues(_.filter{
+              case (v1,v2) => end.contains(v1) && end.contains(v2)
+            })
+            val e4 = (
+              (for (
+                (a,e2s) <- label2EdgesPassage.toSeq;
+                (p1,q1) <- label2EdgesStart(a);
+                (p2,q2) <- e2s;
+                (p3,q3) <- label2EdgesEnd(a)
+              ) yield ((p1,p2,p3),(q1,q2,q3))) ++
+              start.flatMap(p =>
+                end.collect{case q if p != q => ((p,q,q),(p,p,q))}
+              )
+            ).distinct
+
+            new Graph(e4)
           }
 
-          val g4nodes = triplize(nodes)
-          val e4 = (label2Edges.toSeq.flatMap{ case (a,es) =>
-              triplize(es).map{case ((p1,q1),(p2,q2),(p3,q3)) => ((p1,p2,p3),(q1,q2,q3))}
-            } ++ nodes.flatMap(p =>
-              nodes.collect{case q if p != q => ((p,q,q),(p,p,q))}
-            )).distinct
-
-
-          new Graph(g4nodes, e4)
-        }
-
-        val g4 = Debug.time("construct G4") {
-          constructG4()
-        }
-        Debug.info("G4 info")(
-          ("|V|", g4.nodes.size),
-          ("|E|", g4.edges.size)
-        )
-
-        val scs = g4.calcStrongComponents()
-
-        scs.exists{sc =>
-          sc.collect{
-            case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
-          }.exists{
-            case (p,q) => sc.exists{case (q1,q2,q3) => q1 == p && q2 == p && q3 == q}
+          val g4 = Debug.time("construct G4") {
+            constructG4()
           }
+
+          g4.calcStrongComponents().exists{sc =>
+            sc.collect{
+              case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
+            }.exists{
+              case (p,q) => sc.exists{case (q1,q2,q3) => q1 == p && q2 == p && q3 == q}
+            }
+          }
+        }
+
+        degree.get(sc) match {
+          case Some(d) => d
+          case None =>
+            val children = scsGraph.adj(sc)
+            val degreeSc = if (children.isEmpty) 0
+            else {
+              val maxDegree = children.map(calcDegree).max
+              val reachableFromSc = scsGraph.reachableFrom(sc)
+              val maxDegreeScs = reachableFromSc.filter(
+                degree.get(_) == Some(maxDegree)
+              )
+              if (maxDegreeScs.exists{ maxDegreeSc =>
+                val passage = (reachableFromSc & scsGraphRev.reachableFrom(maxDegreeSc)).flatten
+                isIDA(sc, passage, maxDegreeSc)
+              }) maxDegree + 1 else maxDegree
+            }
+
+            degree(sc) = degreeSc
+            degreeSc
         }
       }
 
-      if (isIDA()) 1 else 0
+      scsGraphRev.nodes.filter(scsGraphRev.adj(_).isEmpty).map(calcDegree).max
     }
 
     if (isEDA()) None else Some(calcDegree())

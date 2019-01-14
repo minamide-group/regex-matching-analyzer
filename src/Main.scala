@@ -6,6 +6,7 @@ object Main {
     val result = r.calcGrowthRate()
     println(result match {
       case Some(0) => "finitely"
+      case Some(1) => s"O(n) polynomially"
       case Some(d) => s"O(n^${d}) polynomially"
       case None => "exponentially"
     })

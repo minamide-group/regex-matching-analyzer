@@ -32,6 +32,50 @@ class TransitionSpec extends FlatSpec with Matchers {
     )
   }
 
+  "reverse" should "construct reverse graph" in {
+    val g = new Graph(
+      Seq(1,2,3,4),
+      Seq(
+        (1,2),
+        (1,3),
+        (2,3),
+        (3,4)
+      )
+    )
+
+    val gRev = g.reverse()
+    gRev.nodes contains only (1,2,3,4)
+    gRev.edges contains only ((2,1),(3,1),(3,2),(4,3))
+  }
+
+  "reachableFrom" should "calculate reachable nodes from given node" in {
+    val g = new Graph(
+      Seq(1,2,3,4,5,6,7,8,9),
+      Seq(
+        (1,2),
+        (2,3),
+        (3,4),
+        (4,2),
+        (3,5),
+        (5,6),
+        (5,7),
+        (6,8),
+        (7,8),
+        (9,9)
+      )
+    )
+
+    g.reachableFrom(1) should contain only (1,2,3,4,5,6,7,8)
+    g.reachableFrom(2) should contain only (2,3,4,5,6,7,8)
+    g.reachableFrom(3) should contain only (2,3,4,5,6,7,8)
+    g.reachableFrom(4) should contain only (2,3,4,5,6,7,8)
+    g.reachableFrom(5) should contain only (5,6,7,8)
+    g.reachableFrom(6) should contain only (6,8)
+    g.reachableFrom(7) should contain only (7,8)
+    g.reachableFrom(8) should contain only (8)
+    g.reachableFrom(9) should contain only (9)
+  }
+
   "calcStrongComponents" should "calculate strong components" in {
     val g = new Graph(
       Seq(1,2,3,4,5,6,7,8),
@@ -54,7 +98,108 @@ class TransitionSpec extends FlatSpec with Matchers {
     )
   }
 
-  "calcAmbiguity" should "decide exponentially ambiguous graph" in {
+
+  "calcAmbiguity" should "decide finitely ambiguous graph" in {
+    val g1 = new LabeledGraph(
+      Seq(1,2,3),
+      Seq(
+        (1,'a',1),
+        (1,'b',2),
+        (2,'a',2)
+      )
+    )
+
+    val g2 = new LabeledGraph(
+      Seq(1,2,3,4),
+      Seq(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'b',1),
+        (2,'b',3),
+        (3,'c',4),
+        (4,'b',3)
+      )
+    )
+
+    g1.calcAmbiguity() should be (Some(0))
+    g2.calcAmbiguity() should be (Some(0))
+  }
+
+  it should "decide polynomially ambiguous graph" in {
+    val g11 = new LabeledGraph(
+      Seq(1,2),
+      Seq(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'a',2)
+      )
+    )
+
+    val g12 = new LabeledGraph(
+      Seq(1,2,3,4),
+      Seq(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'b',1),
+        (2,'b',3),
+        (3,'a',4),
+        (4,'b',3)
+      )
+    )
+
+    val g21 = new LabeledGraph(
+      Seq(1,2,3,4),
+      Seq(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'a',2),
+        (2,'b',3),
+        (3,'c',3),
+        (3,'c',4),
+        (4,'c',4),
+      )
+    )
+
+    val g22 = new LabeledGraph(
+      Seq(1,2,3,4,5,6),
+      Seq(
+        (1,'x',2),
+        (2,'y',1),
+        (2,'a',2),
+        (2,'a',3),
+        (3,'a',3),
+        (2,'y',4),
+        (4,'x',5),
+        (5,'y',4),
+        (4,'z',4),
+        (4,'z',6),
+        (6,'z',6)
+      )
+    )
+
+    val g3 = new LabeledGraph(
+      Seq(1,2,3,4),
+      Seq(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'a',2),
+        (2,'b',2),
+        (2,'b',3),
+        (3,'b',3),
+        (3,'c',3),
+        (3,'c',4),
+        (4,'c',4)
+      )
+    )
+
+    g11.calcAmbiguity() should be (Some(1))
+    g12.calcAmbiguity() should be (Some(1))
+    g21.calcAmbiguity() should be (Some(2))
+    g22.calcAmbiguity() should be (Some(2))
+    g3.calcAmbiguity() should be (Some(3))
+  }
+
+  it should "decide exponentially ambiguous graph" in {
     val g1 = new LabeledGraph(
       Seq(1,2,3),
       Seq(
