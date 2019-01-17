@@ -23,20 +23,32 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExpParser("a|b|c") should be (AltExp(AltExp(ElemExp('a'), ElemExp('b')), ElemExp('c')))
   }
 
-  it should "parse a*" in {
-    RegExpParser("a*") should be (StarExp(ElemExp('a')))
-  }
-
   it should "parse (a)" in {
     RegExpParser("(a)") should be (ElemExp('a'))
   }
 
+  it should "parse a*" in {
+    RegExpParser("a*") should be (StarExp(ElemExp('a'), true))
+  }
+
   it should "parse a+" in {
-    RegExpParser("a+") should be (PlusExp(ElemExp('a')))
+    RegExpParser("a+") should be (PlusExp(ElemExp('a'), true))
   }
 
   it should "parse a?" in {
-    RegExpParser("a?") should be (OptionExp(ElemExp('a')))
+    RegExpParser("a?") should be (OptionExp(ElemExp('a'), true))
+  }
+
+  it should "parse a*?" in {
+    RegExpParser("a*?") should be (StarExp(ElemExp('a'), false))
+  }
+
+  it should "parse a+?" in {
+    RegExpParser("a+?") should be (PlusExp(ElemExp('a'), false))
+  }
+
+  it should "parse a??" in {
+    RegExpParser("a??") should be (OptionExp(ElemExp('a'), false))
   }
 
   it should "parse ." in {
@@ -44,19 +56,19 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   it should "parse character class" in {
-    RegExpParser("[abc]") should be (CharClassExp(Seq(SingleCharExp('a'),SingleCharExp('b'),SingleCharExp('c'))))
-    RegExpParser("[a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z'))))
+    RegExpParser("[abc]") should be (CharClassExp(Seq(SingleCharExp('a'),SingleCharExp('b'),SingleCharExp('c')), true))
+    RegExpParser("[a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z')), true))
     RegExpParser("[ab-def-h]") should be (CharClassExp(Seq(
       SingleCharExp('a'),
       RangeExp('b','d'),
       SingleCharExp('e'),
       RangeExp('f','h')
-    )))
+    ), true))
 
     RegExpParser("[^abc]") should be (
-      CharClassExp(Seq(SingleCharExp('a'),SingleCharExp('b'),SingleCharExp('c')), true)
+      CharClassExp(Seq(SingleCharExp('a'),SingleCharExp('b'),SingleCharExp('c')), false)
     )
-    RegExpParser("[^a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z')), true))
+    RegExpParser("[^a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z')), false))
   }
 
   it should "parse complex expressions" in {
@@ -75,8 +87,8 @@ class RegExpSpec extends FlatSpec with Matchers {
         ConcatExp(
           ElemExp('a'),
           StarExp(
-            ElemExp('b')
-          )
+            ElemExp('b'),
+            true)
         ),
         ElemExp('c')
       )
@@ -90,11 +102,12 @@ class RegExpSpec extends FlatSpec with Matchers {
             ElemExp('b'),
             ElemExp('c')
           )
-        )
-      )
+        ),
+      true)
     )
 
-    RegExpParser("a*+?") should be (OptionExp(PlusExp(StarExp(ElemExp('a')))))
+    RegExpParser("a?*") should be (StarExp(OptionExp(ElemExp('a'), true), true))
+    RegExpParser("(a*)?") should be (OptionExp(StarExp(ElemExp('a'), true), true))
   }
 
   it should "parse escape characters" in {
@@ -119,18 +132,18 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   it should "parse escape characters in character class" in {
-    RegExpParser("""[\s]""") should be (CharClassExp(Seq(SingleCharExp(' '))))
-    RegExpParser("""[\t]""") should be (CharClassExp(Seq(SingleCharExp('\t'))))
-    RegExpParser("""[\n]""") should be (CharClassExp(Seq(SingleCharExp('\n'))))
-    RegExpParser("""[\[]""") should be (CharClassExp(Seq(SingleCharExp('['))))
-    RegExpParser("""[\]]""") should be (CharClassExp(Seq(SingleCharExp(']'))))
-    RegExpParser("""[\-]""") should be (CharClassExp(Seq(SingleCharExp('-'))))
-    RegExpParser("""[\^]""") should be (CharClassExp(Seq(SingleCharExp('^'))))
+    RegExpParser("""[\s]""") should be (CharClassExp(Seq(SingleCharExp(' ')), true))
+    RegExpParser("""[\t]""") should be (CharClassExp(Seq(SingleCharExp('\t')), true))
+    RegExpParser("""[\n]""") should be (CharClassExp(Seq(SingleCharExp('\n')), true))
+    RegExpParser("""[\[]""") should be (CharClassExp(Seq(SingleCharExp('[')), true))
+    RegExpParser("""[\]]""") should be (CharClassExp(Seq(SingleCharExp(']')), true))
+    RegExpParser("""[\-]""") should be (CharClassExp(Seq(SingleCharExp('-')), true))
+    RegExpParser("""[\^]""") should be (CharClassExp(Seq(SingleCharExp('^')), true))
     RegExpParser("""[a\s^-\[]""") should be (CharClassExp(Seq(
       SingleCharExp('a'),
       SingleCharExp(' '),
       RangeExp('^','[')
-    )))
+    ), true))
   }
 
   it should "ignore spaces" in {
@@ -209,19 +222,37 @@ class RegExpSpec extends FlatSpec with Matchers {
 
   it should "derive a*" in {
     val r = RegExpParser("a*")
-    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'))), None))
+    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), true)), None))
     r.derive[List]('b') should be (List(None))
   }
 
   it should "derive a+" in {
     val r = RegExpParser("a+")
-    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a')))))
+    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), true))))
     r.derive[List]('b') should be (Nil)
   }
 
   it should "derive a?" in {
     val r = RegExpParser("a?")
     r.derive[List]('a') should be (List(Some(EpsExp()), None))
+    r.derive[List]('b') should be (List(None))
+  }
+
+  it should "derive a*?" in {
+    val r = RegExpParser("a*?")
+    r.derive[List]('a') should be (List(None, Some(StarExp(ElemExp('a'), false))))
+    r.derive[List]('b') should be (List(None))
+  }
+
+  it should "derive a+?" in {
+    val r = RegExpParser("a+?")
+    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), false))))
+    r.derive[List]('b') should be (Nil)
+  }
+
+  it should "derive a??" in {
+    val r = RegExpParser("a??")
+    r.derive[List]('a') should be (List(None, Some(EpsExp())))
     r.derive[List]('b') should be (List(None))
   }
 

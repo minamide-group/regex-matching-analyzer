@@ -18,11 +18,11 @@ case class EmptyExp[A]() extends RegExp[A]
 case class EpsExp[A]() extends RegExp[A]
 case class ConcatExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
 case class AltExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
-case class StarExp[A](r: RegExp[A]) extends RegExp[A]
-case class PlusExp[A](r: RegExp[A]) extends RegExp[A]
-case class OptionExp[A](r: RegExp[A]) extends RegExp[A]
+case class StarExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
+case class PlusExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
+case class OptionExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class DotExp[A]() extends RegExp[A]
-case class CharClassExp(cs: Seq[CharClassElem], negative: Boolean = false) extends RegExp[Char] {
+case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
   val charSet = cs.flatMap(_.toCharSet()).toSet
 }
 
@@ -35,12 +35,11 @@ object RegExp {
       case EpsExp() => "ε"
       case ConcatExp(r1,r2) => s"(${r1}${r2})"
       case AltExp(r1,r2) => s"(${r1}|${r2})"
-      case StarExp(r) => s"(${r})*"
-      case PlusExp(r) => s"(${r})+"
-      case OptionExp(r) => s"(${r})?"
+      case StarExp(r,greedy) => s"(${r})*${if (greedy) "" else "?"}"
+      case PlusExp(r,greedy) => s"(${r})+${if (greedy) "" else "?"}"
+      case OptionExp(r,greedy) => s"(${r})?${if (greedy) "" else "?"}"
       case DotExp() => "."
-      case CharClassExp(es,false) => s"[${es.mkString}]"
-      case CharClassExp(es,true) => s"[^${es.mkString}]"
+      case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
     }
   }
 
@@ -57,22 +56,42 @@ object RegExp {
         }
       case AltExp(r1,r2) =>
         r1.derive[M](a) ++ r2.derive[M](a)
-      case StarExp(r) =>
-        (r.derive[M](a) >>= {
-          case Some(EpsExp()) => m(Some(StarExp(r)))
-          case Some(r1) => m(Some(ConcatExp(r1,StarExp(r))))
-          case None => m(None)
-        }: M[Option[RegExp[A]]]) ++ m(None)
-      case PlusExp(r) =>
-        r.derive[M](a) >>= {
-          case Some(EpsExp()) => m(Some(StarExp(r)))
-          case Some(r1) => m(Some(ConcatExp(r1,StarExp(r))))
-          case None => m(None)
+      case StarExp(r,greedy) =>
+        if (greedy) {
+          (r.derive[M](a) >>= {
+            case Some(EpsExp()) => m(Some(StarExp(r,true)))
+            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,true))))
+            case None => m(None)
+          }: M[Option[RegExp[A]]]) ++ m(None)
+        } else {
+          (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a) >>= {
+            case Some(EpsExp()) => m(Some(StarExp(r,false)))
+            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,false))))
+            case None => m(None)
+          }
         }
-      case OptionExp(r) =>
-        r.derive[M](a) ++ m(None)
+      case PlusExp(r,greedy) =>
+        if (greedy) {
+          r.derive[M](a) >>= {
+            case Some(EpsExp()) => m(Some(StarExp(r,true)))
+            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,true))))
+            case None => StarExp(r,true).derive[M](a)
+          }
+        } else {
+          r.derive[M](a) >>= {
+            case Some(EpsExp()) => m(Some(StarExp(r,false)))
+            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,false))))
+            case None => StarExp(r,false).derive[M](a)
+          }
+        }
+      case OptionExp(r,greedy) =>
+        if (greedy) {
+          r.derive[M](a) ++ m(None)
+        } else {
+          (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a)
+        }
       case DotExp() => m(Some(EpsExp()))
-      case r @ CharClassExp(_,negative) => if (r.charSet.contains(a) ^ negative) m(Some(EpsExp())) else m.fail
+      case r @ CharClassExp(_,positive) => if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
     }
   }
 
@@ -83,9 +102,9 @@ object RegExp {
         case EmptyExp() | EpsExp() | DotExp() => Set()
         case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
         case AltExp(r1,r2) => getElems(r1) | getElems(r2)
-        case StarExp(r) => getElems(r)
-        case PlusExp(r) => getElems(r)
-        case OptionExp(r) => getElems(r)
+        case StarExp(r,_) => getElems(r)
+        case PlusExp(r,_) => getElems(r)
+        case OptionExp(r,_) => getElems(r)
         case r @ CharClassExp(_,_) => r.charSet
       }
     }

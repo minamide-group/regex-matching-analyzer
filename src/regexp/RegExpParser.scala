@@ -27,12 +27,15 @@ object RegExpParser extends RegexParsers {
 
   def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduce(AltExp(_,_))}
   def term: Parser[RegExp[Char]] = rep1(factor) ^^ {_.reduce(ConcatExp(_,_))}
-  def factor: Parser[RegExp[Char]] = (elem | empty | eps | dot | group | charClassNeg | charClass) ~ rep("[*+?]".r) ^^ {
+  def factor: Parser[RegExp[Char]] = (elem | empty | eps | dot | group | charClassNeg | charClass) ~ rep("""[*+?]\?""".r | "[*+?]".r) ^^ {
     case f ~ rs =>
       rs.foldLeft(f)((e,r) => r match {
-        case "*" => StarExp(e)
-        case "+" => PlusExp(e)
-        case "?" => OptionExp(e)
+        case "*" => StarExp(e,true)
+        case "+" => PlusExp(e,true)
+        case "?" => OptionExp(e,true)
+        case "*?" => StarExp(e,false)
+        case "+?" => PlusExp(e,false)
+        case "??" => OptionExp(e,false)
       })
   }
   def elem: Parser[ElemExp[Char]] = (char | esc) ^^ {s => ElemExp(toChar(s))}
@@ -40,8 +43,8 @@ object RegExpParser extends RegexParsers {
   def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
   def dot: Parser[DotExp[Char]] = "." ^^ {_ => DotExp()}
   def group: Parser[RegExp[Char]] = "(" ~> exp <~ ")"
-  def charClass: Parser[CharClassExp] = "[" ~> charClassElems <~ "]" ^^ {CharClassExp(_)}
-  def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassElems <~ "]" ^^ {CharClassExp(_,true)}
+  def charClass: Parser[CharClassExp] = "[" ~> charClassElems <~ "]" ^^ {CharClassExp(_,true)}
+  def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassElems <~ "]" ^^ {CharClassExp(_,false)}
   def charClassElems: Parser[Seq[CharClassElem]] = rep1(range | singleChar)
   def singleChar: Parser[SingleCharExp] = charClassElem ^^ {SingleCharExp}
   def range: Parser[RangeExp] = ((charClassElem <~ "-") ~ charClassElem) ^^ {
