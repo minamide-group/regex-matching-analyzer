@@ -3,7 +3,7 @@ import org.scalatest._
 import transition._
 import Morph._
 
-class TransitionSpec extends FlatSpec with Matchers {
+class GraphSpec extends FlatSpec with Matchers {
   "morphs2Graph" should "construct graph" in {
     val morphs = Seq(
       Map(
@@ -18,8 +18,8 @@ class TransitionSpec extends FlatSpec with Matchers {
     )
 
     val g = morphs2Graph(morphs)
-    g.nodes should contain only ('a','b','c')
-    g.labeledEdges should contain only (
+    g.nodes should contain theSameElementsAs Seq('a','b','c')
+    g.labeledEdges should contain theSameElementsAs Seq(
       ('a', 0, 'a'),
       ('a', 0, 'b'),
       ('b', 0, 'b'),
@@ -44,8 +44,8 @@ class TransitionSpec extends FlatSpec with Matchers {
     )
 
     val gRev = g.reverse()
-    gRev.nodes contains only (1,2,3,4)
-    gRev.edges contains only ((2,1),(3,1),(3,2),(4,3))
+    gRev.nodes should contain theSameElementsAs Seq(1,2,3,4)
+    gRev.edges should contain theSameElementsAs Seq((2,1),(3,1),(3,2),(4,3))
   }
 
   "reachableFrom" should "calculate reachable nodes from given node" in {

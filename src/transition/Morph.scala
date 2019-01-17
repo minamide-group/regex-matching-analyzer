@@ -7,7 +7,7 @@ object Morph {
     val nodes = morphs.flatMap(_.keys).distinct
     val labeledEdges = morphs.zipWithIndex.flatMap{ case (h,idx) =>
       h.flatMap{case (q,qs) => qs.map((q,idx,_))}
-    }
+    }.distinct
 
     new LabeledGraph(nodes, labeledEdges)
   }
