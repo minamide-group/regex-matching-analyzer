@@ -39,18 +39,6 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExpParser("a?") should be (OptionExp(ElemExp('a'), true))
   }
 
-  it should "parse a*?" in {
-    RegExpParser("a*?") should be (StarExp(ElemExp('a'), false))
-  }
-
-  it should "parse a+?" in {
-    RegExpParser("a+?") should be (PlusExp(ElemExp('a'), false))
-  }
-
-  it should "parse a??" in {
-    RegExpParser("a??") should be (OptionExp(ElemExp('a'), false))
-  }
-
   it should "parse ." in {
     RegExpParser(".") should be (DotExp())
   }
@@ -71,7 +59,21 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExpParser("[^a-zA-Z]") should be (CharClassExp(Seq(RangeExp('a','z'),RangeExp('A','Z')), false))
   }
 
-  it should "parse complex expressions" in {
+  it should "parse repeat expression" in {
+    RegExpParser("a{3,5}") should be (RepeatExp(ElemExp('a'),Some(3),Some(5),true))
+    RegExpParser("a{3}") should be (RepeatExp(ElemExp('a'),Some(3),Some(3),true))
+    RegExpParser("a{3,}") should be (RepeatExp(ElemExp('a'),Some(3),None,true))
+    RegExpParser("a{,5}") should be (RepeatExp(ElemExp('a'),None,Some(5),true))
+  }
+
+  it should "parse lazy operations" in {
+    RegExpParser("a*?") should be (StarExp(ElemExp('a'), false))
+    RegExpParser("a+?") should be (PlusExp(ElemExp('a'), false))
+    RegExpParser("a??") should be (OptionExp(ElemExp('a'), false))
+    RegExpParser("a{3,5}?") should be (RepeatExp(ElemExp('a'),Some(3),Some(5),false))
+  }
+
+  it should "parse complex expression" in {
     RegExpParser("ab|c") should be (
       AltExp(
         ConcatExp(
@@ -106,8 +108,7 @@ class RegExpSpec extends FlatSpec with Matchers {
       true)
     )
 
-    RegExpParser("a?*") should be (StarExp(OptionExp(ElemExp('a'), true), true))
-    RegExpParser("(a*)?") should be (OptionExp(StarExp(ElemExp('a'), true), true))
+    RegExpParser("((a*)?){3,5}?") should be (RepeatExp(OptionExp(StarExp(ElemExp('a'), true), true), Some(3), Some(5), false))
   }
 
   it should "parse escape characters" in {
@@ -117,12 +118,15 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExpParser("""\ε""") should be (ElemExp('ε'))
     RegExpParser("""\∅""") should be (ElemExp('∅'))
     RegExpParser("""\.""") should be (ElemExp('.'))
+    RegExpParser("""\,""") should be (ElemExp(','))
     RegExpParser("""\|""") should be (ElemExp('|'))
     RegExpParser("""\*""") should be (ElemExp('*'))
     RegExpParser("""\+""") should be (ElemExp('+'))
     RegExpParser("""\?""") should be (ElemExp('?'))
     RegExpParser("""\(""") should be (ElemExp('('))
     RegExpParser("""\)""") should be (ElemExp(')'))
+    RegExpParser("""\{""") should be (ElemExp('{'))
+    RegExpParser("""\}""") should be (ElemExp('}'))
     RegExpParser("""\[""") should be (ElemExp('['))
     RegExpParser("""\]""") should be (ElemExp(']'))
     RegExpParser("""\\""") should be (ElemExp('\\'))
@@ -151,42 +155,30 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   it should "throw exception when given illegal expressions" in {
-    a [Exception] should be thrownBy {
-      RegExpParser("ab|")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("|ab")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("*ab")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("a()b")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("(a(b)")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("a(b))")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("a[]b")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("a[bc")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("abc]")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("[ab-]")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("[-ab]")
-    }
-    a [Exception] should be thrownBy {
-      RegExpParser("[a--b]")
-    }
+    a [Exception] should be thrownBy {RegExpParser("ab|")}
+    a [Exception] should be thrownBy {RegExpParser("|ab")}
+    a [Exception] should be thrownBy {RegExpParser("*ab")}
+    a [Exception] should be thrownBy {RegExpParser("a*+")}
+    a [Exception] should be thrownBy {RegExpParser("a()b")}
+    a [Exception] should be thrownBy {RegExpParser("(a(b)")}
+    a [Exception] should be thrownBy {RegExpParser("a(b))")}
+    a [Exception] should be thrownBy {RegExpParser("a[]b")}
+    a [Exception] should be thrownBy {RegExpParser("a[bc")}
+    a [Exception] should be thrownBy {RegExpParser("abc]")}
+    a [Exception] should be thrownBy {RegExpParser("[ab-]")}
+    a [Exception] should be thrownBy {RegExpParser("[-ab]")}
+    a [Exception] should be thrownBy {RegExpParser("[a--b]")}
+    a [Exception] should be thrownBy {RegExpParser("[a-b-c]")}
+    a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
+    a [Exception] should be thrownBy {RegExpParser("a{0,3}")}
+    a [Exception] should be thrownBy {RegExpParser("a{x,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,y}")}
+    a [Exception] should be thrownBy {RegExpParser("a{,3,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,5,}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,5")}
+    a [Exception] should be thrownBy {RegExpParser("a3,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{,}")}
   }
 
 
@@ -198,7 +190,7 @@ class RegExpSpec extends FlatSpec with Matchers {
 
   it should "derive ∅" in {
     val r = RegExpParser("∅")
-    r.derive[List]('a') should be (List(Some(EmptyExp())))
+    r.derive[List]('a') should be (Nil)
   }
 
   it should "derive ε" in {
@@ -238,50 +230,86 @@ class RegExpSpec extends FlatSpec with Matchers {
     r.derive[List]('b') should be (List(None))
   }
 
-  it should "derive a*?" in {
-    val r = RegExpParser("a*?")
-    r.derive[List]('a') should be (List(None, Some(StarExp(ElemExp('a'), false))))
-    r.derive[List]('b') should be (List(None))
-  }
-
-  it should "derive a+?" in {
-    val r = RegExpParser("a+?")
-    r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), false))))
-    r.derive[List]('b') should be (Nil)
-  }
-
-  it should "derive a??" in {
-    val r = RegExpParser("a??")
-    r.derive[List]('a') should be (List(None, Some(EpsExp())))
-    r.derive[List]('b') should be (List(None))
-  }
-
   it should "derive ." in {
     val r = RegExpParser(".")
     r.derive[List]('a') should be (List(Some(EpsExp())))
   }
 
-  it should "derive [a-z]" in {
-    val r = RegExpParser("[a-z]")
-    r.derive[List]('a') should be (List(Some(EpsExp())))
-    r.derive[List]('h') should be (List(Some(EpsExp())))
-    r.derive[List]('z') should be (List(Some(EpsExp())))
-    r.derive[List]('A') should be (Nil)
-    r.derive[List]('H') should be (Nil)
-    r.derive[List]('Z') should be (Nil)
+  it should "derive character class" in {
+    val r1 = RegExpParser("[a-z]")
+    r1.derive[List]('a') should be (List(Some(EpsExp())))
+    r1.derive[List]('h') should be (List(Some(EpsExp())))
+    r1.derive[List]('z') should be (List(Some(EpsExp())))
+    r1.derive[List]('A') should be (Nil)
+    r1.derive[List]('H') should be (Nil)
+    r1.derive[List]('Z') should be (Nil)
+
+    val r2 = RegExpParser("[^a-z]")
+    r2.derive[List]('a') should be (Nil)
+    r2.derive[List]('h') should be (Nil)
+    r2.derive[List]('z') should be (Nil)
+    r2.derive[List]('A') should be (List(Some(EpsExp())))
+    r2.derive[List]('H') should be (List(Some(EpsExp())))
+    r2.derive[List]('Z') should be (List(Some(EpsExp())))
   }
 
-  it should "derive [^a-z]" in {
-    val r = RegExpParser("[^a-z]")
-    r.derive[List]('a') should be (Nil)
-    r.derive[List]('h') should be (Nil)
-    r.derive[List]('z') should be (Nil)
-    r.derive[List]('A') should be (List(Some(EpsExp())))
-    r.derive[List]('H') should be (List(Some(EpsExp())))
-    r.derive[List]('Z') should be (List(Some(EpsExp())))
+  it should "derive repeat expression" in {
+    val r1 = RegExpParser("(ab){3,5}")
+    r1.derive[List]('a') should be (List(Some(RegExpParser("b(ab){2,4}"))))
+    r1.derive[List]('b') should be (Nil)
+
+    val r2 = RegExpParser("(ab){3}")
+    r2.derive[List]('a') should be (List(Some(RegExpParser("b(ab){2,2}"))))
+    r2.derive[List]('b') should be (Nil)
+
+    val r3 = RegExpParser("(ab){3,}")
+    r3.derive[List]('a') should be (List(Some(RegExpParser("b(ab){2,}"))))
+    r3.derive[List]('b') should be (Nil)
+
+    val r4 = RegExpParser("(ab){,5}")
+    r4.derive[List]('a') should be (List(Some(RegExpParser("b(ab){,4}")), None))
+    r4.derive[List]('b') should be (List(None))
+
+    val r5 = RegExpParser("(ab){1,5}")
+    r5.derive[List]('a') should be (List(Some(RegExpParser("b(ab){,4}"))))
+    r5.derive[List]('b') should be (Nil)
+
+    val r6 = RegExpParser("(ab){,1}")
+    r6.derive[List]('a') should be (List(Some(RegExpParser("b(ab)*")), None))
+    r6.derive[List]('b') should be (List(None))
+
+    val r7 = RegExpParser("(ab){1}")
+    r7.derive[List]('a') should be (List(Some(RegExpParser("b(ab)*"))))
+    r7.derive[List]('b') should be (Nil)
   }
 
-  it should "derive a*(bc|d)" in {
+  it should "derive lazy operations" in {
+    val r1 = RegExpParser("a*?")
+    r1.derive[List]('a') should be (List(None, Some(StarExp(ElemExp('a'), false))))
+    r1.derive[List]('b') should be (List(None))
+
+    val r2 = RegExpParser("a+?")
+    r2.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), false))))
+    r2.derive[List]('b') should be (Nil)
+
+    val r3 = RegExpParser("a??")
+    r3.derive[List]('a') should be (List(None, Some(EpsExp())))
+    r3.derive[List]('b') should be (List(None))
+
+    val r4 = RegExpParser("(ab){3,5}?")
+    r4.derive[List]('a') should be (List(Some(RegExpParser("b(ab){2,4}?"))))
+    r4.derive[List]('b') should be (Nil)
+
+    val r5 = RegExpParser("(ab){,5}?")
+    r5.derive[List]('a') should be (List(None, Some(RegExpParser("b(ab){,4}?"))))
+    r5.derive[List]('b') should be (List(None))
+
+    val r6 = RegExpParser("(ab){,1}?")
+    r6.derive[List]('a') should be (List(None, Some(RegExpParser("b(ab)*?"))))
+    r6.derive[List]('b') should be (List(None))
+  }
+
+  it should "derive complex expression" in {
     val r = RegExpParser("a*(bc|d)")
     r.derive[List]('a') should be (List(Some(RegExpParser("a*(bc|d)"))))
     r.derive[List]('b') should be (List(Some(RegExpParser("c"))))

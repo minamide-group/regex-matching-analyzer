@@ -25,6 +25,13 @@ case class DotExp[A]() extends RegExp[A]
 case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
   val charSet = cs.flatMap(_.toCharSet()).toSet
 }
+case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy: Boolean) extends RegExp[A] {
+  (min, max) match {
+    case (Some(min),Some(max)) if min > max => throw new Exception(s"illegal repeat expression: ${min} is larger than ${max}")
+    case (None,None) => throw new Exception("illegal repeat expression: either min or max must be specified")
+    case _ =>
+  }
+}
 
 
 object RegExp {
@@ -40,18 +47,41 @@ object RegExp {
       case OptionExp(r,greedy) => s"(${r})?${if (greedy) "" else "?"}"
       case DotExp() => "."
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
+      case RepeatExp(r,min,max,greedy) =>
+        if (min == max) s"${r}{${min.get}}${if (greedy) "" else "?"}"
+        else s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
     }
   }
 
   def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
+    def optConcatExp(r1: RegExp[A], r2: RegExp[A]): RegExp[A] = {
+      r1 match {
+        case EpsExp() => r2
+        case _ => ConcatExp(r1,r2)
+      }
+    }
+    def decrease(r: RepeatExp[A]): RegExp[A] = {
+      def decrease(x: Option[Int]): Option[Int] = {
+        x match {
+          case Some(1) => None
+          case Some(n) => Some(n-1)
+          case None => None
+        }
+      }
+
+      val RepeatExp(r1,min,max,greedy) = r
+      (decrease(min),decrease(max)) match {
+        case (None,None) => StarExp(r1,greedy)
+        case (min,max) => RepeatExp(r1,min,max,greedy)
+      }
+    }
     r match {
       case ElemExp(b) => if (a == b) m(Some(EpsExp())) else m.fail
-      case EmptyExp() => m(Some(EmptyExp()))
+      case EmptyExp() => m.fail
       case EpsExp() => m(None)
       case ConcatExp(r1,r2) =>
         r1.derive[M](a) >>= {
-          case Some(EpsExp()) => m(Some(r2))
-          case Some(r) => m(Some(ConcatExp(r,r2)))
+          case Some(r) => m(Some(optConcatExp(r,r2)))
           case None => r2.derive[M](a)
         }
       case AltExp(r1,r2) =>
@@ -59,22 +89,19 @@ object RegExp {
       case StarExp(r,greedy) =>
         if (greedy) {
           (r.derive[M](a) >>= {
-            case Some(EpsExp()) => m(Some(StarExp(r,true)))
-            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,true))))
+            case Some(r1) => m(Some(optConcatExp(r1,StarExp(r,true))))
             case None => m(None)
           }: M[Option[RegExp[A]]]) ++ m(None)
         } else {
           (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a) >>= {
-            case Some(EpsExp()) => m(Some(StarExp(r,false)))
-            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,false))))
+            case Some(r1) => m(Some(optConcatExp(r1,StarExp(r,false))))
             case None => m(None)
           }
         }
       case PlusExp(r,greedy) =>
         if (greedy) {
           r.derive[M](a) >>= {
-            case Some(EpsExp()) => m(Some(StarExp(r,true)))
-            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,true))))
+            case Some(r1) => m(Some(optConcatExp(r1,StarExp(r,true))))
             case None => StarExp(r,true).derive[M](a)
           }
         } else {
@@ -92,6 +119,17 @@ object RegExp {
         }
       case DotExp() => m(Some(EpsExp()))
       case r @ CharClassExp(_,positive) => if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
+      case r @ RepeatExp(r1,min,max,greedy) =>
+        val rd = r1.derive[M](a) >>= {
+          case Some(r1) => m(Some(optConcatExp(r1,decrease(r))))
+          case None => decrease(r).derive[M](a)
+        }: M[Option[RegExp[A]]]
+        if (min.isDefined) rd
+        else if (greedy) {
+          rd ++ m(None)
+        } else {
+          (m(None): M[Option[RegExp[A]]]) ++ rd
+        }
     }
   }
 
@@ -106,6 +144,7 @@ object RegExp {
         case PlusExp(r,_) => getElems(r)
         case OptionExp(r,_) => getElems(r)
         case r @ CharClassExp(_,_) => r.charSet
+        case RepeatExp(r,_,_,_) => getElems(r)
       }
     }
 
