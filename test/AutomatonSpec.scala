@@ -1,6 +1,6 @@
-import org.scalatest._
+package matching.transition
 
-import transition._
+import org.scalatest._
 
 class AutomatonSpec extends FlatSpec with Matchers {
   "deltaHat in NFA" should "calculate transition" in {
@@ -71,6 +71,180 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(3,4),Set(5),Set(2,4),Set(2,3,5),Set(2,4,5)
     )
   }
+
+
+  "calcAmbiguity" should "decide finitely ambiguous graph" in {
+    val g1 = new NFA(
+      Set(1,2),
+      Set('a','b'),
+      Set(
+        (1,'a',1),
+        (1,'b',2),
+        (2,'a',2)
+      ),
+      Set(1),
+      Set(2)
+    )
+
+    val g2 = new NFA(
+      Set(1,2,3,4),
+      Set('a','b','c'),
+      Set(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'b',1),
+        (2,'b',3),
+        (3,'c',4),
+        (4,'b',3)
+      ),
+      Set(1),
+      Set(4)
+    )
+
+    g1.calcAmbiguity() should be (Some(0))
+    g2.calcAmbiguity() should be (Some(0))
+  }
+
+  it should "decide polynomially ambiguous graph" in {
+    val g11 = new NFA(
+      Set(1,2),
+      Set('a'),
+      Set(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'a',2)
+      ),
+      Set(1),
+      Set(2)
+    )
+
+    val g12 = new NFA(
+      Set(1,2,3,4),
+      Set('a','b'),
+      Set(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'b',1),
+        (2,'b',3),
+        (3,'a',4),
+        (4,'b',3)
+      ),
+      Set(1),
+      Set(4)
+    )
+
+    val g21 = new NFA(
+      Set(1,2,3,4),
+      Set('a','b','c'),
+      Set(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'a',2),
+        (2,'b',3),
+        (3,'c',3),
+        (3,'c',4),
+        (4,'c',4),
+      ),
+      Set(1),
+      Set(4)
+    )
+
+    val g22 = new NFA(
+      Set(1,2,3,4,5,6),
+      Set('a','x','y','z'),
+      Set(
+        (1,'x',2),
+        (2,'y',1),
+        (2,'a',2),
+        (2,'a',3),
+        (3,'a',3),
+        (2,'y',4),
+        (4,'x',5),
+        (5,'y',4),
+        (4,'z',4),
+        (4,'z',6),
+        (6,'z',6)
+      ),
+      Set(1),
+      Set(6)
+    )
+
+    val g3 = new NFA(
+      Set(1,2,3,4),
+      Set('a','b','c'),
+      Set(
+        (1,'a',1),
+        (1,'a',2),
+        (2,'a',2),
+        (2,'b',2),
+        (2,'b',3),
+        (3,'b',3),
+        (3,'c',3),
+        (3,'c',4),
+        (4,'c',4)
+      ),
+      Set(1),
+      Set(4)
+    )
+
+    g11.calcAmbiguity() should be (Some(1))
+    g12.calcAmbiguity() should be (Some(1))
+    g21.calcAmbiguity() should be (Some(2))
+    g22.calcAmbiguity() should be (Some(2))
+    g3.calcAmbiguity() should be (Some(3))
+  }
+
+  it should "decide exponentially ambiguous graph" in {
+    val g1 = new NFA(
+      Set(1,2,3),
+      Set('a'),
+      Set(
+        (1,'a',2),
+        (1,'a',3),
+        (2,'a',1),
+        (3,'a',1)
+      ),
+      Set(1),
+      Set(1)
+    )
+
+    val g2 = new NFA(
+      Set(1,2,3),
+      Set('a','b','c'),
+      Set(
+        (1,'a',1),
+        (1,'b',2),
+        (1,'a',3),
+        (2,'c',1),
+        (3,'b',3),
+        (3,'c',1)
+      ),
+      Set(1),
+      Set(1)
+    )
+
+    val g3 = new NFA(
+      Set(1,2,3,4,5,6),
+      Set('a','b','c','d','e'),
+      Set(
+        (1,'a',2),
+        (2,'b',3),
+        (3,'c',2),
+        (2,'b',4),
+        (4,'c',5),
+        (5,'b',3),
+        (2,'d',6),
+        (6,'e',6)
+      ),
+      Set(1),
+      Set(6)
+    )
+
+    g1.calcAmbiguity() should be (None)
+    g2.calcAmbiguity() should be (None)
+    g3.calcAmbiguity() should be (None)
+  }
+
 
   "deltaHat in DFA" should "calculate transition" in {
     val dfa = new DFA[Int,Char](

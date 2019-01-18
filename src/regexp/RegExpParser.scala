@@ -1,4 +1,4 @@
-package regexp
+package matching.regexp
 
 import scala.util.parsing.combinator._
 
@@ -25,8 +25,8 @@ object RegExpParser extends RegexParsers {
     }
   }
 
-  def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduce(AltExp(_,_))}
-  def term: Parser[RegExp[Char]] = rep1(quantifiedFactor) ^^ {_.reduce(ConcatExp(_,_))}
+  def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
+  def term: Parser[RegExp[Char]] = rep1(quantifiedFactor) ^^ {_.reduceLeft(ConcatExp(_,_))}
   def quantifiedFactor: Parser[RegExp[Char]] = factor ~ opt(quantifier ~ opt("?")) ^^ {
     case f ~ Some(q ~ opt) =>
       val greedy = opt.isEmpty

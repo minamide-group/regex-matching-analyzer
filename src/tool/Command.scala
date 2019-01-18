@@ -1,4 +1,4 @@
-package tool
+package matching.tool
 
 import scala.sys.process._
 import scala.collection.mutable.ArrayBuffer

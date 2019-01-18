@@ -1,4 +1,4 @@
-package tool
+package matching.tool
 
 import scala.io.Source
 import java.nio.file.{Paths, Files}

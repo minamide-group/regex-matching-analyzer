@@ -1,4 +1,4 @@
-package monad
+package matching.monad
 
 trait Monad[M[_]] {
   def unit[A](a: A): M[A]

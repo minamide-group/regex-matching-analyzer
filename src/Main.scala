@@ -1,3 +1,5 @@
+package matching
+
 import regexp._
 
 object Main {

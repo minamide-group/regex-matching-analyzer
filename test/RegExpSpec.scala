@@ -1,6 +1,6 @@
-import org.scalatest._
+package matching.regexp
 
-import regexp._
+import org.scalatest._
 
 class RegExpSpec extends FlatSpec with Matchers {
   "parser" should "parse a" in {
@@ -319,25 +319,22 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
 
-  "calcMorphs" should "calculate morphisms" in {
+  "constructNFA" should "construct NFA" in {
     val r0 = RegExpParser("(ab)*ab")
     val r1 = RegExpParser("b(ab)*ab")
     val r2 = RegExpParser("b")
     val r3 = RegExpParser("ε")
-    val morphs = r0.calcMorphs()
-    morphs should contain only (
-      Map(
-        r0 -> Seq(r1,r2),
-        r1 -> Seq(),
-        r2 -> Seq(),
-        r3 -> Seq()
-      ),
-      Map(
-        r0 -> Seq(),
-        r1 -> Seq(r0),
-        r2 -> Seq(r3),
-        r3 -> Seq()
-      )
+    val nfa = RegExp.constructNFA(r0)
+
+    nfa.states should contain only (r0,r1,r2,r3)
+    nfa.sigma should contain only ('a','b')
+    nfa.delta should contain only (
+      (r0,'a',r1),
+      (r0,'a',r2),
+      (r1,'b',r0),
+      (r2,'b',r3)
     )
+    nfa.initialStates should contain only (r0)
+    nfa.finalStates should contain only (r3)
   }
 }

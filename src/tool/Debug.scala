@@ -1,4 +1,4 @@
-package tool
+package matching.tool
 
 object Debug {
   def info(name: String)(props: (String, Any)*) {

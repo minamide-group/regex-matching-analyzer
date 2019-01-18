@@ -1,16 +1,15 @@
-package regexp
+package matching.regexp
 
 import scala.collection.mutable.Stack
-import monad._
-import Monad._
-import transition.Morph._
+import matching.monad._
+import matching.monad.Monad._
+import matching.transition.NFA
 
 
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
-  def calcMorphs(): Seq[Morph[RegExp[A]]] = RegExp.calcMorphs(this)
-  def calcGrowthRate(): Option[Int] = morphs2Graph(rename(calcMorphs())).calcAmbiguity()
+  def calcGrowthRate(): Option[Int] = RegExp.constructNFA(this).calcAmbiguity()
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -60,6 +59,7 @@ object RegExp {
         case _ => ConcatExp(r1,r2)
       }
     }
+
     def decrease(r: RepeatExp[A]): RegExp[A] = {
       def decrease(x: Option[Int]): Option[Int] = {
         x match {
@@ -75,6 +75,7 @@ object RegExp {
         case (min,max) => RepeatExp(r1,min,max,greedy)
       }
     }
+
     r match {
       case ElemExp(b) => if (a == b) m(Some(EpsExp())) else m.fail
       case EmptyExp() => m.fail
@@ -133,7 +134,7 @@ object RegExp {
     }
   }
 
-  def calcMorphs[A](r: RegExp[A]): Seq[Morph[RegExp[A]]] = {
+  def constructNFA[A](r: RegExp[A]): NFA[RegExp[A],A] = {
     def getElems(r: RegExp[A]): Set[A] = {
       r match {
         case ElemExp(a) => Set(a)
@@ -145,6 +146,17 @@ object RegExp {
         case OptionExp(r,_) => getElems(r)
         case r @ CharClassExp(_,_) => r.charSet
         case RepeatExp(r,_,_,_) => getElems(r)
+      }
+    }
+
+    def nullable(r: RegExp[A]): Boolean = {
+      r match {
+        case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
+        case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) => false
+        case ConcatExp(r1,r2) => nullable(r1) && nullable(r2)
+        case AltExp(r1,r2) => nullable(r1) || nullable(r2)
+        case PlusExp(r,_) => nullable(r)
+        case RepeatExp(r,min,max,greedy) => min.isEmpty || nullable(r)
       }
     }
 
@@ -163,7 +175,15 @@ object RegExp {
       }
     }
 
-    morphs.values.toList
+    val states = regExps
+    val sigma = elems
+    val delta = morphs.toSeq.flatMap{ case (a,h) =>
+      h.flatMap{case (q,qs) => qs.map((q,a,_))}
+    }.toSet
+    val initialStates = Set(r)
+    val finalStates = states.filter(nullable)
+
+    new NFA(states, sigma, delta, initialStates, finalStates)
   }
 }
 
