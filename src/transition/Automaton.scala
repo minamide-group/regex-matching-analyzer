@@ -15,6 +15,10 @@ class NFA[Q,A](
   def deltaHat(qs: Set[Q], a: A): Set[Q] = qs.flatMap(q => deltaMap((q,a)))
   def deltaHat(qs: Set[Q], as: Seq[A]): Set[Q] = as.foldLeft(qs)(deltaHat(_,_))
 
+  override def reverse(): NFA[Q,A] = {
+    new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
+  }
+
   def toDFA(): DFA[Set[Q],A] = {
     val newInitial = initialStates
     var newStates = Set(newInitial)

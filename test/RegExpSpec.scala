@@ -319,6 +319,44 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
 
+  "constructMorphs" should "construct morphs which simulates exhaustive search" in {
+    val r0 = RegExpParser("a|ab")
+    val r1 = RegExpParser("b")
+    val r2 = RegExpParser("ε")
+    val morphs = RegExp.constructMorphs(r0)
+    morphs should contain only (
+      'a' -> Map(
+        r0 -> Seq(r2,r1),
+        r1 -> Seq(),
+        r2 -> Seq()
+      ),
+      'b' -> Map(
+        r0 -> Seq(),
+        r1 -> Seq(r2),
+        r2 -> Seq()
+      )
+    )
+  }
+
+  "constructBtrMorphs" should "construct morphs which simulates backtrack search" in {
+    val r0 = RegExpParser("a|ab")
+    val r1 = RegExpParser("b")
+    val r2 = RegExpParser("ε")
+    val morphs = RegExp.constructBtrMorphs(r0)
+    morphs should contain only (
+      'a' -> Map(
+        r0 -> Seq((Seq(r2,r1),Set(Set(r0),Set(r1),Set())), (Seq(r2),Set(Set(r2)))),
+        r1 -> Seq((Seq(),Set())),
+        r2 -> Seq((Seq(),Set()))
+      ),
+      'b' -> Map(
+        r0 -> Seq((Seq(),Set())),
+        r1 -> Seq((Seq(r2),Set(Set(r0),Set(r1),Set(r2),Set()))),
+        r2 -> Seq((Seq(),Set()))
+      )
+    )
+  }
+
   "constructNFA" should "construct NFA" in {
     val r0 = RegExpParser("(ab)*ab")
     val r1 = RegExpParser("b(ab)*ab")
