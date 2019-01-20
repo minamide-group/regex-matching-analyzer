@@ -25,14 +25,31 @@ case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegEx
 }
 case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy: Boolean) extends RegExp[A] {
   (min, max) match {
-    case (Some(min),Some(max)) if min > max => throw new Exception(s"illegal repeat expression: ${min} is larger than ${max}")
-    case (None,None) => throw new Exception("illegal repeat expression: either min or max must be specified")
+    case (Some(min),Some(max)) =>
+      if (min <= 0 || max <= 0) {
+        throw new Exception(s"illegal repeat expression: min and max must be positive")
+      } else if (min > max) {
+        throw new Exception(s"illegal repeat expression: ${min} is larger than ${max}")
+      }
+    case (None,None) =>
+      throw new Exception("illegal repeat expression: either min or max must be specified")
     case _ =>
   }
 }
 
 
 object RegExp {
+  type Morph[A] = Map[A,Seq[A]]
+  def renameMorphs[A,B](morphs: Map[A,Morph[B]]): (Map[A,Morph[Int]], Map[B,Int]) = {
+    val renameMap = morphs.values.flatMap(
+      morph => morph.keySet ++ morph.values.flatten
+    ).toSet.zipWithIndex.toMap
+    val renamedMorphs = morphs.mapValues(morph =>
+      morph.map{case (b,bs) => renameMap(b) -> bs.map(renameMap)}
+    )
+    (renamedMorphs, renameMap)
+  }
+
   def toString[A](r: RegExp[A]): String = {
     r match {
       case ElemExp(a) => a.toString
@@ -133,7 +150,7 @@ object RegExp {
     }
   }
 
-  def constructMorphs[A](r: RegExp[A]): Map[A,Map[RegExp[A],Seq[RegExp[A]]]] = {
+  def constructMorphs[A](r: RegExp[A]): Map[A,Morph[RegExp[A]]] = {
     def getElems(r: RegExp[A]): Set[A] = {
       r match {
         case ElemExp(a) => Set(a)
@@ -156,33 +173,39 @@ object RegExp {
       val r = stack.pop
       elems.foreach{ e =>
         val rs = r.derive[List](e).flatten
-        morphs += (e -> (morphs(e) + (r -> r.derive[List](e).flatten)))
-        val rsNew = rs.filterNot(regExps.contains)
-        regExps |= rsNew.toSet
-        stack.pushAll(rsNew)
+        if (rs.nonEmpty) {
+          morphs += (e -> (morphs(e) + (r -> rs)))
+          val rsNew = rs.filterNot(regExps.contains)
+          regExps |= rsNew.toSet
+          stack.pushAll(rsNew)
+        }
       }
     }
 
     morphs
   }
 
-  def constructBtrMorphs[A](r: RegExp[A]): Map[A,Map[RegExp[A],Seq[(Seq[RegExp[A]],Set[Set[RegExp[A]]])]]] = {
+  def constructBtrMorphs[A](r: RegExp[A]): Map[(Set[RegExp[A]],Set[RegExp[A]]),Map[A,Morph[RegExp[A]]]] = {
     val morphs = constructMorphs(r)
     val ladfa = constructNFA(morphs,r).reverse().toDFA()
-    morphs.mapValues(_.mapValues{rs =>
-      val rsInits = rs.inits.toList.init
-      rsInits match {
-        case Nil => Seq((rs,Set()))
-        case rsInitsHead :: rsInitsTail =>
-          (rsInits.head, ladfa.states.filter(state => rs.init.forall(!state.contains(_)))) +:
-          rsInits.tail.map(rs => (rs,ladfa.states.filter(state =>
-            rs.init.forall(!state.contains(_)) && state.contains(rs.last)
-          )))
+    val morphInits = morphs.mapValues(_.mapValues(rs =>
+      (rs, ladfa.states.filter(state => rs.init.forall(!state.contains(_)))) +:
+      rs.inits.toSeq.init.tail.map(rsCut => (rsCut, ladfa.states.filter{ state =>
+        val rsCutFail :+ rsCutSuccess = rsCut
+        rsCutFail.forall(!state.contains(_)) && state.contains(rsCutSuccess)
+      }))
+    ))
+
+    ladfa.states.flatMap(p1 => ladfa.states.map(p2 =>
+      (p1,p2) -> ladfa.delta.collect{ case ((s1,a),s2) if s1 == p2 && s2 == p1 =>
+        a -> morphInits(a).map{ case (r,rss) =>
+          r -> rss.collect{case (rs,ps) if ps.contains(p1) => rs}.head
+        }
       }
-    })
+    )).filter(_._2.nonEmpty).toMap
   }
 
-  def constructNFA[A](morphs: Map[A,Map[RegExp[A],Seq[RegExp[A]]]], initial: RegExp[A]): NFA[RegExp[A],A] = {
+  def constructNFA[A](morphs: Map[A,Morph[RegExp[A]]], initial: RegExp[A]): NFA[RegExp[A],A] = {
     def nullable(r: RegExp[A]): Boolean = {
       r match {
         case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
@@ -190,11 +213,13 @@ object RegExp {
         case ConcatExp(r1,r2) => nullable(r1) && nullable(r2)
         case AltExp(r1,r2) => nullable(r1) || nullable(r2)
         case PlusExp(r,_) => nullable(r)
-        case RepeatExp(r,min,max,greedy) => min.isEmpty || nullable(r)
+        case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
       }
     }
 
-    val states = morphs.values.flatMap(_.keySet).toSet
+    val states = morphs.values.flatMap( morph =>
+      morph.keySet ++ morph.values.flatten
+    ).toSet
     val sigma = morphs.keySet
     val delta = morphs.toSeq.flatMap{ case (a,h) =>
       h.flatMap{case (q,qs) => qs.map((q,a,_))}
