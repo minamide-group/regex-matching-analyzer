@@ -31,6 +31,36 @@ class IndexedMorphs[A,B,M[_]](
 
     new NFA(states, sigma, delta, initials, finals)
   }
+
+  def toIndexedMorphsWithTransition(): IndexedMorphsWithTransition[Set[B],A,B,M] = {
+    val ladfa = toNFA().reverse().toDFA()
+    val morphCuts = morphs.mapValues(_.mapValues{ rd =>
+        (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
+        rd.cuts.map(rdCut => (rdCut, ladfa.states.filter{ state =>
+        val rdCutFail :+ rdCutSuccess = rdCut.flat
+        rdCutFail.forall(!state.contains(_)) && state.contains(rdCutSuccess)
+      }))
+    })
+
+    var edge2Sigma = (for (p1 <- ladfa.states; p2 <- ladfa.states) yield (p1,p2) -> Set[A]()).toMap
+    ladfa.delta.foreach{case (q1,a,q2) => edge2Sigma += (q1,q2) -> (edge2Sigma((q1,q2)) + a)}
+
+    val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
+      (p2,p1) -> as.map( a =>
+        a -> morphCuts(a).map{ case (r,rds) =>
+          r -> rds.find{case (rd,ps) => ps.contains(p2)}.get._1
+        }
+      ).toMap
+    }.filter(_._2.nonEmpty)
+
+    new IndexedMorphsWithTransition(
+      btrMorphs,
+      initials,
+      finals,
+      ladfa.states,
+      Set(ladfa.initialState)
+    )
+  }
 }
 
 class IndexedMorphsWithTransition[A,B,C,M[_]](

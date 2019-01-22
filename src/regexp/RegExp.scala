@@ -9,8 +9,19 @@ import matching.tool.Debug._
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
-  def calcGrowthRate(): Option[Int] = RegExp.constructMorphs[List,A](this).toNFA().trim().calcAmbiguity().map(_+1)
-  def calcBtrGrowthRate(): Option[Int] = RegExp.constructBtrMorphs[List,A](this).toIndexedMorphs().toNFA().trim().calcAmbiguity().map(_+1)
+  def calcGrowthRate(): Option[Int] = {
+    RegExp.constructMorphs[List,A](this).rename()
+    .toNFA().trim()
+    .calcAmbiguity().map(_+1)
+  }
+  def calcBtrGrowthRate(): Option[Int] = {
+    RegExp.constructMorphs[List,A](this).rename()
+    .toIndexedMorphsWithTransition().rename()
+    .toIndexedMorphs().rename()
+    .toNFA().trim()
+    .calcAmbiguity().map(_+1)
+  }
+
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -186,37 +197,6 @@ object RegExp {
     }
 
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
-  }
-
-  def constructBtrMorphs[M[_],A](r: RegExp[A])(implicit m: Monad[M]): IndexedMorphsWithTransition[Int,A,Int,M] = {
-    val indexedMorphs = constructMorphs[M,A](r).rename()
-    val ladfa = indexedMorphs.toNFA().reverse().toDFA()
-    val morphCuts = indexedMorphs.morphs.mapValues(_.mapValues{rd =>
-        (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
-        rd.cuts.map(rdCut => (rdCut, ladfa.states.filter{ state =>
-        val rdCutFail :+ rdCutSuccess = rdCut.flat
-        rdCutFail.forall(!state.contains(_)) && state.contains(rdCutSuccess)
-      }))
-    })
-
-    var edge2Sigma = (for (p1 <- ladfa.states; p2 <- ladfa.states) yield (p1,p2) -> Set[A]()).toMap
-    ladfa.delta.foreach{case ((q1,a),q2) => edge2Sigma += (q1,q2) -> (edge2Sigma((q1,q2)) + a)}
-
-    val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
-      (p2,p1) -> as.map( a =>
-        a -> morphCuts(a).map{ case (r,rds) =>
-          r -> rds.find{case (rd,ps) => ps.contains(p2)}.get._1
-        }
-      ).toMap
-    }.filter(_._2.nonEmpty)
-
-    new IndexedMorphsWithTransition(
-      btrMorphs,
-      indexedMorphs.initials,
-      indexedMorphs.finals,
-      ladfa.states,
-      Set(ladfa.initialState)
-    ).rename()
   }
 }
 

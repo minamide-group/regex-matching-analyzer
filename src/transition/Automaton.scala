@@ -184,11 +184,17 @@ class NFA[Q,A](
 }
 
 class DFA[Q,A](
-  val states: Set[Q],
-  val sigma: Set[A],
-  val delta: Map[(Q,A),Q],
+  states: Set[Q],
+  sigma: Set[A],
+  val deltaDet: Map[(Q,A),Q],
   val initialState: Q,
-  val finalStates: Set[Q]
+  finalStates: Set[Q]
+) extends NFA[Q,A](
+  states,
+  sigma,
+  deltaDet.map{case ((v1,a),v2) => (v1,a,v2)}.toSet,
+  Set(initialState),
+  finalStates
 ) {
-  def deltaHat(q: Q, as: Seq[A]): Q = as.foldLeft(q)((q,a) => delta((q,a)))
+  def deltaHat(q: Q, as: Seq[A]): Q = as.foldLeft(q)((q,a) => deltaDet((q,a)))
 }
