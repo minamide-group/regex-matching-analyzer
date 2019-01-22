@@ -9,8 +9,8 @@ import matching.tool.Debug._
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
-  def calcGrowthRate(): Option[Int] = RegExp.constructMorphs[List,A](this).toNFA().calcAmbiguity()
-  def calcBtrGrowthRate(): Option[Int] = RegExp.constructBtrMorphs[List,A](this).toIndexedMorphs().toNFA().calcAmbiguity()
+  def calcGrowthRate(): Option[Int] = RegExp.constructMorphs[List,A](this).toNFA().trim().calcAmbiguity().map(_+1)
+  def calcBtrGrowthRate(): Option[Int] = RegExp.constructBtrMorphs[List,A](this).toIndexedMorphs().toNFA().trim().calcAmbiguity().map(_+1)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -188,8 +188,8 @@ object RegExp {
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def constructBtrMorphs[M[_],A](r: RegExp[A])(implicit m: Monad[M]): IndexedMorphsWithTransition[Set[RegExp[A]],A,RegExp[A],M] = {
-    val indexedMorphs = constructMorphs[M,A](r)
+  def constructBtrMorphs[M[_],A](r: RegExp[A])(implicit m: Monad[M]): IndexedMorphsWithTransition[Int,A,Int,M] = {
+    val indexedMorphs = constructMorphs[M,A](r).rename()
     val ladfa = indexedMorphs.toNFA().reverse().toDFA()
     val morphCuts = indexedMorphs.morphs.mapValues(_.mapValues{rd =>
         (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
@@ -210,7 +210,13 @@ object RegExp {
       ).toMap
     }.filter(_._2.nonEmpty)
 
-    new IndexedMorphsWithTransition(btrMorphs, indexedMorphs.initials, indexedMorphs.finals, ladfa.finalStates, Set(ladfa.initialState))
+    new IndexedMorphsWithTransition(
+      btrMorphs,
+      indexedMorphs.initials,
+      indexedMorphs.finals,
+      ladfa.states,
+      Set(ladfa.initialState)
+    ).rename()
   }
 }
 
