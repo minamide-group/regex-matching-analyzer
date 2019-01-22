@@ -4,11 +4,13 @@ import scala.collection.mutable.Stack
 import matching.monad._
 import matching.monad.Monad._
 import matching.transition._
+import matching.tool.Debug._
 
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
-  def calcGrowthRate(): Option[Int] = RegExp.constructNFA(this).calcAmbiguity()
+  def calcGrowthRate(): Option[Int] = RegExp.constructMorphs[List,A](this).toNFA().calcAmbiguity()
+  def calcBtrGrowthRate(): Option[Int] = RegExp.constructBtrMorphs[List,A](this).toIndexedMorphs().toNFA().calcAmbiguity()
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -39,17 +41,6 @@ case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy
 
 
 object RegExp {
-  type Morph[A] = Map[A,Seq[A]]
-  def renameMorphs[A,B](morphs: Map[A,Morph[B]]): (Map[A,Morph[Int]], Map[B,Int]) = {
-    val renameMap = morphs.values.flatMap(
-      morph => morph.keySet ++ morph.values.flatten
-    ).toSet.zipWithIndex.toMap
-    val renamedMorphs = morphs.mapValues(morph =>
-      morph.map{case (b,bs) => renameMap(b) -> bs.map(renameMap)}
-    )
-    (renamedMorphs, renameMap)
-  }
-
   def toString[A](r: RegExp[A]): String = {
     r match {
       case ElemExp(a) => a.toString
@@ -150,7 +141,7 @@ object RegExp {
     }
   }
 
-  def constructMorphs[A](r: RegExp[A]): Map[A,Morph[RegExp[A]]] = {
+  def constructMorphs[M[_],A](r: RegExp[A])(implicit m: Monad[M]): IndexedMorphs[A,RegExp[A],M] = {
     def getElems(r: RegExp[A]): Set[A] = {
       r match {
         case ElemExp(a) => Set(a)
@@ -165,47 +156,6 @@ object RegExp {
       }
     }
 
-    val elems = getElems(r)
-    var regExps = Set(r)
-    val stack = Stack(r)
-    var morphs = elems.map(_ -> Map[RegExp[A], Seq[RegExp[A]]]()).toMap
-    while (stack.nonEmpty) {
-      val r = stack.pop
-      elems.foreach{ e =>
-        val rs = r.derive[List](e).flatten
-        if (rs.nonEmpty) {
-          morphs += (e -> (morphs(e) + (r -> rs)))
-          val rsNew = rs.filterNot(regExps.contains)
-          regExps |= rsNew.toSet
-          stack.pushAll(rsNew)
-        }
-      }
-    }
-
-    morphs
-  }
-
-  def constructBtrMorphs[A](r: RegExp[A]): Map[(Set[RegExp[A]],Set[RegExp[A]]),Map[A,Morph[RegExp[A]]]] = {
-    val morphs = constructMorphs(r)
-    val ladfa = constructNFA(morphs,r).reverse().toDFA()
-    val morphInits = morphs.mapValues(_.mapValues(rs =>
-      (rs, ladfa.states.filter(state => rs.init.forall(!state.contains(_)))) +:
-      rs.inits.toSeq.init.tail.map(rsCut => (rsCut, ladfa.states.filter{ state =>
-        val rsCutFail :+ rsCutSuccess = rsCut
-        rsCutFail.forall(!state.contains(_)) && state.contains(rsCutSuccess)
-      }))
-    ))
-
-    ladfa.states.flatMap(p1 => ladfa.states.map(p2 =>
-      (p1,p2) -> ladfa.delta.collect{ case ((s1,a),s2) if s1 == p2 && s2 == p1 =>
-        a -> morphInits(a).map{ case (r,rss) =>
-          r -> rss.collect{case (rs,ps) if ps.contains(p1) => rs}.head
-        }
-      }
-    )).filter(_._2.nonEmpty).toMap
-  }
-
-  def constructNFA[A](morphs: Map[A,Morph[RegExp[A]]], initial: RegExp[A]): NFA[RegExp[A],A] = {
     def nullable(r: RegExp[A]): Boolean = {
       r match {
         case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
@@ -217,21 +167,50 @@ object RegExp {
       }
     }
 
-    val states = morphs.values.flatMap( morph =>
-      morph.keySet ++ morph.values.flatten
-    ).toSet
-    val sigma = morphs.keySet
-    val delta = morphs.toSeq.flatMap{ case (a,h) =>
-      h.flatMap{case (q,qs) => qs.map((q,a,_))}
-    }.toSet
-    val initialStates = Set(initial)
-    val finalStates = states.filter(nullable)
+    val elems = getElems(r)
+    var regExps = Set(r)
+    val stack = Stack(r)
+    var morphs = elems.map(_ -> Map[RegExp[A], M[RegExp[A]]]()).toMap
+    while (stack.nonEmpty) {
+      val r = stack.pop
+      elems.foreach{ e =>
+        val rd: M[RegExp[A]] = r.derive[M](e) >>= {
+          case Some(r) => m(r)
+          case None => m.fail
+        }
+        morphs += (e -> (morphs(e) + (r -> rd)))
+        val rdNew = rd.flat.filterNot(regExps.contains)
+        regExps |= rdNew.toSet
+        stack.pushAll(rdNew)
+      }
+    }
 
-    new NFA(states, sigma, delta, initialStates, finalStates)
+    new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def constructNFA[A](r: RegExp[A]): NFA[RegExp[A],A] = {
-    constructNFA(constructMorphs(r),r)
+  def constructBtrMorphs[M[_],A](r: RegExp[A])(implicit m: Monad[M]): IndexedMorphsWithTransition[Set[RegExp[A]],A,RegExp[A],M] = {
+    val indexedMorphs = constructMorphs[M,A](r)
+    val ladfa = indexedMorphs.toNFA().reverse().toDFA()
+    val morphCuts = indexedMorphs.morphs.mapValues(_.mapValues{rd =>
+        (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
+        rd.cuts.map(rdCut => (rdCut, ladfa.states.filter{ state =>
+        val rdCutFail :+ rdCutSuccess = rdCut.flat
+        rdCutFail.forall(!state.contains(_)) && state.contains(rdCutSuccess)
+      }))
+    })
+
+    var edge2Sigma = (for (p1 <- ladfa.states; p2 <- ladfa.states) yield (p1,p2) -> Set[A]()).toMap
+    ladfa.delta.foreach{case ((q1,a),q2) => edge2Sigma += (q1,q2) -> (edge2Sigma((q1,q2)) + a)}
+
+    val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
+      (p2,p1) -> as.map( a =>
+        a -> morphCuts(a).map{ case (r,rds) =>
+          r -> rds.find{case (rd,ps) => ps.contains(p2)}.get._1
+        }
+      ).toMap
+    }.filter(_._2.nonEmpty)
+
+    new IndexedMorphsWithTransition(btrMorphs, indexedMorphs.initials, indexedMorphs.finals, ladfa.finalStates, Set(ladfa.initialState))
   }
 }
 

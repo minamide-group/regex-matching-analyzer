@@ -139,83 +139,129 @@ class RegExpSpec extends FlatSpec with Matchers {
     r.derive[List]('e') should be (Nil)
   }
 
-
   "constructMorphs" should "construct morphs which simulates exhaustive search" in {
-    val r0 = RegExpParser("a|ab")
-    val r1 = RegExpParser("b")
-    val r2 = RegExpParser("ε")
-    val morphs = RegExp.constructMorphs(r0)
-    morphs should contain only (
+    val r0 = RegExpParser("a*a*b|ba")
+    val r1 = RegExpParser("a*a*b")
+    val r2 = RegExpParser("a*b")
+    val r3 = RegExpParser("a")
+    val r4 = RegExpParser("ε")
+    val indexedMorphs = RegExp.constructMorphs[List,Char](r0)
+    indexedMorphs.morphs should contain only (
       'a' -> Map(
-        r0 -> Seq(r2,r1)
+        r0 -> Seq(r1,r2),
+        r1 -> Seq(r1,r2),
+        r2 -> Seq(r2),
+        r3 -> Seq(r4),
+        r4 -> Seq()
       ),
       'b' -> Map(
-        r1 -> Seq(r2)
+        r0 -> Seq(r4,r3),
+        r1 -> Seq(r4),
+        r2 -> Seq(r4),
+        r3 -> Seq(),
+        r4 -> Seq()
       )
     )
+    indexedMorphs.initials should be (Set(r0))
+    indexedMorphs.finals should be (Set(r4))
   }
 
   "constructBtrMorphs" should "construct morphs which simulates backtrack search" in {
-    val r0 = RegExpParser("a|ab")
-    val r1 = RegExpParser("b")
-    val r2 = RegExpParser("ε")
-    val morphs = RegExp.constructBtrMorphs(r0)
-    morphs should contain only (
-      (Set(r0),Set(r1)) -> Map(
-        'a' -> Map(
-          r0 -> Seq(r2,r1)
-        )
-      ),
-      (Set(r0),Set(r2)) -> Map(
-        'a' -> Map(
-          r0 -> Seq(r2,r1)
-        )
-      ),
-      (Set(r1),Set(r2)) -> Map(
+    val r0 = RegExpParser("a*a*b|ba")
+    val r1 = RegExpParser("a*a*b")
+    val r2 = RegExpParser("a*b")
+    val r3 = RegExpParser("a")
+    val r4 = RegExpParser("ε")
+    val doublyIndexedMorphs = RegExp.constructBtrMorphs[List,Char](r0)
+    doublyIndexedMorphs.morphs should contain only (
+      (Set(r0),Set(r3)) -> Map(
         'b' -> Map(
-          r1 -> Seq(r2)
+          r0 -> Seq(r4,r3),
+          r1 -> Seq(r4),
+          r2 -> Seq(r4),
+          r3 -> Seq(),
+          r4 -> Seq()
         )
       ),
-      (Set(),Set(r1)) -> Map(
+      (Set(r0,r1,r2),Set(r0,r1,r2)) -> Map(
+        'a' -> Map(
+          r0 -> Seq(r1),
+          r1 -> Seq(r1),
+          r2 -> Seq(r2),
+          r3 -> Seq(r4),
+          r4 -> Seq()
+        )
+      ),
+      (Set(r0,r1,r2),Set(r4)) -> Map(
         'b' -> Map(
-          r1 -> Seq(r2)
+          r0 -> Seq(r4,r3),
+          r1 -> Seq(r4),
+          r2 -> Seq(r4),
+          r3 -> Seq(),
+          r4 -> Seq()
+        )
+      ),
+      (Set(r3),Set(r4)) -> Map(
+        'a' -> Map(
+          r0 -> Seq(r1,r2),
+          r1 -> Seq(r1,r2),
+          r2 -> Seq(r2),
+          r3 -> Seq(r4),
+          r4 -> Seq()
         )
       ),
       (Set(),Set(r0)) -> Map(
         'a' -> Map(
-          r0 -> Seq(r2,r1)
+          r0 -> Seq(r1,r2),
+          r1 -> Seq(r1,r2),
+          r2 -> Seq(r2),
+          r3 -> Seq(r4),
+          r4 -> Seq()
         ),
         'b' -> Map(
-          r1 -> Seq(r2)
+          r0 -> Seq(r4,r3),
+          r1 -> Seq(r4),
+          r2 -> Seq(r4),
+          r3 -> Seq(),
+          r4 -> Seq()
         )
+      ),
+      (Set(),Set(r0,r1,r2)) -> Map(
+        'b' -> Map(
+          r0 -> Seq(r4,r3),
+          r1 -> Seq(r4),
+          r2 -> Seq(r4),
+          r3 -> Seq(),
+          r4 -> Seq()
+        )
+      ),
+      (Set(),Set(r3)) -> Map(
+        'a' -> Map(
+          r0 -> Seq(r1,r2),
+          r1 -> Seq(r1,r2),
+          r2 -> Seq(r2),
+          r3 -> Seq(r4),
+          r4 -> Seq()
+        ),
       ),
       (Set(),Set()) -> Map(
         'a' -> Map(
-          r0 -> Seq(r2,r1)
+          r0 -> Seq(r1,r2),
+          r1 -> Seq(r1,r2),
+          r2 -> Seq(r2),
+          r3 -> Seq(r4),
+          r4 -> Seq()
         ),
         'b' -> Map(
-          r1 -> Seq(r2)
+          r0 -> Seq(r4,r3),
+          r1 -> Seq(r4),
+          r2 -> Seq(r4),
+          r3 -> Seq(),
+          r4 -> Seq()
         )
       )
     )
-  }
-
-  "constructNFA" should "construct NFA" in {
-    val r0 = RegExpParser("(ab)*ab")
-    val r1 = RegExpParser("b(ab)*ab")
-    val r2 = RegExpParser("b")
-    val r3 = RegExpParser("ε")
-    val nfa = RegExp.constructNFA(r0)
-
-    nfa.states should contain only (r0,r1,r2,r3)
-    nfa.sigma should contain only ('a','b')
-    nfa.delta should contain only (
-      (r0,'a',r1),
-      (r0,'a',r2),
-      (r1,'b',r0),
-      (r2,'b',r3)
-    )
-    nfa.initialStates should contain only (r0)
-    nfa.finalStates should contain only (r3)
+    doublyIndexedMorphs.initials should be (Set(r0))
+    doublyIndexedMorphs.finals should be (Set(r4))
   }
 }
