@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.Stack
-import matching.tool.Debug
+import matching.tool.{File, Debug}
 
 class NFA[Q,A](
   val states: Set[Q],
@@ -17,6 +17,46 @@ class NFA[Q,A](
 
   override def reverse(): NFA[Q,A] = {
     new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
+  }
+
+  override def visualizeNodes(file: File) {
+    file.writeln("\"initial\" [", 1)
+    file.writeln("label = \"\",", 2)
+    file.writeln("shape = none,", 2)
+    file.writeln("fixedsize = true,", 2)
+    file.writeln("width = 0,", 2)
+    file.writeln("height = 0", 2)
+    file.writeln("];", 1)
+
+    states.foreach{ state =>
+      if (finalStates.contains(state)) {
+        file.writeln(s""""${state}" [shape = doublecircle];""", 1)
+      } else {
+        file.writeln(s""""${state}";""", 1)
+      }
+    }
+  }
+
+  override def visualizeEdges(file: File) {
+    initialStates.foreach{ initialState =>
+      file.writeln(s""""initial" -> "${initialState}";""", 1)
+    }
+
+    delta.foreach{ case (q1,a,q2) =>
+      file.writeln(s""""${q1}" -> "${q2}" [label = "${a}"];""", 1)
+    }
+  }
+
+  def trim(): NFA[Q,A] = {
+    val rev = reverse()
+    val usefuls = initialStates.flatMap(reachableFrom) & finalStates.flatMap(rev.reachableFrom)
+    new NFA(
+      usefuls,
+      sigma,
+      delta.filter{case (q1,a,q2) => usefuls(q1) && usefuls(q2)},
+      initialStates.filter(usefuls),
+      finalStates.filter(usefuls)
+    )
   }
 
   def toDFA(): DFA[Set[Q],A] = {
@@ -136,7 +176,7 @@ class NFA[Q,A](
         }
       }
 
-      scsGraphRev.nodes.filter(scsGraphRev.adj(_).isEmpty).map(calcDegree).max
+      (0 +: scsGraphRev.nodes.filter(scsGraphRev.adj(_).isEmpty).map(calcDegree)).max
     }
 
     if (isEDA()) None else Some(calcDegree())

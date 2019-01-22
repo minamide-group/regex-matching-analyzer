@@ -7,8 +7,7 @@ class Graph[V](
   val nodes: Seq[V],
   val edges: Seq[(V,V)]
 ) {
-  val adj = MTMap[V, Seq[V]]()
-  nodes.foreach(adj(_) = Seq[V]())
+  val adj = MTMap[V, Seq[V]]().withDefaultValue(Seq())
   edges.foreach{e => adj(e._1) +:= e._2}
 
   def this(edges: Seq[(V,V)]) {
@@ -73,37 +72,44 @@ class Graph[V](
     }
   }
 
-  def visualize(name: String) = {
+  def visualizeNodes(file: File) {
+    nodes.foreach(v =>
+      file.writeln(s""""${v}";""", 1)
+    )
+    file.writeln()
+  }
+
+  def visualizeEdges(file: File) {
+    edges.foreach{ case (v1,v2) =>
+      file.writeln(s""""${v1}" -> "${v2}";""", 1)
+    }
+  }
+
+  def visualize(name: String) {
     val file = File.makeFile(s"${name}.dot")
 
     file.writeln(s"digraph ${name.replace("/","_")} {")
 
-    /* graph config */
     file.writeln("graph [", 1)
     file.writeln("rankdir = LR", 2)
     file.writeln("];", 1)
     file.writeln()
 
-    /* node config */
     file.writeln("node [", 1)
     file.writeln("shape = circle", 2)
     file.writeln("];", 1)
     file.writeln()
 
-    /* node */
-    nodes.foreach(v =>
-      file.writeln(s""""${v}";""", 1)
-    )
+    visualizeNodes(file)
     file.writeln()
 
-    /* egde */
-    edges.foreach{ case (v1,v2) =>
-      file.writeln(s""""${v1}" -> "${v2}";""", 1)
-    }
+    visualizeEdges(file)
+    file.writeln()
 
     file.writeln("}")
+
     file.close()
 
-    val _ = Command.exec(s"dot -T pdf ${name}.dot -o ${name}.pdf")
+    Command.exec(s"dot -T pdf ${name}.dot -o ${name}.pdf")
   }
 }

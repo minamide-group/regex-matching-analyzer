@@ -50,8 +50,38 @@ class AutomatonSpec extends FlatSpec with Matchers {
         (4,'b',3),
         (4,'b',4)
       )
-      nfaRev.initialStates should contain only (3,4)
-      nfaRev.finalStates should contain only (1)
+      nfaRev.initialStates should be (nfa.finalStates)
+      nfaRev.finalStates should be (nfa.initialStates)
+  }
+
+  "trim" should "construct trimmed NFA" in {
+    val nfa = new NFA[Int,Char](
+      Set(1,2,3,4,5,6,7),
+      Set('a','b'),
+      Set(
+        (1,'a',2),
+        (1,'a',3),
+        (2,'b',3),
+        (2,'a',4),
+        (3,'b',6),
+        (4,'a',4),
+        (5,'b',7)
+      ),
+      Set(1),
+      Set(6,7)
+    )
+
+    val trimmedNFA = nfa.trim()
+    trimmedNFA.states should contain only (1,2,3,6)
+    trimmedNFA.sigma should be (nfa.sigma)
+    trimmedNFA.delta should contain only (
+      (1,'a',2),
+      (1,'a',3),
+      (2,'b',3),
+      (3,'b',6)
+    )
+    trimmedNFA.initialStates should be (Set(1))
+    trimmedNFA.finalStates should be (Set(6))
   }
 
   "toDFA" should "construct subset DFA" in {
