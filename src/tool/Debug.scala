@@ -1,20 +1,29 @@
 package matching.tool
 
+import Console._
+
 object Debug {
+  val debug = false
+
+  def debug(x: Any) {
+    val DEBUG = "\u001b[38;5;111m"
+    if (debug) println(s"${DEBUG}${x}${RESET}")
+  }
+
   def info(name: String)(props: (String, Any)*) {
     val lineLength = 50
-    println(s"--- ${name} ${"-"*((lineLength - (5 + name.length)).max(0))}")
+    debug(s"--- ${name} ${"-"*((lineLength - (5 + name.length)).max(0))}")
     props.foreach{ case (k,v) =>
-      println(s"${k}: ${v}")
+      debug(s"${k}: ${v}")
     }
-    println("-"*lineLength)
+    debug("-"*lineLength)
   }
 
   def time[A](name: String)(proc: => A): A = {
     val start = System.currentTimeMillis()
     val a = proc
     val finish = System.currentTimeMillis()
-    println(s"[time] ${name}: ${finish - start} ms")
+    debug(s"${name}: ${finish - start} ms")
     a
   }
 
