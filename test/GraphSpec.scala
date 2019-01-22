@@ -36,15 +36,15 @@ class GraphSpec extends FlatSpec with Matchers {
       )
     )
 
-    g.reachableFrom(1) should contain only (1,2,3,4,5,6,7,8)
-    g.reachableFrom(2) should contain only (2,3,4,5,6,7,8)
-    g.reachableFrom(3) should contain only (2,3,4,5,6,7,8)
-    g.reachableFrom(4) should contain only (2,3,4,5,6,7,8)
-    g.reachableFrom(5) should contain only (5,6,7,8)
-    g.reachableFrom(6) should contain only (6,8)
-    g.reachableFrom(7) should contain only (7,8)
-    g.reachableFrom(8) should contain only (8)
-    g.reachableFrom(9) should contain only (9)
+    g.reachableFrom(1) should be (Set(1,2,3,4,5,6,7,8))
+    g.reachableFrom(2) should be (Set(2,3,4,5,6,7,8))
+    g.reachableFrom(3) should be (Set(2,3,4,5,6,7,8))
+    g.reachableFrom(4) should be (Set(2,3,4,5,6,7,8))
+    g.reachableFrom(5) should be (Set(5,6,7,8))
+    g.reachableFrom(6) should be (Set(6,8))
+    g.reachableFrom(7) should be (Set(7,8))
+    g.reachableFrom(8) should be (Set(8))
+    g.reachableFrom(9) should be (Set(9))
   }
 
   "calcStrongComponents" should "calculate strong components" in {
@@ -64,8 +64,8 @@ class GraphSpec extends FlatSpec with Matchers {
       )
     )
 
-    g.calcStrongComponents() should contain only (
-      Set(1,2), Set(3), Set(4,5,6,7), Set(8)
+    g.calcStrongComponents() should be (
+      Set(Set(1,2), Set(3), Set(4,5,6,7), Set(8))
     )
   }
 }

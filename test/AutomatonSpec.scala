@@ -19,8 +19,8 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(4)
     )
 
-    nfa.deltaHat(Set(1),"ab".toSeq) should contain only (3,4)
-    nfa.deltaHat(Set(2,3),"bab".toSeq) should contain only (4)
+    nfa.deltaHat(Set(1),"ab".toSeq) should be (Set(3,4))
+    nfa.deltaHat(Set(2,3),"bab".toSeq) should be (Set(4))
   }
 
   "reverse" should "construct reverse NFA" in {
@@ -72,7 +72,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     )
 
     val trimmedNFA = nfa.trim()
-    trimmedNFA.states should contain only (1,2,3,6)
+    trimmedNFA.states should be (Set(1,2,3,6))
     trimmedNFA.sigma should be (nfa.sigma)
     trimmedNFA.delta should contain only (
       (1,'a',2),
@@ -105,31 +105,31 @@ class AutomatonSpec extends FlatSpec with Matchers {
     )
 
     val dfa = nfa.toDFA()
-    dfa.states should contain only (
-      Set(1,2),Set(3,4),Set(5),Set(2,4),Set(),Set(2,3,5),Set(2,4,5),Set(2,3)
+    dfa.states should be (
+      Set(Set(1,2),Set(3,4),Set(5),Set(2,4),Set(),Set(2,3,5),Set(2,4,5),Set(2,3))
     )
     dfa.sigma should be (nfa.sigma)
     dfa.delta should contain only (
-      (Set(1,2),'a') -> Set(3,4),
-      (Set(1,2),'b') -> Set(2,3),
-      (Set(3,4),'a') -> Set(5),
-      (Set(3,4),'b') -> Set(5),
-      (Set(5),'a') -> Set(2,4),
-      (Set(5),'b') -> Set(5),
-      (Set(2,4),'a') -> Set(),
-      (Set(2,4),'b') -> Set(2,3,5),
-      (Set(),'a') -> Set(),
-      (Set(),'b') -> Set(),
-      (Set(2,3,5),'a') -> Set(2,4,5),
-      (Set(2,3,5),'b') -> Set(2,3,5),
-      (Set(2,4,5),'a') -> Set(2,4),
-      (Set(2,4,5),'b') -> Set(2,3,5),
-      (Set(2,3),'a') -> Set(5),
-      (Set(2,3),'b') -> Set(2,3,5)
+      (Set(1,2),'a',Set(3,4)),
+      (Set(1,2),'b',Set(2,3)),
+      (Set(3,4),'a',Set(5)),
+      (Set(3,4),'b',Set(5)),
+      (Set(5),'a',Set(2,4)),
+      (Set(5),'b',Set(5)),
+      (Set(2,4),'a',Set()),
+      (Set(2,4),'b',Set(2,3,5)),
+      (Set(),'a',Set()),
+      (Set(),'b',Set()),
+      (Set(2,3,5),'a',Set(2,4,5)),
+      (Set(2,3,5),'b',Set(2,3,5)),
+      (Set(2,4,5),'a',Set(2,4)),
+      (Set(2,4,5),'b',Set(2,3,5)),
+      (Set(2,3),'a',Set(5)),
+      (Set(2,3),'b',Set(2,3,5))
     )
-    dfa.initialState should contain only (1,2)
-    dfa.finalStates should contain only (
-      Set(3,4),Set(5),Set(2,4),Set(2,3,5),Set(2,4,5)
+    dfa.initialState should be (Set(1,2))
+    dfa.finalStates should be (
+      Set(Set(3,4),Set(5),Set(2,4),Set(2,3,5),Set(2,4,5))
     )
   }
 
@@ -204,7 +204,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
         (2,'b',3),
         (3,'c',3),
         (3,'c',4),
-        (4,'c',4),
+        (4,'c',4)
       ),
       Set(1),
       Set(4)
@@ -317,7 +317,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
         (2,'a') -> 2,
         (2,'b') -> 3,
         (3,'a') -> 2,
-        (3,'b') -> 3,
+        (3,'b') -> 3
       ),
       1,
       Set(3)
