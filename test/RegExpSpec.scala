@@ -1,6 +1,7 @@
 package matching.regexp
 
 import org.scalatest._
+import RegExp._
 
 class RegExpSpec extends FlatSpec with Matchers {
   "derive" should "derive a" in {
@@ -95,13 +96,18 @@ class RegExpSpec extends FlatSpec with Matchers {
     r5.derive[List]('a') should be (List(Some(RegExpParser("b(ab){,4}"))))
     r5.derive[List]('b') should be (Nil)
 
-    val r6 = RegExpParser("(ab){,1}")
-    r6.derive[List]('a') should be (List(Some(RegExpParser("b(ab)*")), None))
-    r6.derive[List]('b') should be (List(None))
 
-    val r7 = RegExpParser("(ab){1}")
-    r7.derive[List]('a') should be (List(Some(RegExpParser("b(ab)*"))))
-    r7.derive[List]('b') should be (Nil)
+    val r6 = RegExpParser("(ab){1,}")
+    r6.derive[List]('a') should be (List(Some(RegExpParser("b(ab)*"))))
+    r6.derive[List]('b') should be (Nil)
+
+    val r7 = RegExpParser("(ab){,1}")
+    r7.derive[List]('a') should be (List(Some(RegExpParser("b")), None))
+    r7.derive[List]('b') should be (List(None))
+
+    val r8 = RegExpParser("(ab){1}")
+    r8.derive[List]('a') should be (List(Some(RegExpParser("b"))))
+    r8.derive[List]('b') should be (Nil)
   }
 
   it should "derive lazy operations" in {
@@ -126,7 +132,7 @@ class RegExpSpec extends FlatSpec with Matchers {
     r5.derive[List]('b') should be (List(None))
 
     val r6 = RegExpParser("(ab){,1}?")
-    r6.derive[List]('a') should be (List(None, Some(RegExpParser("b(ab)*?"))))
+    r6.derive[List]('a') should be (List(None, Some(RegExpParser("b"))))
     r6.derive[List]('b') should be (List(None))
   }
 
@@ -145,7 +151,7 @@ class RegExpSpec extends FlatSpec with Matchers {
     val r2 = RegExpParser("a*b")
     val r3 = RegExpParser("a")
     val r4 = RegExpParser("ε")
-    val indexedMorphs = RegExp.constructMorphs[List,Char](r0)
+    val indexedMorphs = constructMorphs[List,Char](r0)
     indexedMorphs.morphs should contain only (
       'a' -> Map(
         r0 -> Seq(r1,r2),

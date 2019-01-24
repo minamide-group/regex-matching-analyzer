@@ -4,24 +4,11 @@ import scala.collection.mutable.Stack
 import matching.monad._
 import matching.monad.Monad._
 import matching.transition._
-import matching.tool.Debug._
+import matching.tool.Debug
 
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
-  def calcGrowthRate(): Option[Int] = {
-    RegExp.constructMorphs[List,A](this).rename()
-    .toNFA().trim()
-    .calcAmbiguity().map(_+1)
-  }
-  def calcBtrGrowthRate(): Option[Int] = {
-    RegExp.constructMorphs[List,A](this).rename()
-    .toIndexedMorphsWithTransition().rename()
-    .toIndexedMorphs().rename()
-    .toNFA().trim()
-    .calcAmbiguity().map(_+1)
-  }
-
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -72,24 +59,19 @@ object RegExp {
 
   def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
     def optConcatExp(r1: RegExp[A], r2: RegExp[A]): RegExp[A] = {
-      r1 match {
-        case EpsExp() => r2
+      (r1,r2) match {
+        case (EpsExp(),_) => r2
+        case (_,EpsExp()) => r1
         case _ => ConcatExp(r1,r2)
       }
     }
 
     def decrease(r: RepeatExp[A]): RegExp[A] = {
-      def decrease(x: Option[Int]): Option[Int] = {
-        x match {
-          case Some(1) => None
-          case Some(n) => Some(n-1)
-          case None => None
-        }
-      }
-
       val RepeatExp(r1,min,max,greedy) = r
-      (decrease(min),decrease(max)) match {
-        case (None,None) => StarExp(r1,greedy)
+      (min.map(_-1),max.map(_-1)) match {
+        case (min,Some(0)) => EpsExp()
+        case (Some(0),None) => StarExp(r1,greedy)
+        case (Some(0),max) => RepeatExp(r1,None,max,greedy)
         case (min,max) => RepeatExp(r1,min,max,greedy)
       }
     }
@@ -137,7 +119,8 @@ object RegExp {
           (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a)
         }
       case DotExp() => m(Some(EpsExp()))
-      case r @ CharClassExp(_,positive) => if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
+      case r @ CharClassExp(_,positive) =>
+        if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
       case r @ RepeatExp(r1,min,max,greedy) =>
         val rd = r1.derive[M](a) >>= {
           case Some(r1) => m(Some(optConcatExp(r1,decrease(r))))
@@ -197,6 +180,31 @@ object RegExp {
     }
 
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
+  }
+
+  def calcGrowthRate[A](r: RegExp[A]): Option[Int] = {
+    constructMorphs[List,A](r).rename()
+    .toNFA().reachablePart()
+    .calcAmbiguity().map(_+1)
+  }
+
+  def calcBtrGrowthRate[A](r: RegExp[A]): Option[Int] = {
+    val indexedMorphs = Debug.time("consruct IndexedMorphs") {
+      constructMorphs[List,A](r)
+    }
+    val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
+      indexedMorphs.toIndexedMorphsWithTransition()
+    }
+    val productIndexedMorphs = Debug.time("consruct product IndexedMorphs") {
+      indexedMorphsWithTransition.toIndexedMorphs()
+    }
+    val nfa = Debug.time("consruct NFA") {
+      productIndexedMorphs.toNFA().reachablePart()
+    }
+    val ambiguity = Debug.time("calculate ambiguity") {
+      nfa.calcAmbiguity()
+    }
+    ambiguity.map(_+1)
   }
 }
 

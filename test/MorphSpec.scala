@@ -60,25 +60,32 @@ class MorphSpec extends FlatSpec with Matchers {
       )
     )
     val m2 = Map(
-      2 -> Map(
-        'a' -> Seq(),
-        'b' -> Seq('c','d')
-      )
-    )
-    val m3 = Map(
       1 -> Map(
         'a' -> Seq('a','b'),
         'b' -> Seq('b'),
         'c' -> Seq('c')
       )
     )
+    val m3 = Map(
+      2 -> Map(
+        'a' -> Seq(),
+        'b' -> Seq('c')
+      )
+    )
     val m4 = Map(
+      1 -> Map(
+        'a' -> Seq('a','b'),
+        'b' -> Seq('b','c'),
+        'c' -> Seq('c')
+      )
+    )
+    val m5 = Map(
       2 -> Map(
         'a' -> Seq(),
         'b' -> Seq('c','d')
       )
     )
-    val m5 = Map(
+    val m6 = Map(
       1 -> Map(
         'a' -> Seq('a','b'),
         'b' -> Seq('b','c','b'),
@@ -91,16 +98,16 @@ class MorphSpec extends FlatSpec with Matchers {
     )
     indexedMorphsWithTransition.morphs should contain only (
       (Set('a','b'),Set('a','b')) -> m1,
-      (Set('a','b'),Set('b')) -> m1,
-      (Set('b'),Set('a','b','c')) -> m2,
-      (Set('b'),Set('b','c')) -> m2,
-      (Set('b'),Set('c')) -> m2,
+      (Set('a','b'),Set('b')) -> m2,
+      (Set('b'),Set('a','b','c')) -> m3,
+      (Set('b'),Set('b','c')) -> m3,
+      (Set('b'),Set('c')) -> m3,
       (Set('a','b','c'),Set('a','b','c')) -> m1,
-      (Set('a','b','c'),Set('b','c')) -> m1,
-      (Set('b','c'),Set('c')) -> m3,
-      (Set(),Set('a','b')) -> m4,
-      (Set(),Set('b')) -> m4,
-      (Set(),Set()) -> m5
+      (Set('a','b','c'),Set('b','c')) -> m2,
+      (Set('b','c'),Set('c')) -> m4,
+      (Set(),Set('a','b')) -> m5,
+      (Set(),Set('b')) -> m5,
+      (Set(),Set()) -> m6
     )
   }
 
@@ -115,13 +122,13 @@ class MorphSpec extends FlatSpec with Matchers {
         20 -> Map(
           'a' -> "abb",
           'b' -> "ac",
-          'c' -> "c"
+          'c' -> ""
         )
       ),
       (1,2) -> Map(
         10 -> Map(
           'a' -> "cd",
-          'b' -> ""
+          'b' -> "a"
         )
       )
     ).mapValues(_.mapValues(_.mapValues(_.toList)))
@@ -130,23 +137,22 @@ class MorphSpec extends FlatSpec with Matchers {
       morphs,
       Set('a'),
       Set('c'),
-      Set(1),
-      Set(1,2)
+      Set(2)
     ).toIndexedMorphs()
     indexedMorphs.morphs should contain only (
       10 -> Map(
         ('a',1) -> Seq(('a',1),('b',1),('c',2),('d',2)),
-        ('b',1) -> Seq(('b',1),('b',1)),
+        ('b',1) -> Seq(('b',1),('b',1),('a',2)),
         ('c',1) -> Seq(('a',1),('b',1),('c',1))
       ),
       20 -> Map(
         ('a',1) -> Seq(('a',1),('b',1),('b',1)),
         ('b',1) -> Seq(('a',1),('c',1)),
-        ('c',1) -> Seq(('c',1))
+        ('c',1) -> Seq()
       )
     )
 
-    indexedMorphs.initials should be (Set(('a',1)))
-    indexedMorphs.finals should be (Set(('c',1),('c',2)))
+    indexedMorphs.initials should be (Set(('a',1),('a',2)))
+    indexedMorphs.finals should be (Set(('c',2)))
   }
 }

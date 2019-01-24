@@ -19,7 +19,7 @@ class NFA[Q,A](
     new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
   }
 
-  override def visualizeNodes(file: File) {
+  override def visualizeNodes(file: File, renameMap: Map[Q,Int]) {
     file.writeln("\"initial\" [", 1)
     file.writeln("label = \"\",", 2)
     file.writeln("shape = none,", 2)
@@ -30,38 +30,37 @@ class NFA[Q,A](
 
     states.foreach{ state =>
       if (finalStates.contains(state)) {
-        file.writeln(s""""${state}" [shape = doublecircle];""", 1)
+        file.writeln(s""""${renameMap(state)}" [label = "${state}", shape = doublecircle];""", 1)
       } else {
-        file.writeln(s""""${state}";""", 1)
+        file.writeln(s""""${renameMap(state)}" [label = "${state}"];""", 1)
       }
     }
   }
 
-  override def visualizeEdges(file: File) {
+  override def visualizeEdges(file: File, renameMap: Map[Q,Int]) {
     initialStates.foreach{ initialState =>
-      file.writeln(s""""initial" -> "${initialState}";""", 1)
+      file.writeln(s""""initial" -> "${renameMap(initialState)}";""", 1)
     }
 
     delta.foreach{ case (q1,a,q2) =>
-      file.writeln(s""""${q1}" -> "${q2}" [label = "${a}"];""", 1)
+      file.writeln(s""""${renameMap(q1)}" -> "${renameMap(q2)}" [label = "${a}"];""", 1)
     }
   }
 
-  def trim(): NFA[Q,A] = {
-    val rev = reverse()
-    val usefuls = initialStates.flatMap(reachableFrom) & finalStates.flatMap(rev.reachableFrom)
+  def reachablePart(): NFA[Q,A] = {
+    val reachableStates = initialStates.flatMap(reachableFrom)
     new NFA(
-      usefuls,
+      reachableStates,
       sigma,
-      delta.filter{case (q1,a,q2) => usefuls(q1) && usefuls(q2)},
-      initialStates.filter(usefuls),
-      finalStates.filter(usefuls)
+      delta.filter{case (q1,a,q2) => reachableStates(q1) && reachableStates(q2)},
+      initialStates.filter(reachableStates),
+      finalStates.filter(reachableStates)
     )
   }
 
   def toDFA(): DFA[Set[Q],A] = {
     val newInitial = initialStates
-    var newStates = Set(newInitial)
+    var newStates = Set(initialStates)
     val stack = Stack(newInitial)
     var newDelta = Map[(Set[Q],A),Set[Q]]()
 
@@ -90,6 +89,13 @@ class NFA[Q,A](
       (scs.find(_.contains(v1)).get, scs.find(_.contains(v2)).get)
     }.filter{case (v1,v2) => v1 != v2}
     val scsGraph = new Graph(scs.toSeq, scsEdges)
+
+    Debug.info("NFA info") (
+      ("number of states", nodes.size),
+      ("number of transitions", delta.size),
+      ("number of alphabets", sigma.size),
+      ("number of strong components", scsGraph.nodes.size)
+    )
 
     def isEDA(): Boolean = {
       def constructG2(sc: Set[Q]): Graph[(Q,Q)] = {
@@ -141,7 +147,7 @@ class NFA[Q,A](
             new Graph(e4)
           }
 
-          val g4 = Debug.time("construct G4") {
+          val g4 = Debug.time("construct G4", false) {
             constructG4()
           }
 

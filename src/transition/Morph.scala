@@ -48,7 +48,7 @@ class IndexedMorphs[A,B,M[_]](
     val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
       (p2,p1) -> as.map( a =>
         a -> morphCuts(a).map{ case (r,rds) =>
-          r -> rds.find{case (rd,ps) => ps.contains(p2)}.get._1
+          r -> rds.find{case (rd,ps) => ps.contains(p1)}.get._1
         }
       ).toMap
     }.filter(_._2.nonEmpty)
@@ -57,7 +57,6 @@ class IndexedMorphs[A,B,M[_]](
       btrMorphs,
       initials,
       finals,
-      ladfa.states,
       Set(ladfa.initialState)
     )
   }
@@ -67,7 +66,6 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
   val morphs: Map[(A,A),Map[B,Map[C,M[C]]]],
   val initials: Set[C],
   val finals: Set[C],
-  val transitionInitials: Set[A],
   val transitionFinals: Set[A]
 )(implicit m: Monad[M]) {
   def rename(): IndexedMorphsWithTransition[Int,B,C,M] = {
@@ -75,9 +73,8 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
     val newMorphs = morphs.map{ case ((a1,a2),indexedMorphs) =>
       (renameMap(a1),renameMap(a2)) -> indexedMorphs
     }
-    val newTransitionInitials = transitionInitials.map(renameMap)
     val newTransitionFinals = transitionFinals.map(renameMap)
-    new IndexedMorphsWithTransition(newMorphs, initials, finals, newTransitionInitials, newTransitionFinals)
+    new IndexedMorphsWithTransition(newMorphs, initials, finals, newTransitionFinals)
   }
 
   def toIndexedMorphs(): IndexedMorphs[B,(C,A),M] = {
@@ -102,8 +99,8 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
     val newStates = newMorphs.values.flatMap( morph =>
       morph.keySet ++ morph.values.flatMap(_.flat)
     ).toSet
-    val newInitials = for (c <- initials; a <- transitionInitials if newStates.contains((c,a))) yield (c,a)
-    val newFinals = for (c <- finals; a <- transitionFinals if newStates.contains((c,a))) yield (c,a)
+    val newInitials = newStates.filter{case (c,_) => initials.contains(c)}
+    val newFinals = for (c <- finals; a <- transitionFinals) yield (c,a) 
 
     new IndexedMorphs(newMorphs, newInitials, newFinals)
   }

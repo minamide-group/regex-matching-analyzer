@@ -67,19 +67,19 @@ class Graph[V](
       postRevs
     }
 
-    Debug.time("calculate strong components") {
+    Debug.time("calculate strong components", false) {
       dfs(reverse(), dfs(this, nodes).flatten).map(_.toSet).toSet
     }
   }
 
-  def visualizeNodes(file: File) {
+  def visualizeNodes(file: File, renameMap: Map[V,Int]) {
     nodes.foreach(v =>
       file.writeln(s""""${v}";""", 1)
     )
     file.writeln()
   }
 
-  def visualizeEdges(file: File) {
+  def visualizeEdges(file: File, renameMap: Map[V,Int]) {
     edges.foreach{ case (v1,v2) =>
       file.writeln(s""""${v1}" -> "${v2}";""", 1)
     }
@@ -87,6 +87,7 @@ class Graph[V](
 
   def visualize(name: String) {
     val file = File.makeFile(s"${name}.dot")
+    val renameMap = nodes.zipWithIndex.toMap
 
     file.writeln(s"digraph ${name.replace("/","_")} {")
 
@@ -100,10 +101,10 @@ class Graph[V](
     file.writeln("];", 1)
     file.writeln()
 
-    visualizeNodes(file)
+    visualizeNodes(file, renameMap)
     file.writeln()
 
-    visualizeEdges(file)
+    visualizeEdges(file, renameMap)
     file.writeln()
 
     file.writeln("}")

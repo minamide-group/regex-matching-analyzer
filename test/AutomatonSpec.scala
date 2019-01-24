@@ -54,7 +54,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
       nfaRev.finalStates should be (nfa.initialStates)
   }
 
-  "trim" should "construct trimmed NFA" in {
+  "reachablePart" should "construct NFA which only contains reachable states from initial states" in {
     val nfa = new NFA[Int,Char](
       Set(1,2,3,4,5,6,7),
       Set('a','b'),
@@ -71,14 +71,16 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(6,7)
     )
 
-    val trimmedNFA = nfa.trim()
-    trimmedNFA.states should be (Set(1,2,3,6))
+    val trimmedNFA = nfa.reachablePart()
+    trimmedNFA.states should be (Set(1,2,3,4,6))
     trimmedNFA.sigma should be (nfa.sigma)
     trimmedNFA.delta should contain only (
       (1,'a',2),
       (1,'a',3),
       (2,'b',3),
-      (3,'b',6)
+      (2,'a',4),
+      (3,'b',6),
+      (4,'a',4),
     )
     trimmedNFA.initialStates should be (Set(1))
     trimmedNFA.finalStates should be (Set(6))

@@ -1,6 +1,7 @@
 package matching
 
 import regexp._
+import regexp.RegExp._
 
 object Main {
   def main(args: Array[String]) {
@@ -11,9 +12,9 @@ object Main {
         case None => "exponentially"
       })
     }
-    
+
     val r = RegExpParser("a*a*")
-    printResult(r.calcGrowthRate())
-    printResult(r.calcBtrGrowthRate())
+    printResult(calcGrowthRate(r))
+    printResult(calcBtrGrowthRate(r))
   }
 }
