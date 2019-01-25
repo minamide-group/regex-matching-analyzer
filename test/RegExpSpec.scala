@@ -151,7 +151,7 @@ class RegExpSpec extends FlatSpec with Matchers {
     val r2 = RegExpParser("a*b")
     val r3 = RegExpParser("a")
     val r4 = RegExpParser("ε")
-    val indexedMorphs = constructMorphs[List,Char](r0)
+    val indexedMorphs = constructMorphs[List,Char](r0, Set('a','b'))
     indexedMorphs.morphs should contain only (
       'a' -> Map(
         r0 -> Seq(r1,r2),

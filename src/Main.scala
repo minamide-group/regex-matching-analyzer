@@ -14,7 +14,8 @@ object Main {
     }
 
     val r = RegExpParser("a*a*")
-    printResult(calcGrowthRate(r))
-    printResult(calcBtrGrowthRate(r))
+    val sigma = ('a' to 'z').toSet | ('A' to 'Z').toSet | ('0' to '9').toSet
+    printResult(calcGrowthRate(r, sigma))
+    printResult(calcBtrGrowthRate(r, sigma))
   }
 }

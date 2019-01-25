@@ -135,21 +135,7 @@ object RegExp {
     }
   }
 
-  def constructMorphs[M[_],A](r: RegExp[A])(implicit m: Monad[M]): IndexedMorphs[A,RegExp[A],M] = {
-    def getElems(r: RegExp[A]): Set[A] = {
-      r match {
-        case ElemExp(a) => Set(a)
-        case EmptyExp() | EpsExp() | DotExp() => Set()
-        case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
-        case AltExp(r1,r2) => getElems(r1) | getElems(r2)
-        case StarExp(r,_) => getElems(r)
-        case PlusExp(r,_) => getElems(r)
-        case OptionExp(r,_) => getElems(r)
-        case r @ CharClassExp(_,_) => r.charSet
-        case RepeatExp(r,_,_,_) => getElems(r)
-      }
-    }
-
+  def constructMorphs[M[_],A](r: RegExp[A], sigma: Set[A])(implicit m: Monad[M]): IndexedMorphs[A,RegExp[A],M] = {
     def nullable(r: RegExp[A]): Boolean = {
       r match {
         case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
@@ -161,13 +147,12 @@ object RegExp {
       }
     }
 
-    val elems = getElems(r)
     var regExps = Set(r)
     val stack = Stack(r)
-    var morphs = elems.map(_ -> Map[RegExp[A], M[RegExp[A]]]()).toMap
+    var morphs = sigma.map(_ -> Map[RegExp[A], M[RegExp[A]]]()).toMap
     while (stack.nonEmpty) {
       val r = stack.pop
-      elems.foreach{ e =>
+      sigma.foreach{ e =>
         val rd: M[RegExp[A]] = r.derive[M](e) >>= {
           case Some(r) => m(r)
           case None => m.fail
@@ -182,15 +167,15 @@ object RegExp {
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def calcGrowthRate[A](r: RegExp[A]): Option[Int] = {
-    constructMorphs[List,A](r).rename()
+  def calcGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
+    constructMorphs[List,A](r, sigma).rename()
     .toNFA().reachablePart()
     .calcAmbiguity().map(_+1)
   }
 
-  def calcBtrGrowthRate[A](r: RegExp[A]): Option[Int] = {
+  def calcBtrGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
     val indexedMorphs = Debug.time("consruct IndexedMorphs") {
-      constructMorphs[List,A](r)
+      constructMorphs[List,A](r, sigma)
     }
     val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
       indexedMorphs.toIndexedMorphsWithTransition()
