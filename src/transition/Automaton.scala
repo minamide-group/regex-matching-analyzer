@@ -6,7 +6,7 @@ import matching.tool.{File, Debug}
 class NFA[Q,A](
   val states: Set[Q],
   val sigma: Set[A],
-  val delta: Set[(Q,A,Q)],
+  val delta: Seq[(Q,A,Q)],
   val initialStates: Set[Q],
   val finalStates: Set[Q]
 ) extends Graph[Q](states.toSeq, delta.map{case (v1,_,v2) => (v1,v2)}.toSeq) {
@@ -98,22 +98,26 @@ class NFA[Q,A](
     )
 
     def isEDA(): Boolean = {
-      def constructG2(sc: Set[Q]): Graph[(Q,Q)] = {
+      def isEDA(sc: Set[Q]): Boolean = {
         val label2EdgesSc = label2Edges.mapValues(_.filter{ case (v1,v2) =>
           sc.contains(v1) && sc.contains(v2)
         })
-        val g2Edges = label2EdgesSc.toSeq.flatMap{ case (a,es) =>
-          for ((p1,q1) <- es; (p2,q2) <- es) yield ((p1,p2), (q1,q2))
-        }.distinct
-        new Graph(g2Edges)
-      }
 
-      scsGraph.nodes.exists{ sc =>
-        constructG2(sc).calcStrongComponents().find(_.exists{case (v1,v2) => v1 == v2}) match {
+        def constructG2(sc: Set[Q]): Graph[(Q,Q)] = {
+          val g2Edges = label2EdgesSc.toSeq.flatMap{ case (a,es) =>
+            for ((p1,q1) <- es; (p2,q2) <- es) yield ((p1,p2), (q1,q2))
+          }.distinct
+          new Graph(g2Edges)
+        }
+
+        label2EdgesSc.exists{case (_,es) => es.length != es.distinct.length} ||
+        (constructG2(sc).calcStrongComponents().find(_.exists{case (v1,v2) => v1 == v2}) match {
           case Some(g2sc) => g2sc.exists{case (v1,v2) => v1 != v2}
           case None => false
-        }
+        })
       }
+
+      scsGraph.nodes.exists(isEDA)
     }
 
     def calcDegree(): Int = {
@@ -198,7 +202,7 @@ class DFA[Q,A](
 ) extends NFA[Q,A](
   states,
   sigma,
-  deltaDet.map{case ((v1,a),v2) => (v1,a,v2)}.toSet,
+  deltaDet.map{case ((v1,a),v2) => (v1,a,v2)}.toSeq,
   Set(initialState),
   finalStates
 ) {

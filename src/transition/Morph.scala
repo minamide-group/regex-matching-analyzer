@@ -27,7 +27,7 @@ class IndexedMorphs[A,B,M[_]](
     val sigma = morphs.keySet
     val delta = morphs.toSeq.flatMap{ case (a,h) =>
       h.flatMap{case (b,bs) => bs.flat.map((b,a,_))}
-    }.toSet
+    }.toSeq
 
     new NFA(states, sigma, delta, initials, finals)
   }
@@ -100,7 +100,7 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
       morph.keySet ++ morph.values.flatMap(_.flat)
     ).toSet
     val newInitials = newStates.filter{case (c,_) => initials.contains(c)}
-    val newFinals = for (c <- finals; a <- transitionFinals) yield (c,a) 
+    val newFinals = for (c <- finals; a <- transitionFinals) yield (c,a)
 
     new IndexedMorphs(newMorphs, newInitials, newFinals)
   }

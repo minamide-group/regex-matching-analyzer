@@ -7,7 +7,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val nfa = new NFA[Int,Char](
       Set(1,2,3,4),
       Set('a','b'),
-      Set(
+      Seq(
         (1,'a',2),
         (1,'a',3),
         (2,'b',3),
@@ -27,7 +27,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
       val nfa = new NFA[Int,Char](
         Set(1,2,3,4),
         Set('a','b'),
-        Set(
+        Seq(
           (1,'a',1),
           (1,'a',2),
           (2,'b',1),
@@ -58,7 +58,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val nfa = new NFA[Int,Char](
       Set(1,2,3,4,5,6,7),
       Set('a','b'),
-      Set(
+      Seq(
         (1,'a',2),
         (1,'a',3),
         (2,'b',3),
@@ -71,10 +71,10 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(6,7)
     )
 
-    val trimmedNFA = nfa.reachablePart()
-    trimmedNFA.states should be (Set(1,2,3,4,6))
-    trimmedNFA.sigma should be (nfa.sigma)
-    trimmedNFA.delta should contain only (
+    val reachablePartNFA = nfa.reachablePart()
+    reachablePartNFA.states should be (Set(1,2,3,4,6))
+    reachablePartNFA.sigma should be (nfa.sigma)
+    reachablePartNFA.delta should contain only (
       (1,'a',2),
       (1,'a',3),
       (2,'b',3),
@@ -82,15 +82,15 @@ class AutomatonSpec extends FlatSpec with Matchers {
       (3,'b',6),
       (4,'a',4),
     )
-    trimmedNFA.initialStates should be (Set(1))
-    trimmedNFA.finalStates should be (Set(6))
+    reachablePartNFA.initialStates should be (Set(1))
+    reachablePartNFA.finalStates should be (Set(6))
   }
 
   "toDFA" should "construct subset DFA" in {
     val nfa = new NFA[Int,Char](
       Set(1,2,3,4,5),
       Set('a','b'),
-      Set(
+      Seq(
         (1,'a',3),
         (1,'a',4),
         (2,'b',2),
@@ -140,7 +140,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g1 = new NFA(
       Set(1,2),
       Set('a','b'),
-      Set(
+      Seq(
         (1,'a',1),
         (1,'b',2),
         (2,'a',2)
@@ -152,10 +152,23 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g2 = new NFA(
       Set(1,2,3,4),
       Set('a','b','c'),
-      Set(
+      Seq(
+        (1,'a',2),
+        (2,'b',3),
+        (3,'c',4)
+      ),
+      Set(1),
+      Set(4)
+    )
+
+    val g3 = new NFA(
+      Set(1,2,3,4),
+      Set('a','b','c'),
+      Seq(
         (1,'a',1),
         (1,'a',2),
         (2,'b',1),
+        (2,'b',3),
         (2,'b',3),
         (3,'c',4),
         (4,'b',3)
@@ -166,13 +179,14 @@ class AutomatonSpec extends FlatSpec with Matchers {
 
     g1.calcAmbiguity() should be (Some(0))
     g2.calcAmbiguity() should be (Some(0))
+    g3.calcAmbiguity() should be (Some(0))
   }
 
   it should "decide polynomially ambiguous graph" in {
     val g11 = new NFA(
       Set(1,2),
       Set('a'),
-      Set(
+      Seq(
         (1,'a',1),
         (1,'a',2),
         (2,'a',2)
@@ -184,7 +198,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g12 = new NFA(
       Set(1,2,3,4),
       Set('a','b'),
-      Set(
+      Seq(
         (1,'a',1),
         (1,'a',2),
         (2,'b',1),
@@ -199,7 +213,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g21 = new NFA(
       Set(1,2,3,4),
       Set('a','b','c'),
-      Set(
+      Seq(
         (1,'a',1),
         (1,'a',2),
         (2,'a',2),
@@ -215,7 +229,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g22 = new NFA(
       Set(1,2,3,4,5,6),
       Set('a','x','y','z'),
-      Set(
+      Seq(
         (1,'x',2),
         (2,'y',1),
         (2,'a',2),
@@ -235,7 +249,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g3 = new NFA(
       Set(1,2,3,4),
       Set('a','b','c'),
-      Set(
+      Seq(
         (1,'a',1),
         (1,'a',2),
         (2,'a',2),
@@ -261,7 +275,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g1 = new NFA(
       Set(1,2,3),
       Set('a'),
-      Set(
+      Seq(
         (1,'a',2),
         (1,'a',3),
         (2,'a',1),
@@ -274,7 +288,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g2 = new NFA(
       Set(1,2,3),
       Set('a','b','c'),
-      Set(
+      Seq(
         (1,'a',1),
         (1,'b',2),
         (1,'a',3),
@@ -289,7 +303,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     val g3 = new NFA(
       Set(1,2,3,4,5,6),
       Set('a','b','c','d','e'),
-      Set(
+      Seq(
         (1,'a',2),
         (2,'b',3),
         (3,'c',2),
@@ -303,9 +317,37 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(6)
     )
 
+    val g4 = new NFA(
+      Set(1,2,3),
+      Set('a','b'),
+      Seq(
+        (1,'a',2),
+        (2,'b',3),
+        (2,'b',3),
+        (3,'a',2)
+      ),
+      Set(1),
+      Set(3)
+    )
+
+    val g5 = new NFA(
+      Set(1,2,3),
+      Set('a','b','c'),
+      Seq(
+        (1,'a',2),
+        (2,'b',3),
+        (3,'c',3),
+        (3,'c',3)
+      ),
+      Set(1),
+      Set(3)
+    )
+
     g1.calcAmbiguity() should be (None)
     g2.calcAmbiguity() should be (None)
     g3.calcAmbiguity() should be (None)
+    g4.calcAmbiguity() should be (None)
+    g5.calcAmbiguity() should be (None)
   }
 
 
