@@ -62,6 +62,7 @@ class IndexedMorphs[A,B,M[_]](
   }
 }
 
+
 class IndexedMorphsWithTransition[A,B,C,M[_]](
   val morphs: Map[(A,A),Map[B,Map[C,M[C]]]],
   val initials: Set[C],
@@ -100,7 +101,7 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
       morph.keySet ++ morph.values.flatMap(_.flat)
     ).toSet
     val newInitials = newStates.filter{case (c,_) => initials.contains(c)}
-    val newFinals = for (c <- finals; a <- transitionFinals) yield (c,a)
+    val newFinals = for (c <- finals; a <- transitionFinals if newStates.contains((c,a))) yield (c,a)
 
     new IndexedMorphs(newMorphs, newInitials, newFinals)
   }

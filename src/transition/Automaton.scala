@@ -15,11 +15,19 @@ class NFA[Q,A](
   def deltaHat(qs: Set[Q], a: A): Set[Q] = qs.flatMap(q => deltaMap((q,a)))
   def deltaHat(qs: Set[Q], as: Seq[A]): Set[Q] = as.foldLeft(qs)(deltaHat(_,_))
 
+  lazy val scsGraph = {
+    val scs = calcStrongComponents()
+    val scsEdges = edges.map{ case (v1,v2) =>
+      (scs.find(_.contains(v1)).get, scs.find(_.contains(v2)).get)
+    }.filter{case (v1,v2) => v1 != v2}
+    new Graph(scs.toSeq, scsEdges)
+  }
+
   override def reverse(): NFA[Q,A] = {
     new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
   }
 
-  override def visualizeNodes(file: File, renameMap: Map[Q,Int]) {
+  override protected def visualizeNodes(file: File, renameMap: Map[Q,Int]) {
     file.writeln("\"initial\" [", 1)
     file.writeln("label = \"\",", 2)
     file.writeln("shape = none,", 2)
@@ -37,7 +45,7 @@ class NFA[Q,A](
     }
   }
 
-  override def visualizeEdges(file: File, renameMap: Map[Q,Int]) {
+  override protected def visualizeEdges(file: File, renameMap: Map[Q,Int]) {
     initialStates.foreach{ initialState =>
       file.writeln(s""""initial" -> "${renameMap(initialState)}";""", 1)
     }
@@ -81,21 +89,15 @@ class NFA[Q,A](
     new DFA(newStates, sigma, newDelta, newInitial, newFinal)
   }
 
-  def calcAmbiguity(): Option[Int] = {
-    val label2Edges = delta.groupBy(_._2).mapValues(_.map{case (v1,_,v2) => (v1,v2)})
-
-    val scs = calcStrongComponents()
-    val scsEdges = edges.map{ case (v1,v2) =>
-      (scs.find(_.contains(v1)).get, scs.find(_.contains(v2)).get)
-    }.filter{case (v1,v2) => v1 != v2}
-    val scsGraph = new Graph(scs.toSeq, scsEdges)
-
+  private def calcAmbiguity(shouldCheck: (Set[Q], Set[Q]) => Boolean): Option[Int] = {
     Debug.info("NFA info") (
       ("number of states", nodes.size),
       ("number of transitions", delta.size),
       ("number of alphabets", sigma.size),
       ("number of strong components", scsGraph.nodes.size)
     )
+
+    val label2Edges = delta.groupBy(_._2).mapValues(_.map{case (v1,_,v2) => (v1,v2)})
 
     def isEDA(): Boolean = {
       def isEDA(sc: Set[Q]): Boolean = {
@@ -151,15 +153,17 @@ class NFA[Q,A](
             new Graph(e4)
           }
 
-          val g4 = Debug.time("construct G4", false) {
-            constructG4()
-          }
+          shouldCheck(start,end) && {
+            val g4 = Debug.time("construct G4", false) {
+              constructG4()
+            }
 
-          g4.calcStrongComponents().exists{sc =>
-            sc.collect{
-              case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
-            }.exists{
-              case (p,q) => sc.exists{case (q1,q2,q3) => q1 == p && q2 == p && q3 == q}
+            g4.calcStrongComponents().exists{sc =>
+              sc.collect{
+                case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
+              }.exists{
+                case (p,q) => sc.exists{case (q1,q2,q3) => q1 == p && q2 == p && q3 == q}
+              }
             }
           }
         }
@@ -191,7 +195,17 @@ class NFA[Q,A](
 
     if (isEDA()) None else Some(calcDegree())
   }
+
+  def calcAmbiguity(): Option[Int] = {
+    calcAmbiguity((_,_) => true)
+  }
+
+  def calcAmbiguityWithTransition[R,P]()(implicit ev: Q <:< (R,P)): Option[Int] = {
+    val laSet = scsGraph.nodes.map(sc => sc -> sc.map(_._2)).toMap
+    calcAmbiguity((start,end) => (laSet(start) & laSet(end)).nonEmpty)
+  }
 }
+
 
 class DFA[Q,A](
   states: Set[Q],

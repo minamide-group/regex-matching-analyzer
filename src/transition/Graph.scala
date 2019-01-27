@@ -72,14 +72,14 @@ class Graph[V](
     }
   }
 
-  def visualizeNodes(file: File, renameMap: Map[V,Int]) {
+  protected def visualizeNodes(file: File, renameMap: Map[V,Int]) {
     nodes.foreach(v =>
       file.writeln(s""""${v}";""", 1)
     )
     file.writeln()
   }
 
-  def visualizeEdges(file: File, renameMap: Map[V,Int]) {
+  protected def visualizeEdges(file: File, renameMap: Map[V,Int]) {
     edges.foreach{ case (v1,v2) =>
       file.writeln(s""""${v1}" -> "${v2}";""", 1)
     }

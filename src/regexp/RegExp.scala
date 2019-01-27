@@ -175,10 +175,10 @@ object RegExp {
 
   def calcBtrGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
     val indexedMorphs = Debug.time("consruct IndexedMorphs") {
-      constructMorphs[List,A](r, sigma)
+      constructMorphs[List,A](r, sigma).rename()
     }
     val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
-      indexedMorphs.toIndexedMorphsWithTransition()
+      indexedMorphs.toIndexedMorphsWithTransition().rename()
     }
     val productIndexedMorphs = Debug.time("consruct product IndexedMorphs") {
       indexedMorphsWithTransition.toIndexedMorphs()
@@ -187,7 +187,7 @@ object RegExp {
       productIndexedMorphs.toNFA().reachablePart()
     }
     val ambiguity = Debug.time("calculate ambiguity") {
-      nfa.calcAmbiguity()
+      nfa.calcAmbiguityWithTransition()
     }
     ambiguity.map(_+1)
   }
