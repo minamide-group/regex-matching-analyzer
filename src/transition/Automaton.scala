@@ -19,7 +19,7 @@ class NFA[Q,A](
     val scs = calcStrongComponents()
     val scsEdges = edges.map{ case (v1,v2) =>
       (scs.find(_.contains(v1)).get, scs.find(_.contains(v2)).get)
-    }.filter{case (v1,v2) => v1 != v2}
+    }.filter{case (v1,v2) => v1 != v2}.distinct
     new Graph(scs.toSeq, scsEdges)
   }
 
@@ -97,13 +97,17 @@ class NFA[Q,A](
       ("number of strong components", scsGraph.nodes.size)
     )
 
-    val label2Edges = delta.groupBy(_._2).mapValues(_.map{case (v1,_,v2) => (v1,v2)})
+    val scPair2Label2Edges = delta.groupBy{ case (q1,a,q2) =>
+      (scsGraph.nodes.find(_.contains(q1)).get, scsGraph.nodes.find(_.contains(q2)).get)
+    }.mapValues(
+      _.groupBy(_._2).mapValues(
+        _.map{case (v1,_,v2) => (v1,v2)}
+      ).withDefaultValue(Seq())
+    ).withDefaultValue(Map().withDefaultValue(Seq()))
 
     def isEDA(): Boolean = {
       def isEDA(sc: Set[Q]): Boolean = {
-        val label2EdgesSc = label2Edges.mapValues(_.filter{ case (v1,v2) =>
-          sc.contains(v1) && sc.contains(v2)
-        })
+        val label2EdgesSc = scPair2Label2Edges((sc,sc))
 
         def constructG2(sc: Set[Q]): Graph[(Q,Q)] = {
           val g2Edges = label2EdgesSc.toSeq.flatMap{ case (a,es) =>
@@ -127,22 +131,16 @@ class NFA[Q,A](
 
       var degree = Map[Set[Q], Int]()
       def calcDegree(sc: Set[Q]): Int = {
-        def isIDA(start: Set[Q], passage: Set[Q], end: Set[Q]): Boolean = {
+        def isIDA(start: Set[Q], passage: Set[Set[Q]], end: Set[Q]): Boolean = {
           def constructG4(): Graph[(Q,Q,Q)] = {
-            val label2EdgesStart = label2Edges.mapValues(_.filter{
-              case (v1,v2) => start.contains(v1) && start.contains(v2)
-            })
-            val label2EdgesPassage = label2Edges.mapValues(_.filter{
-              case (v1,v2) => passage.contains(v1) && passage.contains(v2)
-            })
-            val label2EdgesEnd = label2Edges.mapValues(_.filter{
-              case (v1,v2) => end.contains(v1) && end.contains(v2)
-            })
+            val label2EdgesStart = scPair2Label2Edges((start,start))
+            val label2EdgesPassage = for (sc1 <- passage; sc2 <- passage) yield scPair2Label2Edges((sc1,sc2))
+            val label2EdgesEnd = scPair2Label2Edges((end,end))
             val e4 = (
               (for (
-                (a,e2s) <- label2EdgesPassage.toSeq;
+                a <- sigma.toSeq;
                 (p1,q1) <- label2EdgesStart(a);
-                (p2,q2) <- e2s;
+                (p2,q2) <- label2EdgesPassage.flatMap(_(a));
                 (p3,q3) <- label2EdgesEnd(a)
               ) yield ((p1,p2,p3),(q1,q2,q3))) ++
               start.flatMap(p =>
@@ -180,7 +178,7 @@ class NFA[Q,A](
                 degree.get(_) == Some(maxDegree)
               )
               if (maxDegreeScs.exists{ maxDegreeSc =>
-                val passage = (reachableFromSc & scsGraphRev.reachableFrom(maxDegreeSc)).flatten
+                val passage = reachableFromSc & scsGraphRev.reachableFrom(maxDegreeSc)
                 isIDA(sc, passage, maxDegreeSc)
               }) maxDegree + 1 else maxDegree
             }
