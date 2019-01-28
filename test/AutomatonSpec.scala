@@ -3,26 +3,6 @@ package matching.transition
 import org.scalatest._
 
 class AutomatonSpec extends FlatSpec with Matchers {
-  "deltaHat in NFA" should "calculate transition" in {
-    val nfa = new NFA[Int,Char](
-      Set(1,2,3,4),
-      Set('a','b'),
-      Seq(
-        (1,'a',2),
-        (1,'a',3),
-        (2,'b',3),
-        (3,'a',3),
-        (3,'b',4),
-        (4,'b',4)
-      ),
-      Set(1),
-      Set(4)
-    )
-
-    nfa.deltaHat(Set(1),"ab".toSeq) should be (Set(3,4))
-    nfa.deltaHat(Set(2,3),"bab".toSeq) should be (Set(4))
-  }
-
   "reverse" should "construct reverse NFA" in {
       val nfa = new NFA[Int,Char](
         Set(1,2,3,4),
@@ -348,26 +328,5 @@ class AutomatonSpec extends FlatSpec with Matchers {
     g3.calcAmbiguity() should be (None)
     g4.calcAmbiguity() should be (None)
     g5.calcAmbiguity() should be (None)
-  }
-
-
-  "deltaHat in DFA" should "calculate transition" in {
-    val dfa = new DFA[Int,Char](
-      Set(1,2,3),
-      Set('a','b'),
-      Map(
-        (1,'a') -> 2,
-        (1,'b') -> 1,
-        (2,'a') -> 2,
-        (2,'b') -> 3,
-        (3,'a') -> 2,
-        (3,'b') -> 3
-      ),
-      1,
-      Set(3)
-    )
-
-    dfa.deltaHat(1,"abab".toSeq) should be (3)
-    dfa.deltaHat(2,"baa".toSeq) should be (2)
   }
 }

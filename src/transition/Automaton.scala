@@ -10,11 +10,6 @@ class NFA[Q,A](
   val initialStates: Set[Q],
   val finalStates: Set[Q]
 ) extends Graph[Q](states.toSeq, delta.map{case (v1,_,v2) => (v1,v2)}.toSeq) {
-  var deltaMap = Map[(Q,A),Set[Q]]().withDefaultValue(Set())
-  delta.foreach{case (q1,a,q2) => deltaMap += (q1,a) -> (deltaMap((q1,a)) + q2)}
-  def deltaHat(qs: Set[Q], a: A): Set[Q] = qs.flatMap(q => deltaMap((q,a)))
-  def deltaHat(qs: Set[Q], as: Seq[A]): Set[Q] = as.foldLeft(qs)(deltaHat(_,_))
-
   lazy val scsGraph = {
     val scs = calcStrongComponents()
     val scsEdges = edges.map{ case (v1,v2) =>
@@ -67,6 +62,10 @@ class NFA[Q,A](
   }
 
   def toDFA(): DFA[Set[Q],A] = {
+    var deltaMap = Map[(Q,A),Set[Q]]().withDefaultValue(Set())
+    delta.foreach{case (q1,a,q2) => deltaMap += (q1,a) -> (deltaMap((q1,a)) + q2)}
+    def deltaHat(qs: Set[Q], a: A): Set[Q] = qs.flatMap(q => deltaMap((q,a)))
+
     val newInitial = initialStates
     var newStates = Set(initialStates)
     val stack = Stack(newInitial)
@@ -217,6 +216,4 @@ class DFA[Q,A](
   deltaDet.map{case ((v1,a),v2) => (v1,a,v2)}.toSeq,
   Set(initialState),
   finalStates
-) {
-  def deltaHat(q: Q, as: Seq[A]): Q = as.foldLeft(q)((q,a) => deltaDet((q,a)))
-}
+)
