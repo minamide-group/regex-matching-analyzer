@@ -4,15 +4,15 @@ import scala.util.parsing.combinator._
 
 object RegExpParser extends RegexParsers {
   def apply(s: String): RegExp[Char] = {
-    parseAll(exp, s) match {
+    parseAll(expAnchor, s) match {
       case Success(r,_) => r
       case NoSuccess(msg,next) => throw new Exception(s"${msg} at ${next.pos.line}:${next.pos.column}")
     }
   }
 
-  val char = """[^\s∅ε.,|*+?(){}\[\]\\]""".r
-  val esc = """\\[stn∅ε.,|*+?(){}\[\]\\]""".r
-  val charInCharClass = """[^\s\[\]\-\\]""".r
+  val char = """[^\s∅ε.,|*+?^$(){}\[\]\\]""".r
+  val esc = """\\[stn∅ε.,|*+?^$(){}\[\]\\]""".r
+  val charInCharClass = """[^\s^\[\]\-\\]""".r
   val escInCharClass = """\\[stn^\[\]\-\\]""".r
 
   def toChar(s: String): Char = {
@@ -23,6 +23,16 @@ object RegExpParser extends RegexParsers {
       case "n" => '\n'
       case c => c.head
     }
+  }
+
+  def expAnchor: Parser[RegExp[Char]] = opt("^") ~ rep1sep(term,"|") ~ opt("$") ^^ { case start ~ ts ~ end =>
+    RegExp.optConcatExp(
+      RegExp.optConcatExp(
+        if (start.isDefined) EpsExp() else StarExp(DotExp(),false),
+        ts.reduceLeft(AltExp(_,_))
+      ),
+      if (end.isDefined) EpsExp() else StarExp(DotExp(),true)
+    )
   }
 
   def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}

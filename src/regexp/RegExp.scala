@@ -57,15 +57,15 @@ object RegExp {
     }
   }
 
-  def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
-    def optConcatExp(r1: RegExp[A], r2: RegExp[A]): RegExp[A] = {
-      (r1,r2) match {
-        case (EpsExp(),_) => r2
-        case (_,EpsExp()) => r1
-        case _ => ConcatExp(r1,r2)
-      }
+  def optConcatExp[A](r1: RegExp[A], r2: RegExp[A]): RegExp[A] = {
+    (r1,r2) match {
+      case (EpsExp(),_) => r2
+      case (_,EpsExp()) => r1
+      case _ => ConcatExp(r1,r2)
     }
+  }
 
+  def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
     def decrease(r: RepeatExp[A]): RegExp[A] = {
       val RepeatExp(r1,min,max,greedy) = r
       (min.map(_-1),max.map(_-1)) match {
