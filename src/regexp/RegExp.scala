@@ -20,9 +20,6 @@ case class StarExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class PlusExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class OptionExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class DotExp[A]() extends RegExp[A]
-case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
-  val charSet = cs.flatMap(_.toCharSet()).toSet
-}
 case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy: Boolean) extends RegExp[A] {
   (min, max) match {
     case (Some(min),Some(max)) =>
@@ -36,6 +33,13 @@ case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy
     case _ =>
   }
 }
+case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
+  val charSet = cs.flatMap(_.toCharSet()).toSet
+}
+case class MetaCharExp(c: Char) extends RegExp[Char] {
+  if (!Seq('s','t','n','w','d').contains(c)) throw new Exception(s"illegal meta character")
+}
+
 
 
 object RegExp {
@@ -51,6 +55,7 @@ object RegExp {
       case OptionExp(r,greedy) => s"(${r})?${if (greedy) "" else "?"}"
       case DotExp() => "."
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
+      case MetaCharExp(c) => s"\\${c}"
       case RepeatExp(r,min,max,greedy) =>
         if (min == max) s"${r}{${min.get}}${if (greedy) "" else "?"}"
         else s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
@@ -119,8 +124,6 @@ object RegExp {
           (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a)
         }
       case DotExp() => m(Some(EpsExp()))
-      case r @ CharClassExp(_,positive) =>
-        if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
       case r @ RepeatExp(r1,min,max,greedy) =>
         val rd = r1.derive[M](a) >>= {
           case Some(r1) => m(Some(optConcatExp(r1,decrease(r))))
@@ -132,6 +135,17 @@ object RegExp {
         } else {
           (m(None): M[Option[RegExp[A]]]) ++ rd
         }
+      case r @ CharClassExp(_,positive) =>
+        if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
+      case MetaCharExp(c) =>
+        val charSet = c match {
+          case 's' => Set(' ', '\t', '\n')
+          case 't' => Set('\t')
+          case 'n' => Set('\n')
+          case 'w' => ('a' to 'z').toSet | ('A' to 'Z').toSet | ('0' to '9').toSet + '_'
+          case 'd' => ('0' to '9').toSet
+        }
+        if (charSet.contains(a)) m(Some(EpsExp())) else m.fail
     }
   }
 
@@ -139,7 +153,7 @@ object RegExp {
     def nullable(r: RegExp[A]): Boolean = {
       r match {
         case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
-        case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) => false
+        case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => false
         case ConcatExp(r1,r2) => nullable(r1) && nullable(r2)
         case AltExp(r1,r2) => nullable(r1) || nullable(r2)
         case PlusExp(r,_) => nullable(r)

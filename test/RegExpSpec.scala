@@ -83,6 +83,42 @@ class RegExpSpec extends FlatSpec with Matchers {
     r2.derive[List]('Z') should be (List(Some(EpsExp())))
   }
 
+  it should "derive meta character" in {
+    val r1 = RegExpParser("""^\s$""")
+    r1.derive[List](' ') should be (List(Some(EpsExp())))
+    r1.derive[List]('\t') should be (List(Some(EpsExp())))
+    r1.derive[List]('\n') should be (List(Some(EpsExp())))
+    r1.derive[List]('a') should be (Nil)
+
+    val r2 = RegExpParser("""^\t$""")
+    r2.derive[List]('\t') should be (List(Some(EpsExp())))
+    r2.derive[List]('a') should be (Nil)
+
+    val r3 = RegExpParser("""^\n$""")
+    r3.derive[List]('\n') should be (List(Some(EpsExp())))
+    r3.derive[List]('a') should be (Nil)
+
+    val r4 = RegExpParser("""^\w$""")
+    r4.derive[List]('a') should be (List(Some(EpsExp())))
+    r4.derive[List]('h') should be (List(Some(EpsExp())))
+    r4.derive[List]('z') should be (List(Some(EpsExp())))
+    r4.derive[List]('A') should be (List(Some(EpsExp())))
+    r4.derive[List]('H') should be (List(Some(EpsExp())))
+    r4.derive[List]('Z') should be (List(Some(EpsExp())))
+    r4.derive[List]('0') should be (List(Some(EpsExp())))
+    r4.derive[List]('5') should be (List(Some(EpsExp())))
+    r4.derive[List]('9') should be (List(Some(EpsExp())))
+    r4.derive[List]('_') should be (List(Some(EpsExp())))
+    r4.derive[List]('!') should be (Nil)
+
+    val r5 = RegExpParser("""^\d$""")
+    r5.derive[List]('0') should be (List(Some(EpsExp())))
+    r5.derive[List]('5') should be (List(Some(EpsExp())))
+    r5.derive[List]('9') should be (List(Some(EpsExp())))
+    r5.derive[List]('a') should be (Nil)
+    r5.derive[List]('A') should be (Nil)
+  }
+
   it should "derive repeat expression" in {
     val r1 = RegExpParser("^(ab){3,5}$")
     r1.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){2,4}$"))))

@@ -10,19 +10,16 @@ object RegExpParser extends RegexParsers {
     }
   }
 
-  val char = """[^\s∅ε.,|*+?^$(){}\[\]\\]""".r
-  val esc = """\\[stn∅ε.,|*+?^$(){}\[\]\\]""".r
-  val charInCharClass = """[^\s^\[\]\-\\]""".r
-  val escInCharClass = """\\[stn^\[\]\-\\]""".r
+  val specialChars = """∅ε.,|*+?^$(){}\[\]\\"""
+  val specialCharsInCharClass = """\^\[\]\-\\"""
+  val chars = s"""[^\\s${specialChars}]""".r
+  val escs = s"""\\\\[${specialChars}]""".r
+  val metas = """\\[stnwd]""".r
+  val charsInCharClass = s"""[^\\s${specialCharsInCharClass}]""".r
+  val escsInCharClass = s"""\\\\[${specialCharsInCharClass}]""".r
 
   def toChar(s: String): Char = {
-    if (s.head != '\\') s.head
-    else s.tail match {
-      case "s" => ' '
-      case "t" => '\t'
-      case "n" => '\n'
-      case c => c.head
-    }
+    if (s.head == '\\') s.last else s.head
   }
 
   def expAnchor: Parser[RegExp[Char]] = opt("^") ~ rep1sep(term,"|") ~ opt("$") ^^ { case start ~ ts ~ end =>
@@ -59,7 +56,9 @@ object RegExpParser extends RegexParsers {
   def exact: Parser[(Option[Int],Option[Int])] = "{" ~> posNum <~ "}" ^^ {case num => (Some(num), Some(num))}
   def posNum: Parser[Int] = """[1-9]\d*""".r ^^ {_.toInt}
   def factor: Parser[RegExp[Char]] = elem | empty | eps | dot | group | charClassNeg | charClass
-  def elem: Parser[ElemExp[Char]] = (char | esc) ^^ {s => ElemExp(toChar(s))}
+  def elem: Parser[RegExp[Char]] = charEsc | meta
+  def charEsc: Parser[ElemExp[Char]] = (chars | escs) ^^ {s => ElemExp(toChar(s))}
+  def meta: Parser[MetaCharExp] = metas ^^ {s => MetaCharExp(s.last)}
   def empty: Parser[EmptyExp[Char]] = "∅" ^^ {_ => EmptyExp()}
   def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
   def dot: Parser[DotExp[Char]] = "." ^^ {_ => DotExp()}
@@ -71,5 +70,5 @@ object RegExpParser extends RegexParsers {
   def range: Parser[RangeExp] = (charClassElem <~ "-") ~ charClassElem ^^ {
     case start ~ end => RangeExp(start, end)
   }
-  def charClassElem: Parser[Char] = (charInCharClass | escInCharClass) ^^ {toChar}
+  def charClassElem: Parser[Char] = (charsInCharClass | escsInCharClass) ^^ {toChar}
 }

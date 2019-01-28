@@ -53,6 +53,13 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser(".") should be (withStartEnd(DotExp()))
   }
 
+  it should "parse repeat expression" in {
+    RegExpParser("a{3,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(5),true)))
+    RegExpParser("a{3}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(3),true)))
+    RegExpParser("a{3,}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),None,true)))
+    RegExpParser("a{,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(5),true)))
+  }
+
   it should "parse character class" in {
     RegExpParser("[abc]") should be (withStartEnd(CharClassExp(Seq(
       SingleCharExp('a'),
@@ -83,11 +90,12 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     ), false)))
   }
 
-  it should "parse repeat expression" in {
-    RegExpParser("a{3,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(5),true)))
-    RegExpParser("a{3}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(3),true)))
-    RegExpParser("a{3,}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),None,true)))
-    RegExpParser("a{,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(5),true)))
+  it should "parse meta character" in {
+    RegExpParser("""\s""") should be (withStartEnd(MetaCharExp('s')))
+    RegExpParser("""\t""") should be (withStartEnd(MetaCharExp('t')))
+    RegExpParser("""\n""") should be (withStartEnd(MetaCharExp('n')))
+    RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
+    RegExpParser("""\d""") should be (withStartEnd(MetaCharExp('d')))
   }
 
   it should "parse lazy operations" in {
@@ -144,9 +152,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse escape characters" in {
-    RegExpParser("""\s""") should be (withStartEnd(ElemExp(' ')))
-    RegExpParser("""\t""") should be (withStartEnd(ElemExp('\t')))
-    RegExpParser("""\n""") should be (withStartEnd(ElemExp('\n')))
     RegExpParser("""\ε""") should be (withStartEnd(ElemExp('ε')))
     RegExpParser("""\∅""") should be (withStartEnd(ElemExp('∅')))
     RegExpParser("""\.""") should be (withStartEnd(ElemExp('.')))
@@ -164,23 +169,21 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\[""") should be (withStartEnd(ElemExp('[')))
     RegExpParser("""\]""") should be (withStartEnd(ElemExp(']')))
     RegExpParser("""\\""") should be (withStartEnd(ElemExp('\\')))
-    RegExpParser("""a\s\*b""") should be (
-      withStartEnd(ConcatExp(ConcatExp(ConcatExp(ElemExp('a'), ElemExp(' ')), ElemExp('*')), ElemExp('b')))
+    RegExpParser("""a\ε\*b""") should be (
+      withStartEnd(ConcatExp(ConcatExp(ConcatExp(ElemExp('a'), ElemExp('ε')), ElemExp('*')), ElemExp('b')))
     )
   }
 
   it should "parse escape characters in character class" in {
-    RegExpParser("""[\s]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp(' ')), true)))
-    RegExpParser("""[\t]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('\t')), true)))
-    RegExpParser("""[\n]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('\n')), true)))
+    RegExpParser("""[\^]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('^')), true)))
     RegExpParser("""[\[]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('[')), true)))
     RegExpParser("""[\]]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp(']')), true)))
     RegExpParser("""[\-]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('-')), true)))
-    RegExpParser("""[\^]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('^')), true)))
-    RegExpParser("""[a\s\^-\[]""") should be (withStartEnd(CharClassExp(Seq(
+    RegExpParser("""[\\]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('\\')), true)))
+    RegExpParser("""[a\^\[-\]]""") should be (withStartEnd(CharClassExp(Seq(
       SingleCharExp('a'),
-      SingleCharExp(' '),
-      RangeExp('^','[')
+      SingleCharExp('^'),
+      RangeExp('[',']')
     ), true)))
   }
 
