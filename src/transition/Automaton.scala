@@ -109,7 +109,7 @@ class NFA[Q,A](
         val label2EdgesSc = scPair2Label2Edges((sc,sc))
 
         def constructG2(sc: Set[Q]): Graph[(Q,Q)] = {
-          val g2Edges = label2EdgesSc.toSeq.flatMap{ case (a,es) =>
+          val g2Edges = label2EdgesSc.toSeq.flatMap{ case (_,es) =>
             for ((p1,q1) <- es; (p2,q2) <- es) yield ((p1,p2), (q1,q2))
           }.distinct
           new Graph(g2Edges)
@@ -126,13 +126,32 @@ class NFA[Q,A](
     }
 
     def calcDegree(): Int = {
+      def reachableFromDAG[V](g: Graph[V]): Map[V,Set[V]] = {
+        var m = Map[V,Set[V]]()
+        def reachableFromDAG(v: V): Set[V] = {
+          m.get(v) match {
+            case Some(vs) => vs
+            case None =>
+              val vs = g.adj(v).toSet.flatMap(reachableFromDAG) + v
+              m += v -> vs
+              vs
+          }
+        }
+
+        g.nodes.foreach(reachableFromDAG)
+        m
+      }
+
       val scsGraphRev = scsGraph.reverse()
+      val reachableFromScsGraph = reachableFromDAG(scsGraph)
+      val reachableFromScsGraphRev = reachableFromDAG(scsGraphRev)
 
       var degree = Map[Set[Q], Int]()
       def calcDegree(sc: Set[Q]): Int = {
-        def isIDA(start: Set[Q], passage: Set[Set[Q]], end: Set[Q]): Boolean = {
+        def isIDA(end: Set[Q]): Boolean = {
           def constructG4(): Graph[(Q,Q,Q)] = {
-            val label2EdgesStart = scPair2Label2Edges((start,start))
+            val label2EdgesStart = scPair2Label2Edges((sc,sc))
+            val passage = reachableFromScsGraph(sc) & reachableFromScsGraphRev(end)
             val label2EdgesPassage = for (sc1 <- passage; sc2 <- passage) yield scPair2Label2Edges((sc1,sc2))
             val label2EdgesEnd = scPair2Label2Edges((end,end))
             val e4 = (
@@ -142,15 +161,17 @@ class NFA[Q,A](
                 (p2,q2) <- label2EdgesPassage.flatMap(_(a));
                 (p3,q3) <- label2EdgesEnd(a)
               ) yield ((p1,p2,p3),(q1,q2,q3))) ++
-              start.flatMap(p =>
-                end.collect{case q if p != q => ((p,q,q),(p,p,q))}
-              )
+              (for (
+                p <- sc;
+                q <- end
+                if p != q
+              ) yield ((p,q,q),(p,p,q)))
             ).distinct
 
             new Graph(e4)
           }
 
-          shouldCheck(start,end) && {
+          shouldCheck(sc,end) && {
             val g4 = Debug.time("construct G4", false) {
               constructG4()
             }
@@ -172,16 +193,10 @@ class NFA[Q,A](
             val degreeSc = if (children.isEmpty) 0
             else {
               val maxDegree = children.map(calcDegree).max
-              val reachableFromSc = scsGraph.reachableFrom(sc)
-              val maxDegreeScs = reachableFromSc.filter(
+              maxDegree + (if (reachableFromScsGraph(sc).filter(
                 degree.get(_) == Some(maxDegree)
-              )
-              if (maxDegreeScs.exists{ maxDegreeSc =>
-                val passage = reachableFromSc & scsGraphRev.reachableFrom(maxDegreeSc)
-                isIDA(sc, passage, maxDegreeSc)
-              }) maxDegree + 1 else maxDegree
+              ).exists(isIDA)) 1 else 0)
             }
-
             degree += sc -> degreeSc
             degreeSc
         }
