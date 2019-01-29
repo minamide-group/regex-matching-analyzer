@@ -37,7 +37,8 @@ case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegEx
   val charSet = cs.flatMap(_.toCharSet()).toSet
 }
 case class MetaCharExp(c: Char) extends RegExp[Char] {
-  if (!Seq('s','t','n','w','d').contains(c)) throw new Exception(s"illegal meta character")
+  val validChars = Set('s','t','n','w','d')
+  if (!validChars(c)) throw new Exception(s"illegal meta character")
 }
 
 
@@ -182,9 +183,15 @@ object RegExp {
   }
 
   def calcGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
-    constructMorphs[List,A](r, sigma).rename()
-    .toNFA().reachablePart()
-    .calcAmbiguity().map(_+1)
+    val indexedMorphs = constructMorphs[List,A](r, sigma).rename()
+    val nfa = indexedMorphs.toNFA().reachablePart()
+    if (!nfa.hasLoop()) Some(0)
+    else {
+      val ambiguity = Debug.time("calculate ambiguity") {
+        nfa.calcAmbiguity()
+      }
+      ambiguity.map(_+1)
+    }
   }
 
   def calcBtrGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
@@ -200,10 +207,13 @@ object RegExp {
     val nfa = Debug.time("consruct NFA") {
       productIndexedMorphs.toNFA().reachablePart()
     }
-    val ambiguity = Debug.time("calculate ambiguity") {
-      nfa.calcAmbiguityWithTransition()
+    if (!nfa.hasLoop()) Some(0)
+    else {
+      val ambiguity = Debug.time("calculate ambiguity") {
+        nfa.calcAmbiguityWithTransition()
+      }
+      ambiguity.map(_+1)
     }
-    ambiguity.map(_+1)
   }
 }
 

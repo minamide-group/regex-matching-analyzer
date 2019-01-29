@@ -116,6 +116,51 @@ class AutomatonSpec extends FlatSpec with Matchers {
   }
 
 
+  "hasLoop" should "decide whether it has loop or not" in {
+    val nfa1 = new NFA[Int,Char](
+      Set(1,2,3),
+      Set('a','b'),
+      Seq(
+        (1,'a',2),
+        (2,'b',2),
+        (2,'a',3)
+      ),
+      Set(1),
+      Set(3)
+    )
+
+    val nfa2 = new NFA[Int,Char](
+      Set(1,2,3),
+      Set('a','b'),
+      Seq(
+        (1,'a',2),
+        (2,'b',3),
+        (3,'a',1)
+      ),
+      Set(1),
+      Set(3)
+    )
+
+    val nfa3 = new NFA[Int,Char](
+      Set(1,2,3,4),
+      Set('a','b'),
+      Seq(
+        (1,'a',2),
+        (1,'b',3),
+        (2,'a',3),
+        (2,'a',4),
+        (3,'b',4)
+      ),
+      Set(1),
+      Set(3,4)
+    )
+
+    nfa1.hasLoop() should be (true)
+    nfa2.hasLoop() should be (true)
+    nfa3.hasLoop() should be (false)
+  }
+
+
   "calcAmbiguity" should "decide finitely ambiguous graph" in {
     val g1 = new NFA(
       Set(1,2),

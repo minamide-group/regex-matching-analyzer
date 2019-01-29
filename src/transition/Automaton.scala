@@ -12,9 +12,10 @@ class NFA[Q,A](
 ) extends Graph[Q](states.toSeq, delta.map{case (v1,_,v2) => (v1,v2)}.toSeq) {
   lazy val scsGraph = {
     val scs = calcStrongComponents()
-    val scsEdges = edges.map{ case (v1,v2) =>
-      (scs.find(_.contains(v1)).get, scs.find(_.contains(v2)).get)
-    }.filter{case (v1,v2) => v1 != v2}.distinct
+    val scsMap = (for (sc <- scs; q <- sc) yield q -> sc).toMap
+    val scsEdges = edges.map{ case (q1,q2) =>
+      (scsMap(q1),scsMap(q2))
+    }.filter{case (sc1,sc2) => sc1 != sc2}.distinct
     new Graph(scs.toSeq, scsEdges)
   }
 
@@ -86,6 +87,10 @@ class NFA[Q,A](
     val newFinal = newStates.filter(qs => (qs & finalStates).nonEmpty)
 
     new DFA(newStates, sigma, newDelta, newInitial, newFinal)
+  }
+
+  def hasLoop(): Boolean = {
+    delta.exists{case (q1,_,q2) => q1 == q2} || scsGraph.nodes.size != states.size
   }
 
   private def calcAmbiguity(shouldCheck: (Set[Q], Set[Q]) => Boolean): Option[Int] = {
