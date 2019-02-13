@@ -4,7 +4,7 @@ import scala.collection.mutable.Stack
 import matching.monad._
 import matching.monad.Monad._
 import matching.transition._
-import matching.tool.Debug
+import matching.tool.{Analysis, Debug}
 
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
@@ -167,6 +167,7 @@ object RegExp {
     val stack = Stack(r)
     var morphs = sigma.map(_ -> Map[RegExp[A], M[RegExp[A]]]()).toMap
     while (stack.nonEmpty) {
+      Analysis.checkInterrupted("constructing morphisms")
       val r = stack.pop
       sigma.foreach{ e =>
         val rd: M[RegExp[A]] = r.derive[M](e) >>= {

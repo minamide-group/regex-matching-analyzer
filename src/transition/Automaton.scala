@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.Stack
-import matching.tool.{File, Debug}
+import matching.tool.{Analysis, File, Debug}
 
 class NFA[Q,A](
   val states: Set[Q],
@@ -11,6 +11,7 @@ class NFA[Q,A](
   val finalStates: Set[Q]
 ) extends Graph[Q](states.toSeq, delta.map{case (v1,_,v2) => (v1,v2)}.toSeq) {
   lazy val scsGraph = {
+    Analysis.checkInterrupted("constructing scs graph")
     val scs = calcStrongComponents()
     val scsMap = (for (sc <- scs; q <- sc) yield q -> sc).toMap
     val scsEdges = edges.map{ case (q1,q2) =>
@@ -22,6 +23,7 @@ class NFA[Q,A](
   lazy val reachableFromScsGraph = reachableFromDAG(scsGraph)
   lazy val reachableFromScsGraphRev = reachableFromDAG(scsGraphRev)
   lazy val scPair2Label2Edges = delta.groupBy{ case (q1,a,q2) =>
+    Analysis.checkInterrupted("preparing for calculate ambiguity")
     (scsGraph.nodes.find(_.contains(q1)).get, scsGraph.nodes.find(_.contains(q2)).get)
   }.mapValues(
     _.groupBy(_._2).mapValues(
@@ -100,6 +102,7 @@ class NFA[Q,A](
     var newDelta = Map[(Set[Q],A),Set[Q]]()
 
     while (stack.nonEmpty) {
+      Analysis.checkInterrupted("constructing DFA")
       val qs = stack.pop
       sigma.foreach{ a =>
         val next = deltaHat(qs,a)
@@ -130,6 +133,7 @@ class NFA[Q,A](
 
     def isEDA(): Boolean = {
       def isEDA(sc: Set[Q]): Boolean = {
+        Analysis.checkInterrupted("checking EDA")
         val label2EdgesSc = scPair2Label2Edges((sc,sc))
 
         def constructG2(sc: Set[Q]): Graph[(Q,Q)] = {
@@ -167,7 +171,10 @@ class NFA[Q,A](
               maxDegree + (if (
                 canSkip(sc) && reachableFromScsGraph(sc).filter( end =>
                   canSkip(end) && degree.get(end) == Some(maxDegree)
-                ).exists(isIDA(sc,_))
+                ).exists{
+                  Analysis.checkInterrupted("calculating degree")
+                  isIDA(sc,_)
+                }
               ) 1 else 0)
             }
             degree += sc -> degreeSc

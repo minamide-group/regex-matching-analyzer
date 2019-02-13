@@ -2,6 +2,7 @@ package matching.transition
 
 import matching.monad._
 import matching.monad.Monad._
+import matching.tool.Analysis
 
 class IndexedMorphs[A,B,M[_]](
   val morphs: Map[A,Map[B,M[B]]],
@@ -35,6 +36,7 @@ class IndexedMorphs[A,B,M[_]](
   def toIndexedMorphsWithTransition(): IndexedMorphsWithTransition[Set[B],A,B,M] = {
     val ladfa = toNFA().reverse().toDFA()
     val morphCuts = morphs.mapValues(_.mapValues{ rd =>
+      Analysis.checkInterrupted("constructing indexed morphisms with transition")
       (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
       rd.cuts.map(rdCut => (rdCut, ladfa.states.filter{ state =>
         val rdCutFail :+ rdCutSuccess = rdCut.flat
@@ -48,6 +50,7 @@ class IndexedMorphs[A,B,M[_]](
     val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
       (p2,p1) -> as.map( a =>
         a -> morphCuts(a).map{ case (r,rds) =>
+          Analysis.checkInterrupted("constructing indexed morphisms with transition")
           r -> rds.find{case (rd,ps) => ps.contains(p1)}.get._1
         }
       ).toMap

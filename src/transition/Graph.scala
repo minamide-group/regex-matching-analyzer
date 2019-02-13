@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.{Stack, Map => MTMap}
-import matching.tool.{File, Command, Debug}
+import matching.tool.{Analysis, File, Command, Debug}
 
 class Graph[V](
   val nodes: Seq[V],
@@ -41,6 +41,7 @@ class Graph[V](
         val stack = Stack(Seq(v))
 
         while (stack.nonEmpty) {
+          Analysis.checkInterrupted("calculating strong components")
           stack.pop match {
             case vs @ (v +: rest) =>
               if (!visited(v)) {
