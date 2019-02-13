@@ -11,6 +11,21 @@ class RegExpSpec extends FlatSpec with Matchers {
     RegExp.optConcatExp(EpsExp(),EpsExp()) should be (EpsExp())
   }
 
+  it should "concat expressions with optimization on repeat expression" in {
+    RegExp.optConcatExp(ElemExp('a'),RepeatExp(ElemExp('a'),Some(3),Some(5),true)) should be (
+      RepeatExp(ElemExp('a'),Some(4),Some(6),true)
+    )
+    RegExp.optConcatExp(ElemExp('a'),RepeatExp(ElemExp('a'),None,Some(5),false)) should be (
+      RepeatExp(ElemExp('a'),Some(1),Some(6),false)
+    )
+    RegExp.optConcatExp(ElemExp('a'),RepeatExp(ElemExp('a'),Some(3),None,true)) should be (
+      RepeatExp(ElemExp('a'),Some(4),None,true)
+    )
+    RegExp.optConcatExp(ElemExp('a'),RepeatExp(ElemExp('b'),Some(3),Some(5),true)) should be (
+      ConcatExp(ElemExp('a'),RepeatExp(ElemExp('b'),Some(3),Some(5),true))
+    )
+  }
+
 
   "derive" should "derive a" in {
     val r = RegExpParser("^a$")

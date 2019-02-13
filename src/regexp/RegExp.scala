@@ -42,7 +42,6 @@ case class MetaCharExp(c: Char) extends RegExp[Char] {
 }
 
 
-
 object RegExp {
   def toString[A](r: RegExp[A]): String = {
     r match {
@@ -67,21 +66,13 @@ object RegExp {
     (r1,r2) match {
       case (EpsExp(),_) => r2
       case (_,EpsExp()) => r1
+      case (_,RepeatExp(`r1`,min,max,greedy)) =>
+        RepeatExp(r1,min.orElse(Some(0)).map(_+1),max.map(_+1),greedy)
       case _ => ConcatExp(r1,r2)
     }
   }
 
   def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
-    def decrease(r: RepeatExp[A]): RegExp[A] = {
-      val RepeatExp(r1,min,max,greedy) = r
-      (min.map(_-1),max.map(_-1)) match {
-        case (min,Some(0)) => EpsExp()
-        case (Some(0),None) => StarExp(r1,greedy)
-        case (Some(0),max) => RepeatExp(r1,None,max,greedy)
-        case (min,max) => RepeatExp(r1,min,max,greedy)
-      }
-    }
-
     r match {
       case ElemExp(b) => if (a == b) m(Some(EpsExp())) else m.fail
       case EmptyExp() => m.fail
@@ -126,6 +117,16 @@ object RegExp {
         }
       case DotExp() => m(Some(EpsExp()))
       case r @ RepeatExp(r1,min,max,greedy) =>
+        def decrease(r: RepeatExp[A]): RegExp[A] = {
+          val RepeatExp(r1,min,max,greedy) = r
+          (min.map(_-1),max.map(_-1)) match {
+            case (min,Some(0)) => EpsExp()
+            case (Some(0),None) => StarExp(r1,greedy)
+            case (Some(0),max) => RepeatExp(r1,None,max,greedy)
+            case (min,max) => RepeatExp(r1,min,max,greedy)
+          }
+        }
+
         val rd = r1.derive[M](a) >>= {
           case Some(r1) => m(Some(optConcatExp(r1,decrease(r))))
           case None => decrease(r).derive[M](a)

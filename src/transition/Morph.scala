@@ -35,8 +35,8 @@ class IndexedMorphs[A,B,M[_]](
   def toIndexedMorphsWithTransition(): IndexedMorphsWithTransition[Set[B],A,B,M] = {
     val ladfa = toNFA().reverse().toDFA()
     val morphCuts = morphs.mapValues(_.mapValues{ rd =>
-        (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
-        rd.cuts.map(rdCut => (rdCut, ladfa.states.filter{ state =>
+      (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
+      rd.cuts.map(rdCut => (rdCut, ladfa.states.filter{ state =>
         val rdCutFail :+ rdCutSuccess = rdCut.flat
         rdCutFail.forall(!state.contains(_)) && state.contains(rdCutSuccess)
       }))
