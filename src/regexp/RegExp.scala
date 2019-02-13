@@ -34,11 +34,18 @@ case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy
   }
 }
 case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
-  val charSet = cs.flatMap(_.toCharSet()).toSet
+  val charSet = cs.flatMap(_.charSet).toSet
 }
-case class MetaCharExp(c: Char) extends RegExp[Char] {
-  val validChars = Set('s','t','n','w','d')
-  if (!validChars(c)) throw new Exception(s"illegal meta character")
+case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
+  val charSet = c match {
+    case 's' => Set(' ', '\t', '\n', '\r')
+    case 't' => Set('\t')
+    case 'n' => Set('\n')
+    case 'r' => Set('\r')
+    case 'w' => ('a' to 'z').toSet | ('A' to 'Z').toSet | ('0' to '9').toSet + '_'
+    case 'd' => ('0' to '9').toSet
+    case _ => throw new Exception(s"illegal meta character")
+  }
 }
 
 
@@ -139,15 +146,8 @@ object RegExp {
         }
       case r @ CharClassExp(_,positive) =>
         if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
-      case MetaCharExp(c) =>
-        val charSet = c match {
-          case 's' => Set(' ', '\t', '\n')
-          case 't' => Set('\t')
-          case 'n' => Set('\n')
-          case 'w' => ('a' to 'z').toSet | ('A' to 'Z').toSet | ('0' to '9').toSet + '_'
-          case 'd' => ('0' to '9').toSet
-        }
-        if (charSet.contains(a)) m(Some(EpsExp())) else m.fail
+      case r @ MetaCharExp(_) =>
+        if (r.charSet.contains(a)) m(Some(EpsExp())) else m.fail
     }
   }
 
@@ -221,12 +221,16 @@ object RegExp {
 
 
 sealed trait CharClassElem {
+  val charSet: Set[Char]
   override def toString(): String = CharClassElem.toString(this)
-  def toCharSet(): Set[Char] = CharClassElem.toCharSet(this)
 }
 
-case class SingleCharExp(c: Char) extends CharClassElem
-case class RangeExp(start: Char, end: Char) extends CharClassElem
+case class SingleCharExp(c: Char) extends CharClassElem {
+  val charSet = Set(c)
+}
+case class RangeExp(start: Char, end: Char) extends CharClassElem {
+  val charSet = (start to end).toSet
+}
 
 
 object CharClassElem {
@@ -234,13 +238,7 @@ object CharClassElem {
     e match {
       case SingleCharExp(c) => c.toString
       case RangeExp(start, end) => s"${start}-${end}"
-    }
-  }
-
-  def toCharSet(e: CharClassElem): Set[Char] = {
-    e match {
-      case SingleCharExp(c) => Set(c)
-      case RangeExp(start, end) => (start to end).toSet
+      case MetaCharExp(c) => s"\\${c}"
     }
   }
 }

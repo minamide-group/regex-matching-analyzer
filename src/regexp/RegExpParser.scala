@@ -14,7 +14,7 @@ object RegExpParser extends RegexParsers {
   val specialCharsInCharClass = """\^\[\]\-\\"""
   val chars = s"""[^\\s${specialChars}]""".r
   val escs = s"""\\\\[${specialChars}]""".r
-  val metas = """\\[stnwd]""".r
+  val metas = """\\[stnrwd]""".r
   val charsInCharClass = s"""[^\\s${specialCharsInCharClass}]""".r
   val escsInCharClass = s"""\\\\[${specialCharsInCharClass}]""".r
 
@@ -65,7 +65,7 @@ object RegExpParser extends RegexParsers {
   def group: Parser[RegExp[Char]] = "(" ~> exp <~ ")"
   def charClass: Parser[CharClassExp] = "[" ~> charClassElems <~ "]" ^^ {CharClassExp(_,true)}
   def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassElems <~ "]" ^^ {CharClassExp(_,false)}
-  def charClassElems: Parser[Seq[CharClassElem]] = rep1(range | singleChar)
+  def charClassElems: Parser[Seq[CharClassElem]] = rep1(range | singleChar | meta)
   def singleChar: Parser[SingleCharExp] = charClassElem ^^ {SingleCharExp}
   def range: Parser[RangeExp] = (charClassElem <~ "-") ~ charClassElem ^^ {
     case start ~ end => RangeExp(start, end)

@@ -70,11 +70,16 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       RangeExp('a','z'),
       RangeExp('A','Z')
     ), true)))
-    RegExpParser("[ab-def-h]") should be (withStartEnd(CharClassExp(Seq(
+    RegExpParser("""[\w\d]""") should be (withStartEnd(CharClassExp(Seq(
+      MetaCharExp('w'),
+      MetaCharExp('d')
+    ), true)))
+    RegExpParser("""[ab-def-h\n]""") should be (withStartEnd(CharClassExp(Seq(
       SingleCharExp('a'),
       RangeExp('b','d'),
       SingleCharExp('e'),
-      RangeExp('f','h')
+      RangeExp('f','h'),
+      MetaCharExp('n')
     ), true)))
 
     RegExpParser("[^abc]") should be (
@@ -94,6 +99,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\s""") should be (withStartEnd(MetaCharExp('s')))
     RegExpParser("""\t""") should be (withStartEnd(MetaCharExp('t')))
     RegExpParser("""\n""") should be (withStartEnd(MetaCharExp('n')))
+    RegExpParser("""\r""") should be (withStartEnd(MetaCharExp('r')))
     RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
     RegExpParser("""\d""") should be (withStartEnd(MetaCharExp('d')))
   }
