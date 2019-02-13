@@ -2,36 +2,67 @@ package matching
 
 import regexp._
 import regexp.RegExp._
-import tool.{File, Analysis, Debug}
+import regexp.RegExpParser._
+import tool.{Analysis, File}
+import scala.io.StdIn
+import java.util.Calendar
 
 object Main {
   def main(args: Array[String]) {
-    if (args.length == 2) test(args(0),args(1))
+    if (args.isEmpty) interactiveTest()
+    else if (args.length == 1) test(args(0))
     else throw new Exception("invalid argument")
   }
 
-  def test(input: String, output: String, sigma: Set[Char] = (' ' to '~').toSet) {
-    def convertResult(result: Option[Int]): String = {
-      result match {
-        case Some(0) => "constant"
-        case Some(1) => "linear"
-        case Some(d) => s"O(n^${d}) polynomially"
-        case None => "exponentially"
+  def convertResult(result: Option[Int]): String = {
+    result match {
+      case Some(0) => "constant"
+      case Some(1) => "linear"
+      case Some(d) => s"O(n^${d}) polynomially"
+      case None => "exponentially"
+    }
+  }
+
+  def interactiveTest(sigma: Set[Char] = (' ' to '~').toSet) {
+    var continue = true
+    while (continue) {
+      val regExpStr = StdIn.readLine()
+      if (regExpStr.isEmpty) continue = false
+      else {
+        try {
+          println(regExpStr)
+          val r = RegExpParser(regExpStr)
+          val result = calcBtrGrowthRate(r,sigma)
+          println(convertResult(result))
+        } catch {
+          case e: ParseException => e.printStackTrace
+        }
+        println()
       }
     }
+  }
 
-    val outputFile = File.makeFile(output)
+  def test(inputFile: String, sigma: Set[Char] = (' ' to '~').toSet) {
+    val textFile = """(?:.*?)([^/]+)\.txt""".r
+    val name = inputFile match {
+      case textFile(name) => name
+      case _ => throw new Exception("invalid file name")
+    }
+    val now = Calendar.getInstance()
+    val timeStamp = f"${now.get(Calendar.YEAR)}-${now.get(Calendar.MONTH)}%02d-${now.get(Calendar.DATE)}%02d-${now.get(Calendar.HOUR)}%02d-${now.get(Calendar.MINUTE)}%02d-${now.get(Calendar.SECOND)}%02d"
+
+    val outputFile = File.makeFile(s"output/${name}_${timeStamp}.txt")
 
     def write(s: String = "") {
-      Debug.debug(s)
+      println(s)
       outputFile.writeln(s)
     }
 
-    val regExpStrs = File.loadFile(input).getLines.toSeq
+    val regExpStrs = File.loadFile(inputFile).getLines.toSeq
     val total = regExpStrs.length
 
     regExpStrs.zipWithIndex.foreach{ case (regExpStr,idx) =>
-      Debug.debug(s"${idx+1}/${total}")
+      println(s"${idx+1}/${total}")
       write(regExpStr)
       try {
         val r = RegExpParser(regExpStr)
@@ -44,7 +75,7 @@ object Main {
             write(s"timeout, ${time} ms")
         }
       } catch {
-        case _: Exception => write("parse error")
+        case e: ParseException => write(s"parse error: ${e.message}")
       }
       write()
     }

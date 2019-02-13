@@ -13,4 +13,5 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 shellPrompt := {_ => s"${scala.Console.MAGENTA}sbt:${name.value}> ${scala.Console.RESET}"}
 autoStartServer := false
 fork in run := true
+connectInput in run := true
 cancelable in Global := true

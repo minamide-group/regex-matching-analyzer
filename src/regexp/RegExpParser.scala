@@ -3,10 +3,12 @@ package matching.regexp
 import scala.util.parsing.combinator._
 
 object RegExpParser extends RegexParsers {
+  case class ParseException(message: String) extends Exception(message)
+
   def apply(s: String): RegExp[Char] = {
     parseAll(expAnchor, s) match {
       case Success(r,_) => r
-      case NoSuccess(msg,next) => throw new Exception(s"${msg} at ${next.pos.line}:${next.pos.column}")
+      case NoSuccess(msg,next) => throw ParseException(s"${msg} at ${next.pos.line}:${next.pos.column}")
     }
   }
 
