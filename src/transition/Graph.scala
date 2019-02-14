@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.{Stack, Map => MTMap}
-import matching.tool.{Analysis, File, Command, Debug}
+import matching.tool.{Analysis, File, Command}
 
 class Graph[V](
   val nodes: Seq[V],
@@ -68,21 +68,19 @@ class Graph[V](
       postRevs
     }
 
-    Debug.time("calculate strong components", false) {
-      dfs(reverse(), dfs(this, nodes).flatten).map(_.toSet).toSet
-    }
+    dfs(reverse(), dfs(this, nodes).flatten).map(_.toSet).toSet
   }
 
   protected def visualizeNodes(file: File, renameMap: Map[V,Int]) {
     nodes.foreach(v =>
-      file.writeln(s""""${v}";""", 1)
+      file.writeln(s""""${renameMap(v)}";""", 1)
     )
     file.writeln()
   }
 
   protected def visualizeEdges(file: File, renameMap: Map[V,Int]) {
     edges.foreach{ case (v1,v2) =>
-      file.writeln(s""""${v1}" -> "${v2}";""", 1)
+      file.writeln(s""""${renameMap(v1)}" -> "${renameMap(v2)}";""", 1)
     }
   }
 

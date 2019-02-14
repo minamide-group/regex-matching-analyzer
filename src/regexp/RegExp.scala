@@ -80,6 +80,7 @@ object RegExp {
   }
 
   def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
+    Analysis.checkInterrupted("calculating derivative")
     r match {
       case ElemExp(b) => if (a == b) m(Some(EpsExp())) else m.fail
       case EmptyExp() => m.fail

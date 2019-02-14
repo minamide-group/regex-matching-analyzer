@@ -52,6 +52,14 @@ class NFA[Q,A](
     new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
   }
 
+  private def esc(a: Any): String = {
+    a.toString.map{
+      case '"' => "\\\""
+      case '\\' => "\\\\"
+      case c => c
+    }.mkString
+  }
+
   override protected def visualizeNodes(file: File, renameMap: Map[Q,Int]) {
     file.writeln("\"initial\" [", 1)
     file.writeln("label = \"\",", 2)
@@ -63,9 +71,9 @@ class NFA[Q,A](
 
     states.foreach{ state =>
       if (finalStates.contains(state)) {
-        file.writeln(s""""${renameMap(state)}" [label = "${state}", shape = doublecircle];""", 1)
+        file.writeln(s""""${renameMap(state)}" [label = "${esc(state)}", shape = doublecircle];""", 1)
       } else {
-        file.writeln(s""""${renameMap(state)}" [label = "${state}"];""", 1)
+        file.writeln(s""""${renameMap(state)}" [label = "${esc(state)}"];""", 1)
       }
     }
   }
@@ -76,7 +84,7 @@ class NFA[Q,A](
     }
 
     delta.foreach{ case (q1,a,q2) =>
-      file.writeln(s""""${renameMap(q1)}" -> "${renameMap(q2)}" [label = "${a}"];""", 1)
+      file.writeln(s""""${renameMap(q1)}" -> "${renameMap(q2)}" [label = "${esc(a)}"];""", 1)
     }
   }
 
@@ -261,18 +269,13 @@ class NFA[Q,A](
         new Graph(e4)
       }
 
-      (laSet(start) & laSet(end)).nonEmpty && {
-        val g4 = Debug.time("construct G4", false) {
-          constructG4()
-        }
-
-        g4.calcStrongComponents().exists{sc =>
-          sc.collect{
-            case (r11,r12,r13,p1) if r12 == r13 && r11 != r12 => (r11,r12,p1)
-          }.exists{
-            case (r11,r12,p1) => sc.exists{ case (r21,r22,r23,p2) =>
-              r21 == r11 && r22 == r11 && r23 == r12 && p1 == p2
-            }
+      (laSet(start) & laSet(end)).nonEmpty &&
+      constructG4().calcStrongComponents().exists{sc =>
+        sc.collect{
+          case (r11,r12,r13,p1) if r12 == r13 && r11 != r12 => (r11,r12,p1)
+        }.exists{
+          case (r11,r12,p1) => sc.exists{ case (r21,r22,r23,p2) =>
+            r21 == r11 && r22 == r11 && r23 == r12 && p1 == p2
           }
         }
       }

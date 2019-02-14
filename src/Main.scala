@@ -35,7 +35,7 @@ object Main {
           val result = calcBtrGrowthRate(r,sigma)
           println(convertResult(result))
         } catch {
-          case e: ParseException => e.printStackTrace
+          case e: ParseException => e.printStackTrace()
         }
         println()
       }
@@ -75,7 +75,7 @@ object Main {
             write(s"timeout, ${time} ms")
         }
       } catch {
-        case e: ParseException => write(s"parse error: ${e.message}")
+        case e: ParseException => write(e.toString)
       }
       write()
     }
