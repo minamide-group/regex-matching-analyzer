@@ -35,7 +35,7 @@ object RegExpParser extends RegexParsers {
   }
 
   def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
-  def term: Parser[RegExp[Char]] = rep1(quantifiedFactor) ^^ {_.reduceLeft(ConcatExp(_,_))}
+  def term: Parser[RegExp[Char]] = rep(quantifiedFactor) ^^ {_.foldLeft(EpsExp(): RegExp[Char])(RegExp.optConcatExp(_,_))}
   def quantifiedFactor: Parser[RegExp[Char]] = factor ~ opt(quantifier ~ opt("?")) ^^ {
     case f ~ Some(q ~ opt) =>
       val greedy = opt.isEmpty
@@ -56,7 +56,7 @@ object RegExpParser extends RegexParsers {
     case min ~ max => (min, max)
   }
   def exact: Parser[(Option[Int],Option[Int])] = "{" ~> posNum <~ "}" ^^ {case num => (Some(num), Some(num))}
-  def posNum: Parser[Int] = """[1-9]\d*""".r ^^ {_.toInt}
+  def posNum: Parser[Int] = """\d+""".r ^^ {_.toInt}
   def factor: Parser[RegExp[Char]] = elem | empty | eps | dot | group | charClassNeg | charClass
   def elem: Parser[RegExp[Char]] = charEsc | meta
   def charEsc: Parser[ElemExp[Char]] = (chars | escs) ^^ {s => ElemExp(toChar(s))}

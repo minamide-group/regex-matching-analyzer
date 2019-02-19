@@ -49,7 +49,7 @@ object Main {
       case _ => throw new Exception("invalid file name")
     }
     val now = Calendar.getInstance()
-    val timeStamp = f"${now.get(Calendar.YEAR)}-${now.get(Calendar.MONTH)}%02d-${now.get(Calendar.DATE)}%02d-${now.get(Calendar.HOUR)}%02d-${now.get(Calendar.MINUTE)}%02d-${now.get(Calendar.SECOND)}%02d"
+    val timeStamp = f"${now.get(Calendar.YEAR)}-${now.get(Calendar.MONTH)}%02d-${now.get(Calendar.DATE)}%02d-${now.get(Calendar.HOUR_OF_DAY)}%02d-${now.get(Calendar.MINUTE)}%02d-${now.get(Calendar.SECOND)}%02d"
 
     val outputFile = File.makeFile(s"output/${name}_${timeStamp}.txt")
 

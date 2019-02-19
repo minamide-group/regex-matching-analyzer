@@ -20,17 +20,31 @@ case class StarExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class PlusExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class OptionExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class DotExp[A]() extends RegExp[A]
-case class RepeatExp[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy: Boolean) extends RegExp[A] {
-  (min, max) match {
-    case (Some(min),Some(max)) =>
-      if (min <= 0 || max <= 0) {
-        throw new Exception(s"illegal repeat expression: min and max must be positive")
-      } else if (min > max) {
-        throw new Exception(s"illegal repeat expression: ${min} is larger than ${max}")
+case class RepeatExp[A](r: RegExp[A], var min: Option[Int], var max: Option[Int], greedy: Boolean) extends RegExp[A]
+object RepeatExp {
+  def apply[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy: Boolean): RegExp[A] = {
+    def validate() {
+      (min, max) match {
+        case (Some(min),Some(max)) =>
+          if (min < 0 || max < 0) {
+            throw new Exception(s"illegal repeat expression: min and max must be positive")
+          } else if (min > max) {
+            throw new Exception(s"illegal repeat expression: ${min} is larger than ${max}")
+          }
+        case (None,None) =>
+          throw new Exception("illegal repeat expression: either min or max must be specified")
+        case _ =>
       }
-    case (None,None) =>
-      throw new Exception("illegal repeat expression: either min or max must be specified")
-    case _ =>
+    }
+
+    validate()
+
+    (min, max) match {
+      case (min,Some(0)) => EpsExp()
+      case (Some(0),None) => StarExp(r,greedy)
+      case (Some(0),max) => new RepeatExp(r,None,max,greedy)
+      case (min,max) => new RepeatExp(r,min,max,greedy)
+    }
   }
 }
 case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
@@ -124,20 +138,10 @@ object RegExp {
           (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a)
         }
       case DotExp() => m(Some(EpsExp()))
-      case r @ RepeatExp(r1,min,max,greedy) =>
-        def decrease(r: RepeatExp[A]): RegExp[A] = {
-          val RepeatExp(r1,min,max,greedy) = r
-          (min.map(_-1),max.map(_-1)) match {
-            case (min,Some(0)) => EpsExp()
-            case (Some(0),None) => StarExp(r1,greedy)
-            case (Some(0),max) => RepeatExp(r1,None,max,greedy)
-            case (min,max) => RepeatExp(r1,min,max,greedy)
-          }
-        }
-
+      case RepeatExp(r1,min,max,greedy) =>
         val rd = r1.derive[M](a) >>= {
-          case Some(r1) => m(Some(optConcatExp(r1,decrease(r))))
-          case None => decrease(r).derive[M](a)
+          case Some(r2) => m(Some(optConcatExp(r2,RepeatExp(r1,min.map(_-1),max.map(_-1),greedy))))
+          case None => RepeatExp(r1,min.map(_-1),max.map(_-1),greedy).derive[M](a)
         }: M[Option[RegExp[A]]]
         if (min.isDefined) rd
         else if (greedy) {

@@ -93,7 +93,7 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
 
     val newMorphs = morphs.map{ case ((a1,a2),indexedMorphs) =>
       indexedMorphs.mapValues(_.map{ case (c,cs) =>
-       (c,a1) -> (cs >>= ((c: C) => m((c,a2))))
+        (c,a1) -> (cs >>= ((c: C) => m((c,a2))))
       })
     }.foldLeft(Map[B,Map[(C,A),M[(C,A)]]]())((mp1,mp2) => merge(mp1,mp2,
       (mp1: Map[(C,A),M[(C,A)]], mp2: Map[(C,A),M[(C,A)]]) => merge(mp1,mp2,

@@ -53,11 +53,19 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser(".") should be (withStartEnd(DotExp()))
   }
 
+  it should "parse | with empty string" in {
+    RegExpParser("|a|b") should be (withStartEnd(AltExp(AltExp(EpsExp(), ElemExp('a')), ElemExp('b'))))
+    RegExpParser("a||b") should be (withStartEnd(AltExp(AltExp(ElemExp('a'), EpsExp()), ElemExp('b'))))
+    RegExpParser("a|b|") should be (withStartEnd(AltExp(AltExp(ElemExp('a'), ElemExp('b')), EpsExp())))
+  }
+
   it should "parse repeat expression" in {
     RegExpParser("a{3,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(5),true)))
     RegExpParser("a{3}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(3),true)))
     RegExpParser("a{3,}") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),None,true)))
     RegExpParser("a{,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(5),true)))
+    RegExpParser("a{0,2}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(2),true)))
+    RegExpParser("a{0}") should be (withStartEnd(EpsExp()))
   }
 
   it should "parse character class" in {
@@ -200,11 +208,8 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   it should "throw exception when given illegal expressions" in {
     a [Exception] should be thrownBy {RegExpParser("a^b")}
     a [Exception] should be thrownBy {RegExpParser("a$b")}
-    a [Exception] should be thrownBy {RegExpParser("ab|")}
-    a [Exception] should be thrownBy {RegExpParser("|ab")}
     a [Exception] should be thrownBy {RegExpParser("*ab")}
     a [Exception] should be thrownBy {RegExpParser("a*+")}
-    a [Exception] should be thrownBy {RegExpParser("a()b")}
     a [Exception] should be thrownBy {RegExpParser("(a(b)")}
     a [Exception] should be thrownBy {RegExpParser("a(b))")}
     a [Exception] should be thrownBy {RegExpParser("a[]b")}
@@ -216,8 +221,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     a [Exception] should be thrownBy {RegExpParser("[a--b]")}
     a [Exception] should be thrownBy {RegExpParser("[a-b-c]")}
     a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
-    a [Exception] should be thrownBy {RegExpParser("a{0,3}")}
-    a [Exception] should be thrownBy {RegExpParser("a{0}")}
     a [Exception] should be thrownBy {RegExpParser("a{x,5}")}
     a [Exception] should be thrownBy {RegExpParser("a{3,y}")}
     a [Exception] should be thrownBy {RegExpParser("a{,3,5}")}
