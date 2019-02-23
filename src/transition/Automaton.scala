@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.Stack
-import matching.tool.{Analysis, File, Debug}
+import matching.tool.{Analysis, Debug}
 
 class NFA[Q,A](
   val states: Set[Q],
@@ -50,42 +50,6 @@ class NFA[Q,A](
 
   override def reverse(): NFA[Q,A] = {
     new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
-  }
-
-  private def esc(a: Any): String = {
-    a.toString.map{
-      case '"' => "\\\""
-      case '\\' => "\\\\"
-      case c => c
-    }.mkString
-  }
-
-  override protected def visualizeNodes(file: File, renameMap: Map[Q,Int]) {
-    file.writeln("\"initial\" [", 1)
-    file.writeln("label = \"\",", 2)
-    file.writeln("shape = none,", 2)
-    file.writeln("fixedsize = true,", 2)
-    file.writeln("width = 0,", 2)
-    file.writeln("height = 0", 2)
-    file.writeln("];", 1)
-
-    states.foreach{ state =>
-      if (finalStates.contains(state)) {
-        file.writeln(s""""${renameMap(state)}" [label = "${esc(state)}", shape = doublecircle];""", 1)
-      } else {
-        file.writeln(s""""${renameMap(state)}" [label = "${esc(state)}"];""", 1)
-      }
-    }
-  }
-
-  override protected def visualizeEdges(file: File, renameMap: Map[Q,Int]) {
-    initialStates.foreach{ initialState =>
-      file.writeln(s""""initial" -> "${renameMap(initialState)}";""", 1)
-    }
-
-    delta.foreach{ case (q1,a,q2) =>
-      file.writeln(s""""${renameMap(q1)}" -> "${renameMap(q2)}" [label = "${esc(a)}"];""", 1)
-    }
   }
 
   def reachablePart(): NFA[Q,A] = {

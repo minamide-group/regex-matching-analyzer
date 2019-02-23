@@ -26,6 +26,7 @@ object Main {
   def interactiveTest(sigma: Set[Char] = (' ' to '~').toSet) {
     var continue = true
     while (continue) {
+      println("please input expression. (input blank line to quit)")
       val regExpStr = StdIn.readLine()
       if (regExpStr.isEmpty) continue = false
       else {

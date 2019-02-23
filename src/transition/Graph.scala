@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.{Stack, Map => MTMap}
-import matching.tool.{Analysis, File, Command}
+import matching.tool.Analysis
 
 class Graph[V](
   val nodes: Seq[V],
@@ -69,47 +69,5 @@ class Graph[V](
     }
 
     dfs(reverse(), dfs(this, nodes).flatten).map(_.toSet).toSet
-  }
-
-  protected def visualizeNodes(file: File, renameMap: Map[V,Int]) {
-    nodes.foreach(v =>
-      file.writeln(s""""${renameMap(v)}";""", 1)
-    )
-    file.writeln()
-  }
-
-  protected def visualizeEdges(file: File, renameMap: Map[V,Int]) {
-    edges.foreach{ case (v1,v2) =>
-      file.writeln(s""""${renameMap(v1)}" -> "${renameMap(v2)}";""", 1)
-    }
-  }
-
-  def visualize(name: String) {
-    val file = File.makeFile(s"${name}.dot")
-    val renameMap = nodes.zipWithIndex.toMap
-
-    file.writeln(s"digraph ${name.replace("/","_")} {")
-
-    file.writeln("graph [", 1)
-    file.writeln("rankdir = LR", 2)
-    file.writeln("];", 1)
-    file.writeln()
-
-    file.writeln("node [", 1)
-    file.writeln("shape = circle", 2)
-    file.writeln("];", 1)
-    file.writeln()
-
-    visualizeNodes(file, renameMap)
-    file.writeln()
-
-    visualizeEdges(file, renameMap)
-    file.writeln()
-
-    file.writeln("}")
-
-    file.close()
-
-    Command.exec(s"dot -T pdf ${name}.dot -o ${name}.pdf")
   }
 }
