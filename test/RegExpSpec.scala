@@ -98,6 +98,19 @@ class RegExpSpec extends FlatSpec with Matchers {
     r2.derive[List]('A') should be (List(Some(EpsExp())))
     r2.derive[List]('H') should be (List(Some(EpsExp())))
     r2.derive[List]('Z') should be (List(Some(EpsExp())))
+
+    val r3 = RegExpParser("""^[\W\D]$""")
+    r3.derive[List]('a') should be (List(Some(EpsExp())))
+    r3.derive[List]('A') should be (List(Some(EpsExp())))
+    r3.derive[List]('!') should be (List(Some(EpsExp())))
+    r3.derive[List]('0') should be (Nil)
+
+    val r4 = RegExpParser("""^[^0\D]$""")
+    r4.derive[List]('1') should be (List(Some(EpsExp())))
+    r4.derive[List]('0') should be (Nil)
+    r4.derive[List]('a') should be (Nil)
+    r4.derive[List]('A') should be (Nil)
+    r4.derive[List]('!') should be (Nil)
   }
 
   it should "derive meta character" in {
@@ -122,23 +135,43 @@ class RegExpSpec extends FlatSpec with Matchers {
 
     val r5 = RegExpParser("""^\w$""")
     r5.derive[List]('a') should be (List(Some(EpsExp())))
-    r5.derive[List]('h') should be (List(Some(EpsExp())))
     r5.derive[List]('z') should be (List(Some(EpsExp())))
     r5.derive[List]('A') should be (List(Some(EpsExp())))
-    r5.derive[List]('H') should be (List(Some(EpsExp())))
     r5.derive[List]('Z') should be (List(Some(EpsExp())))
     r5.derive[List]('0') should be (List(Some(EpsExp())))
-    r5.derive[List]('5') should be (List(Some(EpsExp())))
     r5.derive[List]('9') should be (List(Some(EpsExp())))
     r5.derive[List]('_') should be (List(Some(EpsExp())))
     r5.derive[List]('!') should be (Nil)
 
     val r6 = RegExpParser("""^\d$""")
     r6.derive[List]('0') should be (List(Some(EpsExp())))
-    r6.derive[List]('5') should be (List(Some(EpsExp())))
     r6.derive[List]('9') should be (List(Some(EpsExp())))
     r6.derive[List]('a') should be (Nil)
     r6.derive[List]('A') should be (Nil)
+
+    val r7 = RegExpParser("""^\S$""")
+    r7.derive[List]('a') should be (List(Some(EpsExp())))
+    r7.derive[List](' ') should be (Nil)
+    r7.derive[List]('\t') should be (Nil)
+    r7.derive[List]('\n') should be (Nil)
+    r7.derive[List]('\r') should be (Nil)
+
+    val r8 = RegExpParser("""^\W$""")
+    r8.derive[List]('!') should be (List(Some(EpsExp())))
+    r8.derive[List]('0') should be (Nil)
+    r8.derive[List]('9') should be (Nil)
+    r8.derive[List]('a') should be (Nil)
+    r8.derive[List]('z') should be (Nil)
+    r8.derive[List]('A') should be (Nil)
+    r8.derive[List]('Z') should be (Nil)
+    r8.derive[List]('_') should be (Nil)
+
+    val r9 = RegExpParser("""^\D$""")
+    r9.derive[List]('a') should be (List(Some(EpsExp())))
+    r9.derive[List]('A') should be (List(Some(EpsExp())))
+    r9.derive[List]('_') should be (List(Some(EpsExp())))
+    r9.derive[List]('0') should be (Nil)
+    r9.derive[List]('9') should be (Nil)
   }
 
   it should "derive repeat expression" in {

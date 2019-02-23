@@ -16,7 +16,7 @@ object RegExpParser extends RegexParsers {
   val specialCharsInCharClass = """\^\[\]\-\\"""
   val chars = s"""[^\\s${specialChars}]""".r
   val escs = s"""\\\\[${specialChars}]""".r
-  val metas = """\\[stnrwd]""".r
+  val metas = """\\[stnrwdSWD]""".r
   val charsInCharClass = s"""[^\\s${specialCharsInCharClass}]""".r
   val escsInCharClass = s"""\\\\[${specialCharsInCharClass}]""".r
 

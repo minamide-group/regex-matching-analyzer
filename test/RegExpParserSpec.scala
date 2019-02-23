@@ -110,6 +110,9 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\r""") should be (withStartEnd(MetaCharExp('r')))
     RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
     RegExpParser("""\d""") should be (withStartEnd(MetaCharExp('d')))
+    RegExpParser("""\S""") should be (withStartEnd(MetaCharExp('S')))
+    RegExpParser("""\W""") should be (withStartEnd(MetaCharExp('W')))
+    RegExpParser("""\D""") should be (withStartEnd(MetaCharExp('D')))
   }
 
   it should "parse lazy operations" in {

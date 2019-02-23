@@ -48,10 +48,10 @@ object RepeatExp {
   }
 }
 case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
-  val charSet = cs.flatMap(_.charSet).toSet
+  def accept(c: Char): Boolean = cs.exists(_.accept(c)) ^ !positive
 }
 case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
-  val charSet = c match {
+  val charSet = c.toLower match {
     case 's' => Set(' ', '\t', '\n', '\r')
     case 't' => Set('\t')
     case 'n' => Set('\n')
@@ -60,6 +60,10 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
     case 'd' => ('0' to '9').toSet
     case _ => throw new Exception(s"illegal meta character")
   }
+
+  val positive = c.isLower
+
+  def accept(c: Char): Boolean = charSet.contains(c) ^ !positive
 }
 
 
@@ -149,10 +153,10 @@ object RegExp {
         } else {
           (m(None): M[Option[RegExp[A]]]) ++ rd
         }
-      case r @ CharClassExp(_,positive) =>
-        if (r.charSet.contains(a) ^ !positive) m(Some(EpsExp())) else m.fail
+      case r @ CharClassExp(_,_) =>
+        if (r.accept(a)) m(Some(EpsExp())) else m.fail
       case r @ MetaCharExp(_) =>
-        if (r.charSet.contains(a)) m(Some(EpsExp())) else m.fail
+        if (r.accept(a)) m(Some(EpsExp())) else m.fail
     }
   }
 
@@ -226,15 +230,17 @@ object RegExp {
 
 
 sealed trait CharClassElem {
-  val charSet: Set[Char]
+  def accept(c: Char): Boolean
   override def toString(): String = CharClassElem.toString(this)
 }
 
 case class SingleCharExp(c: Char) extends CharClassElem {
-  val charSet = Set(c)
+  def accept(c1: Char): Boolean = c == c1
 }
 case class RangeExp(start: Char, end: Char) extends CharClassElem {
   val charSet = (start to end).toSet
+
+  def accept(c: Char): Boolean = charSet.contains(c)
 }
 
 
