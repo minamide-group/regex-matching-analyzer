@@ -33,7 +33,7 @@
 ^\b(java)?script:([\s]*)history\.go\(-[0-9]*\)([\s]*[;]*[\s]*)$
 ^\s*(\s*\))
 ^set-cookie:[\s]+([^=]+)=([^;]+)
-{.*}/
+\{.*\}/
 (.*)(\s*(ASC|DESC))
 (Konqueror/)(.*)(;)
 GD\sVersion\s*\(.*\)
