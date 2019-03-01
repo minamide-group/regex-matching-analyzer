@@ -90,6 +90,12 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       RangeExp('f','h'),
       MetaCharExp('n')
     ), true)))
+    RegExpParser("""[a^[-]""") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('a'),
+      SingleCharExp('^'),
+      SingleCharExp('['),
+      SingleCharExp('-')
+    ), true)))
 
     RegExpParser("[^abc]") should be (
       withStartEnd(CharClassExp(Seq(
@@ -178,39 +184,19 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse escape characters" in {
-    RegExpParser("""\ε""") should be (withStartEnd(ElemExp('ε')))
-    RegExpParser("""\∅""") should be (withStartEnd(ElemExp('∅')))
     RegExpParser("""\.""") should be (withStartEnd(ElemExp('.')))
-    RegExpParser("""\,""") should be (withStartEnd(ElemExp(',')))
-    RegExpParser("""\|""") should be (withStartEnd(ElemExp('|')))
     RegExpParser("""\*""") should be (withStartEnd(ElemExp('*')))
-    RegExpParser("""\+""") should be (withStartEnd(ElemExp('+')))
-    RegExpParser("""\?""") should be (withStartEnd(ElemExp('?')))
-    RegExpParser("""\^""") should be (withStartEnd(ElemExp('^')))
-    RegExpParser("""\$""") should be (withStartEnd(ElemExp('$')))
-    RegExpParser("""\(""") should be (withStartEnd(ElemExp('(')))
-    RegExpParser("""\)""") should be (withStartEnd(ElemExp(')')))
-    RegExpParser("""\{""") should be (withStartEnd(ElemExp('{')))
-    RegExpParser("""\}""") should be (withStartEnd(ElemExp('}')))
-    RegExpParser("""\[""") should be (withStartEnd(ElemExp('[')))
-    RegExpParser("""\]""") should be (withStartEnd(ElemExp(']')))
+    RegExpParser("""\!""") should be (withStartEnd(ElemExp('!')))
     RegExpParser("""\\""") should be (withStartEnd(ElemExp('\\')))
-    RegExpParser("""a\ε\*b""") should be (
-      withStartEnd(ConcatExp(ConcatExp(ConcatExp(ElemExp('a'), ElemExp('ε')), ElemExp('*')), ElemExp('b')))
-    )
   }
 
   it should "parse escape characters in character class" in {
     RegExpParser("""[\^]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('^')), true)))
-    RegExpParser("""[\[]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('[')), true)))
     RegExpParser("""[\]]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp(']')), true)))
     RegExpParser("""[\-]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('-')), true)))
+    RegExpParser("""[\.]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('.')), true)))
+    RegExpParser("""[\!]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('!')), true)))
     RegExpParser("""[\\]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('\\')), true)))
-    RegExpParser("""[a\^\[-\]]""") should be (withStartEnd(CharClassExp(Seq(
-      SingleCharExp('a'),
-      SingleCharExp('^'),
-      RangeExp('[',']')
-    ), true)))
   }
 
   it should "ignore spaces" in {
@@ -227,11 +213,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     a [Exception] should be thrownBy {RegExpParser("a[]b")}
     a [Exception] should be thrownBy {RegExpParser("a[bc")}
     a [Exception] should be thrownBy {RegExpParser("abc]")}
-    a [Exception] should be thrownBy {RegExpParser("[ab-]")}
-    a [Exception] should be thrownBy {RegExpParser("[a^b]")}
-    a [Exception] should be thrownBy {RegExpParser("[-ab]")}
-    a [Exception] should be thrownBy {RegExpParser("[a--b]")}
-    a [Exception] should be thrownBy {RegExpParser("[a-b-c]")}
     a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
     a [Exception] should be thrownBy {RegExpParser("a{x,5}")}
     a [Exception] should be thrownBy {RegExpParser("a{3,y}")}

@@ -12,20 +12,12 @@ object RegExpParser extends RegexParsers {
     }
   }
 
-  val specialChars = """∅ε.,|*+?^$(){}\[\]\\"""
-  val specialCharsInCharClass = """\^\[\]\-\\"""
-  val metaChars = """adDefhHnrRsStvVwW"""
-  val chars = s"""[^\\s${specialChars}]""".r
-  val escs = s"""\\\\[${specialChars}]""".r
+  val metaChars = "adDefhHnrRsStvVwW"
+  val chars = """[^\s∅ε.|*+?^$(){}\[\]\\]""".r
   val metas = s"""\\\\[${metaChars}]""".r
-  val charsInCharClass = s"""[^\\s${specialCharsInCharClass}]""".r
-  val escsInCharClass = s"""\\\\[${specialCharsInCharClass}]""".r
+  val charsInCharClass = """[^\s\]\\]""".r
   val metasInCharClass = s"""\\\\[${metaChars}b]""".r
-
-  def toChar(s: String): Char = {
-    if (s.head == '\\') s.last else s.head
-  }
-
+  
   def expAnchor: Parser[RegExp[Char]] = opt("^") ~ rep1sep(term,"|") ~ opt("$") ^^ { case start ~ ts ~ end =>
     RegExp.optConcatExp(
       RegExp.optConcatExp(
@@ -60,8 +52,9 @@ object RegExpParser extends RegexParsers {
   def exact: Parser[(Option[Int],Option[Int])] = "{" ~> posNum <~ "}" ^^ {case num => (Some(num), Some(num))}
   def posNum: Parser[Int] = """\d+""".r ^^ {_.toInt}
   def factor: Parser[RegExp[Char]] = elem | empty | eps | dot | group | charClassNeg | charClass
-  def elem: Parser[RegExp[Char]] = charEsc | meta
-  def charEsc: Parser[ElemExp[Char]] = (chars | escs) ^^ {s => ElemExp(toChar(s))}
+  def elem: Parser[RegExp[Char]] = char | meta | esc
+  def char: Parser[ElemExp[Char]] = chars ^^ {s => ElemExp(s.head)}
+  def esc: Parser[ElemExp[Char]] = "\\" ~> """[^\s]""".r ^^ {s => ElemExp(s.head)}
   def meta: Parser[MetaCharExp] = metas ^^ {s => MetaCharExp(s.last)}
   def empty: Parser[EmptyExp[Char]] = "∅" ^^ {_ => EmptyExp()}
   def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
@@ -69,11 +62,12 @@ object RegExpParser extends RegexParsers {
   def group: Parser[RegExp[Char]] = "(" ~> exp <~ ")"
   def charClass: Parser[CharClassExp] = "[" ~> charClassElems <~ "]" ^^ {CharClassExp(_,true)}
   def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassElems <~ "]" ^^ {CharClassExp(_,false)}
-  def charClassElems: Parser[Seq[CharClassElem]] = rep1(range | singleChar | charClassMeta)
-  def singleChar: Parser[SingleCharExp] = charClassCharEsc ^^ {SingleCharExp}
-  def range: Parser[RangeExp] = (charClassCharEsc <~ "-") ~ charClassCharEsc ^^ {
+  def charClassElems: Parser[Seq[CharClassElem]] = rep1(charClassMeta | range | singleChar)
+  def singleChar: Parser[SingleCharExp] = (charClassChar | charClassEsc) ^^ {SingleCharExp}
+  def range: Parser[RangeExp] = ((charClassChar | charClassEsc) <~ "-") ~ (charClassChar | charClassEsc) ^^ {
     case start ~ end => RangeExp(start, end)
   }
-  def charClassCharEsc: Parser[Char] = (charsInCharClass | escsInCharClass) ^^ {toChar}
+  def charClassChar: Parser[Char] = charsInCharClass ^^ {_.head}
+  def charClassEsc: Parser[Char] = "\\" ~> """[^\s]""".r ^^ {_.head}
   def charClassMeta: Parser[MetaCharExp] = metasInCharClass ^^ {s => MetaCharExp(s.last)}
 }
