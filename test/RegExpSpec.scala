@@ -4,6 +4,10 @@ import org.scalatest._
 import RegExp._
 
 class RegExpSpec extends FlatSpec with Matchers {
+  def parseWithStartEnd(s: String): RegExp[Char] = {
+    RegExpParser(s"^${s}${"$"}")
+  }
+
   "optConcatExp" should "concat expressions with optimization on ε" in {
     RegExp.optConcatExp(ElemExp('a'),ElemExp('b')) should be (ConcatExp(ElemExp('a'),ElemExp('b')))
     RegExp.optConcatExp(EpsExp(),ElemExp('b')) should be (ElemExp('b'))
@@ -26,62 +30,61 @@ class RegExpSpec extends FlatSpec with Matchers {
     )
   }
 
-
   "derive" should "derive a" in {
-    val r = RegExpParser("^a$")
+    val r = parseWithStartEnd("a")
     r.derive[List]('a') should be (List(Some(EpsExp())))
     r.derive[List]('b') should be (Nil)
   }
 
   it should "derive ∅" in {
-    val r = RegExpParser("^∅$")
+    val r = parseWithStartEnd("∅")
     r.derive[List]('a') should be (Nil)
   }
 
   it should "derive ε" in {
-    val r = RegExpParser("^ε$")
+    val r = parseWithStartEnd("ε")
     r.derive[List]('a') should be (List(None))
   }
 
   it should "derive ab" in {
-    val r = RegExpParser("^ab$")
+    val r = parseWithStartEnd("ab")
     r.derive[List]('a') should be (List(Some(ElemExp('b'))))
     r.derive[List]('b') should be (Nil)
     r.derive[List]('c') should be (Nil)
   }
 
   it should "derive a|b" in {
-    val r = RegExpParser("^a|b$")
+    val r = parseWithStartEnd("a|b")
     r.derive[List]('a') should be (List(Some(EpsExp())))
     r.derive[List]('b') should be (List(Some(EpsExp())))
     r.derive[List]('c') should be (Nil)
   }
 
   it should "derive a*" in {
-    val r = RegExpParser("^a*$")
+    val r = parseWithStartEnd("a*")
     r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), true)), None))
     r.derive[List]('b') should be (List(None))
   }
 
   it should "derive a+" in {
-    val r = RegExpParser("^a+$")
+    val r = parseWithStartEnd("a+")
     r.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), true))))
     r.derive[List]('b') should be (Nil)
   }
 
   it should "derive a?" in {
-    val r = RegExpParser("^a?$")
+    val r = parseWithStartEnd("a?")
     r.derive[List]('a') should be (List(Some(EpsExp()), None))
     r.derive[List]('b') should be (List(None))
   }
 
   it should "derive ." in {
-    val r = RegExpParser("^.$")
+    val r = parseWithStartEnd(".")
     r.derive[List]('a') should be (List(Some(EpsExp())))
   }
 
   it should "derive character class" in {
-    val r1 = RegExpParser("""^[ah-k\d]$""")
+    val r1 = parseWithStartEnd("""[ah-k\d]""")
     r1.derive[List]('a') should be (List(Some(EpsExp())))
     r1.derive[List]('i') should be (List(Some(EpsExp())))
     r1.derive[List]('0') should be (List(Some(EpsExp())))
@@ -90,7 +93,7 @@ class RegExpSpec extends FlatSpec with Matchers {
     r1.derive[List]('H') should be (Nil)
     r1.derive[List]('Z') should be (Nil)
 
-    val r2 = RegExpParser("""^[^ah-k\d]$""")
+    val r2 = parseWithStartEnd("""[^ah-k\d]""")
     r2.derive[List]('a') should be (Nil)
     r2.derive[List]('i') should be (Nil)
     r2.derive[List]('0') should be (Nil)
@@ -99,13 +102,13 @@ class RegExpSpec extends FlatSpec with Matchers {
     r2.derive[List]('H') should be (List(Some(EpsExp())))
     r2.derive[List]('Z') should be (List(Some(EpsExp())))
 
-    val r3 = RegExpParser("""^[\W\D]$""")
+    val r3 = parseWithStartEnd("""[\W\D]""")
     r3.derive[List]('a') should be (List(Some(EpsExp())))
     r3.derive[List]('A') should be (List(Some(EpsExp())))
     r3.derive[List]('!') should be (List(Some(EpsExp())))
     r3.derive[List]('0') should be (Nil)
 
-    val r4 = RegExpParser("""^[^0\D]$""")
+    val r4 = parseWithStartEnd("""[^0\D]""")
     r4.derive[List]('1') should be (List(Some(EpsExp())))
     r4.derive[List]('0') should be (Nil)
     r4.derive[List]('a') should be (Nil)
@@ -114,142 +117,180 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   it should "derive meta character" in {
-    val r1 = RegExpParser("""^\s$""")
-    r1.derive[List](' ') should be (List(Some(EpsExp())))
-    r1.derive[List]('\t') should be (List(Some(EpsExp())))
-    r1.derive[List]('\n') should be (List(Some(EpsExp())))
-    r1.derive[List]('\r') should be (List(Some(EpsExp())))
-    r1.derive[List]('a') should be (Nil)
+    val ra = parseWithStartEnd("""\a""")
+    ra.derive[List]('\u0007') should be (List(Some(EpsExp())))
+    ra.derive[List]('a') should be (Nil)
 
-    val r2 = RegExpParser("""^\t$""")
-    r2.derive[List]('\t') should be (List(Some(EpsExp())))
-    r2.derive[List]('a') should be (Nil)
+    val rb = parseWithStartEnd("""[\b]""")
+    rb.derive[List]('\b') should be (List(Some(EpsExp())))
+    rb.derive[List]('a') should be (Nil)
 
-    val r3 = RegExpParser("""^\n$""")
-    r3.derive[List]('\n') should be (List(Some(EpsExp())))
-    r3.derive[List]('a') should be (Nil)
+    val rd = parseWithStartEnd("""\d""")
+    rd.derive[List]('0') should be (List(Some(EpsExp())))
+    rd.derive[List]('9') should be (List(Some(EpsExp())))
+    rd.derive[List]('a') should be (Nil)
+    rd.derive[List]('A') should be (Nil)
 
-    val r4 = RegExpParser("""^\r$""")
-    r4.derive[List]('\r') should be (List(Some(EpsExp())))
-    r4.derive[List]('a') should be (Nil)
+    val rD = parseWithStartEnd("""\D""")
+    rD.derive[List]('a') should be (List(Some(EpsExp())))
+    rD.derive[List]('A') should be (List(Some(EpsExp())))
+    rD.derive[List]('0') should be (Nil)
+    rD.derive[List]('9') should be (Nil)
 
-    val r5 = RegExpParser("""^\w$""")
-    r5.derive[List]('a') should be (List(Some(EpsExp())))
-    r5.derive[List]('z') should be (List(Some(EpsExp())))
-    r5.derive[List]('A') should be (List(Some(EpsExp())))
-    r5.derive[List]('Z') should be (List(Some(EpsExp())))
-    r5.derive[List]('0') should be (List(Some(EpsExp())))
-    r5.derive[List]('9') should be (List(Some(EpsExp())))
-    r5.derive[List]('_') should be (List(Some(EpsExp())))
-    r5.derive[List]('!') should be (Nil)
+    val re = parseWithStartEnd("""\e""")
+    re.derive[List]('\u001B') should be (List(Some(EpsExp())))
+    re.derive[List]('a') should be (Nil)
 
-    val r6 = RegExpParser("""^\d$""")
-    r6.derive[List]('0') should be (List(Some(EpsExp())))
-    r6.derive[List]('9') should be (List(Some(EpsExp())))
-    r6.derive[List]('a') should be (Nil)
-    r6.derive[List]('A') should be (Nil)
+    val rf = parseWithStartEnd("""\f""")
+    rf.derive[List]('\f') should be (List(Some(EpsExp())))
+    rf.derive[List]('a') should be (Nil)
 
-    val r7 = RegExpParser("""^\S$""")
-    r7.derive[List]('a') should be (List(Some(EpsExp())))
-    r7.derive[List](' ') should be (Nil)
-    r7.derive[List]('\t') should be (Nil)
-    r7.derive[List]('\n') should be (Nil)
-    r7.derive[List]('\r') should be (Nil)
+    val rh = parseWithStartEnd("""\h""")
+    rh.derive[List]('\u0009') should be (List(Some(EpsExp())))
+    rh.derive[List]('a') should be (Nil)
 
-    val r8 = RegExpParser("""^\W$""")
-    r8.derive[List]('!') should be (List(Some(EpsExp())))
-    r8.derive[List]('0') should be (Nil)
-    r8.derive[List]('9') should be (Nil)
-    r8.derive[List]('a') should be (Nil)
-    r8.derive[List]('z') should be (Nil)
-    r8.derive[List]('A') should be (Nil)
-    r8.derive[List]('Z') should be (Nil)
-    r8.derive[List]('_') should be (Nil)
+    val rH = parseWithStartEnd("""\H""")
+    rH.derive[List]('a') should be (List(Some(EpsExp())))
+    rH.derive[List]('\u0009') should be (Nil)
 
-    val r9 = RegExpParser("""^\D$""")
-    r9.derive[List]('a') should be (List(Some(EpsExp())))
-    r9.derive[List]('A') should be (List(Some(EpsExp())))
-    r9.derive[List]('_') should be (List(Some(EpsExp())))
-    r9.derive[List]('0') should be (Nil)
-    r9.derive[List]('9') should be (Nil)
+    val rn = parseWithStartEnd("""\n""")
+    rn.derive[List]('\n') should be (List(Some(EpsExp())))
+    rn.derive[List]('a') should be (Nil)
+
+    val rr = parseWithStartEnd("""\r""")
+    rr.derive[List]('\r') should be (List(Some(EpsExp())))
+    rr.derive[List]('a') should be (Nil)
+
+    val rR = parseWithStartEnd("""\R""")
+    rR.derive[List]('\r') should be (List(Some(EpsExp())))
+    rR.derive[List]('\n') should be (List(Some(EpsExp())))
+    rR.derive[List]('a') should be (Nil)
+
+    val rs = parseWithStartEnd("""\s""")
+    rs.derive[List](' ') should be (List(Some(EpsExp())))
+    rs.derive[List]('\t') should be (List(Some(EpsExp())))
+    rs.derive[List]('\n') should be (List(Some(EpsExp())))
+    rs.derive[List]('\r') should be (List(Some(EpsExp())))
+    rs.derive[List]('\f') should be (List(Some(EpsExp())))
+    rs.derive[List]('a') should be (Nil)
+
+    val rS = parseWithStartEnd("""\S""")
+    rS.derive[List]('a') should be (List(Some(EpsExp())))
+    rS.derive[List](' ') should be (Nil)
+    rS.derive[List]('\t') should be (Nil)
+    rS.derive[List]('\n') should be (Nil)
+    rS.derive[List]('\r') should be (Nil)
+    rS.derive[List]('\f') should be (Nil)
+
+    val rt = parseWithStartEnd("""\t""")
+    rt.derive[List]('\t') should be (List(Some(EpsExp())))
+    rt.derive[List]('a') should be (Nil)
+
+    val rv = parseWithStartEnd("""\v""")
+    rv.derive[List]('\u000B') should be (List(Some(EpsExp())))
+    rv.derive[List]('a') should be (Nil)
+
+    val rV = parseWithStartEnd("""\V""")
+    rV.derive[List]('a') should be (List(Some(EpsExp())))
+    rV.derive[List]('\u000B') should be (Nil)
+
+    val rw = parseWithStartEnd("""\w""")
+    rw.derive[List]('a') should be (List(Some(EpsExp())))
+    rw.derive[List]('z') should be (List(Some(EpsExp())))
+    rw.derive[List]('A') should be (List(Some(EpsExp())))
+    rw.derive[List]('Z') should be (List(Some(EpsExp())))
+    rw.derive[List]('0') should be (List(Some(EpsExp())))
+    rw.derive[List]('9') should be (List(Some(EpsExp())))
+    rw.derive[List]('_') should be (List(Some(EpsExp())))
+    rw.derive[List]('!') should be (Nil)
+
+    val rW = parseWithStartEnd("""\W""")
+    rW.derive[List]('!') should be (List(Some(EpsExp())))
+    rW.derive[List]('0') should be (Nil)
+    rW.derive[List]('9') should be (Nil)
+    rW.derive[List]('a') should be (Nil)
+    rW.derive[List]('z') should be (Nil)
+    rW.derive[List]('A') should be (Nil)
+    rW.derive[List]('Z') should be (Nil)
+    rW.derive[List]('_') should be (Nil)
   }
 
   it should "derive repeat expression" in {
-    val r1 = RegExpParser("^(ab){3,5}$")
-    r1.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){2,4}$"))))
+    val r1 = parseWithStartEnd("(ab){3,5}")
+    r1.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab){2,4}"))))
     r1.derive[List]('b') should be (Nil)
 
-    val r2 = RegExpParser("^(ab){3}$")
-    r2.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){2,2}$"))))
+    val r2 = parseWithStartEnd("(ab){3}")
+    r2.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab){2,2}"))))
     r2.derive[List]('b') should be (Nil)
 
-    val r3 = RegExpParser("^(ab){3,}$")
-    r3.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){2,}$"))))
+    val r3 = parseWithStartEnd("(ab){3,}")
+    r3.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab){2,}"))))
     r3.derive[List]('b') should be (Nil)
 
-    val r4 = RegExpParser("^(ab){,5}$")
-    r4.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){,4}$")), None))
+    val r4 = parseWithStartEnd("(ab){,5}")
+    r4.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab){,4}")), None))
     r4.derive[List]('b') should be (List(None))
 
-    val r5 = RegExpParser("^(ab){1,5}$")
-    r5.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){,4}$"))))
+    val r5 = parseWithStartEnd("(ab){1,5}")
+    r5.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab){,4}"))))
     r5.derive[List]('b') should be (Nil)
 
 
-    val r6 = RegExpParser("^(ab){1,}$")
-    r6.derive[List]('a') should be (List(Some(RegExpParser("^b(ab)*$"))))
+    val r6 = parseWithStartEnd("(ab){1,}")
+    r6.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab)*"))))
     r6.derive[List]('b') should be (Nil)
 
-    val r7 = RegExpParser("^(ab){,1}$")
-    r7.derive[List]('a') should be (List(Some(RegExpParser("^b$")), None))
+    val r7 = parseWithStartEnd("(ab){,1}")
+    r7.derive[List]('a') should be (List(Some(parseWithStartEnd("b")), None))
     r7.derive[List]('b') should be (List(None))
 
-    val r8 = RegExpParser("^(ab){1}$")
-    r8.derive[List]('a') should be (List(Some(RegExpParser("^b$"))))
+    val r8 = parseWithStartEnd("(ab){1}")
+    r8.derive[List]('a') should be (List(Some(parseWithStartEnd("b"))))
     r8.derive[List]('b') should be (Nil)
   }
 
   it should "derive lazy operations" in {
-    val r1 = RegExpParser("^a*?$")
+    val r1 = parseWithStartEnd("a*?")
     r1.derive[List]('a') should be (List(None, Some(StarExp(ElemExp('a'), false))))
     r1.derive[List]('b') should be (List(None))
 
-    val r2 = RegExpParser("^a+?$")
+    val r2 = parseWithStartEnd("a+?")
     r2.derive[List]('a') should be (List(Some(StarExp(ElemExp('a'), false))))
     r2.derive[List]('b') should be (Nil)
 
-    val r3 = RegExpParser("^a??$")
+    val r3 = parseWithStartEnd("a??")
     r3.derive[List]('a') should be (List(None, Some(EpsExp())))
     r3.derive[List]('b') should be (List(None))
 
-    val r4 = RegExpParser("^(ab){3,5}?$")
-    r4.derive[List]('a') should be (List(Some(RegExpParser("^b(ab){2,4}?$"))))
+    val r4 = parseWithStartEnd("(ab){3,5}?")
+    r4.derive[List]('a') should be (List(Some(parseWithStartEnd("b(ab){2,4}?"))))
     r4.derive[List]('b') should be (Nil)
 
-    val r5 = RegExpParser("^(ab){,5}?$")
-    r5.derive[List]('a') should be (List(None, Some(RegExpParser("^b(ab){,4}?$"))))
+    val r5 = parseWithStartEnd("(ab){,5}?")
+    r5.derive[List]('a') should be (List(None, Some(parseWithStartEnd("b(ab){,4}?"))))
     r5.derive[List]('b') should be (List(None))
 
-    val r6 = RegExpParser("^(ab){,1}?$")
-    r6.derive[List]('a') should be (List(None, Some(RegExpParser("^b$"))))
+    val r6 = parseWithStartEnd("(ab){,1}?")
+    r6.derive[List]('a') should be (List(None, Some(parseWithStartEnd("b"))))
     r6.derive[List]('b') should be (List(None))
   }
 
   it should "derive complex expression" in {
-    val r = RegExpParser("^a*(bc|d)$")
-    r.derive[List]('a') should be (List(Some(RegExpParser("^a*(bc|d)$"))))
-    r.derive[List]('b') should be (List(Some(RegExpParser("^c$"))))
+    val r = parseWithStartEnd("a*(bc|d)")
+    r.derive[List]('a') should be (List(Some(parseWithStartEnd("a*(bc|d)"))))
+    r.derive[List]('b') should be (List(Some(parseWithStartEnd("c"))))
     r.derive[List]('c') should be (Nil)
-    r.derive[List]('d') should be (List(Some(RegExpParser("^ε$"))))
+    r.derive[List]('d') should be (List(Some(parseWithStartEnd("ε"))))
     r.derive[List]('e') should be (Nil)
   }
 
   "constructMorphs" should "construct morphs which simulates exhaustive search" in {
-    val r0 = RegExpParser("^a*a*b|ba$")
-    val r1 = RegExpParser("^a*a*b$")
-    val r2 = RegExpParser("^a*b$")
-    val r3 = RegExpParser("^a$")
-    val r4 = RegExpParser("^ε$")
+    val r0 = parseWithStartEnd("a*a*b|ba")
+    val r1 = parseWithStartEnd("a*a*b")
+    val r2 = parseWithStartEnd("a*b")
+    val r3 = parseWithStartEnd("a")
+    val r4 = parseWithStartEnd("ε")
     val indexedMorphs = constructMorphs[List,Char](r0, Set('a','b'))
     indexedMorphs.morphs should contain only (
       'a' -> Map(

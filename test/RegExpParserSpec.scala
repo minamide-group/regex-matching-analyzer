@@ -78,9 +78,10 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       RangeExp('a','z'),
       RangeExp('A','Z')
     ), true)))
-    RegExpParser("""[\w\d]""") should be (withStartEnd(CharClassExp(Seq(
+    RegExpParser("""[\w\d\b]""") should be (withStartEnd(CharClassExp(Seq(
       MetaCharExp('w'),
-      MetaCharExp('d')
+      MetaCharExp('d'),
+      MetaCharExp('b')
     ), true)))
     RegExpParser("""[ab-def-h\n]""") should be (withStartEnd(CharClassExp(Seq(
       SingleCharExp('a'),
@@ -104,15 +105,23 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse meta character" in {
-    RegExpParser("""\s""") should be (withStartEnd(MetaCharExp('s')))
-    RegExpParser("""\t""") should be (withStartEnd(MetaCharExp('t')))
+    RegExpParser("""\a""") should be (withStartEnd(MetaCharExp('a')))
+    RegExpParser("""\d""") should be (withStartEnd(MetaCharExp('d')))
+    RegExpParser("""\D""") should be (withStartEnd(MetaCharExp('D')))
+    RegExpParser("""\e""") should be (withStartEnd(MetaCharExp('e')))
+    RegExpParser("""\f""") should be (withStartEnd(MetaCharExp('f')))
+    RegExpParser("""\h""") should be (withStartEnd(MetaCharExp('h')))
+    RegExpParser("""\H""") should be (withStartEnd(MetaCharExp('H')))
     RegExpParser("""\n""") should be (withStartEnd(MetaCharExp('n')))
     RegExpParser("""\r""") should be (withStartEnd(MetaCharExp('r')))
-    RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
-    RegExpParser("""\d""") should be (withStartEnd(MetaCharExp('d')))
+    RegExpParser("""\R""") should be (withStartEnd(MetaCharExp('R')))
+    RegExpParser("""\s""") should be (withStartEnd(MetaCharExp('s')))
     RegExpParser("""\S""") should be (withStartEnd(MetaCharExp('S')))
+    RegExpParser("""\t""") should be (withStartEnd(MetaCharExp('t')))
+    RegExpParser("""\v""") should be (withStartEnd(MetaCharExp('v')))
+    RegExpParser("""\V""") should be (withStartEnd(MetaCharExp('V')))
+    RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
     RegExpParser("""\W""") should be (withStartEnd(MetaCharExp('W')))
-    RegExpParser("""\D""") should be (withStartEnd(MetaCharExp('D')))
   }
 
   it should "parse lazy operations" in {
