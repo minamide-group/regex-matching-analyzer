@@ -23,6 +23,7 @@ class RegExpParser() extends RegexParsers {
   val specialMetaChars = "aefnrt"
   val chars = """[^\s∅ε.|*+?^$(){}\[\]\\]""".r
   val metas = s"[dDhHRsSvVwW]".r
+  val backslashAssertions = s"[AbBzZ]".r
   val spacialMetas = s"[${specialMetaChars}]".r
   val charsInCharClass = """[^\s\]\\]""".r
   val spacialMetasInCharClass = s"[${specialMetaChars}b]".r
@@ -43,15 +44,11 @@ class RegExpParser() extends RegexParsers {
     def term: Parser[RegExp[Char]] = {
       def quantifiedFactor: Parser[RegExp[Char]] = {
         def factor: Parser[RegExp[Char]] = {
-          def elem: Parser[RegExp[Char]] = {
-            def atom: Parser[Char] = {
-              def char: Parser[Char] = chars ^^ {_.head}
-              def specialMeta: Parser[Char] = "\\" ~> spacialMetas ^^ {c => convertSpecialMeta(c.head)}
+          def elem: Parser[ElemExp[Char]] = {
+            def char: Parser[Char] = chars ^^ {_.head}
+            def specialMeta: Parser[Char] = "\\" ~> spacialMetas ^^ {c => convertSpecialMeta(c.head)}
 
-              char | specialMeta | hex | unicode | esc
-            }
-
-            meta | atom ^^ {ElemExp(_)}
+            (char | specialMeta | hex | unicode | esc) ^^ {ElemExp(_)}
           }
           def empty: Parser[EmptyExp[Char]] = "∅" ^^ {_ => EmptyExp()}
           def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
@@ -65,10 +62,10 @@ class RegExpParser() extends RegexParsers {
               case _ ~ e => e
             }
           }
-          def charClass: Parser[CharClassExp] = "[" ~> charClassElems <~ "]" ^^ {CharClassExp(_,true)}
-          def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassElems <~ "]" ^^ {CharClassExp(_,false)}
-          def charClassElems: Parser[Seq[CharClassElem]] = {
-            def charClassAtom: Parser[Seq[Char]] = {
+          def charClass: Parser[CharClassExp] = "[" ~> charClassFactor <~ "]" ^^ {CharClassExp(_,true)}
+          def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassFactor <~ "]" ^^ {CharClassExp(_,false)}
+          def charClassFactor: Parser[Seq[CharClassElem]] = {
+            def charClassElem: Parser[Seq[Char]] = {
               def charClassChar: Parser[Char] = charsInCharClass ^^ {_.head}
               def charClassSpecialMeta: Parser[Char] = "\\" ~> spacialMetasInCharClass ^^ {c => convertSpecialMeta(c.head)}
               def oct: Parser[Seq[Char]] = "\\" ~> """\d+""".r ^^ { d =>
@@ -81,7 +78,7 @@ class RegExpParser() extends RegexParsers {
             def charClassMeta: Parser[List[MetaCharExp]] = meta ^^ {List(_)}
             def hyphen: Parser[List[Unit]] = "-" ^^ {_ => List(())}
 
-            rep1(hyphen | charClassMeta | charClassAtom) ^^ { ll =>
+            rep1(hyphen | charClassMeta | charClassElem) ^^ { ll =>
               def parseCharClassElems(ss: List[Any]): List[CharClassElem] = {
                 ss match {
                   case (c1: Char) +: () +: (c2: Char) +: rest =>
@@ -106,6 +103,8 @@ class RegExpParser() extends RegexParsers {
               )
             }
           }
+          def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
+          def backslashAssertion: Parser[UnsupportedExp] = "\\" ~> backslashAssertions ^^ {s => UnsupportedExp(s"\\${s}")}
           def hex: Parser[Char] = "\\x" ~> "[0-9a-fA-F]{0,2}".r ^^ { code =>
             Integer.parseInt(s"0${code}", 16).toChar
           }
@@ -114,9 +113,9 @@ class RegExpParser() extends RegexParsers {
             else throw RegExpParser.ParseException(s"illegal unicode representation: \\u${code}")
           }
           def esc: Parser[Char] = "\\" ~> ".".r ^^ {_.head}
-          def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
 
-          backReferenceOrOct | elem | empty | eps | dot | group | charClassNeg | charClass
+
+          backReferenceOrOct | meta | backslashAssertion | elem | empty | eps | dot | group | charClassNeg | charClass
         }
         def quantifier: Parser[Either[(Option[Int],Option[Int]),String]] = {
           def symbol: Parser[Right[Nothing,String]] = "[*+?]".r ^^ {Right(_)}

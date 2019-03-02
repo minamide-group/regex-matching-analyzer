@@ -69,6 +69,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
   def accept(c: Char): Boolean = charSet.contains(c) ^ negative
 }
 case class BackReferenceExp[A](n: Int) extends RegExp[A]
+case class UnsupportedExp(s: String) extends RegExp[Char]
 
 
 object RegExp {
@@ -89,6 +90,7 @@ object RegExp {
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
       case BackReferenceExp(n) => s"\\${n}"
+      case UnsupportedExp(s) => s
     }
   }
 

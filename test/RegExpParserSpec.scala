@@ -186,6 +186,14 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\t""") should be (withStartEnd(ElemExp('\t')))
   }
 
+  it should "parse backslash assertions" in {
+    RegExpParser("""\A""") should be (withStartEnd(UnsupportedExp("""\A""")))
+    RegExpParser("""\b""") should be (withStartEnd(UnsupportedExp("""\b""")))
+    RegExpParser("""\B""") should be (withStartEnd(UnsupportedExp("""\B""")))
+    RegExpParser("""\z""") should be (withStartEnd(UnsupportedExp("""\z""")))
+    RegExpParser("""\Z""") should be (withStartEnd(UnsupportedExp("""\Z""")))
+  }
+
   it should "parse character class" in {
     RegExpParser("[abc]") should be (withStartEnd(CharClassExp(Seq(
       SingleCharExp('a'),
