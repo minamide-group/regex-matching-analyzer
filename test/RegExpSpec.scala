@@ -117,14 +117,6 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   it should "derive meta character" in {
-    val ra = parseWithStartEnd("""\a""")
-    ra.derive[List]('\u0007') should be (List(Some(EpsExp())))
-    ra.derive[List]('a') should be (Nil)
-
-    val rb = parseWithStartEnd("""[\b]""")
-    rb.derive[List]('\b') should be (List(Some(EpsExp())))
-    rb.derive[List]('a') should be (Nil)
-
     val rd = parseWithStartEnd("""\d""")
     rd.derive[List]('0') should be (List(Some(EpsExp())))
     rd.derive[List]('9') should be (List(Some(EpsExp())))
@@ -137,14 +129,6 @@ class RegExpSpec extends FlatSpec with Matchers {
     rD.derive[List]('0') should be (Nil)
     rD.derive[List]('9') should be (Nil)
 
-    val re = parseWithStartEnd("""\e""")
-    re.derive[List]('\u001B') should be (List(Some(EpsExp())))
-    re.derive[List]('a') should be (Nil)
-
-    val rf = parseWithStartEnd("""\f""")
-    rf.derive[List]('\f') should be (List(Some(EpsExp())))
-    rf.derive[List]('a') should be (Nil)
-
     val rh = parseWithStartEnd("""\h""")
     rh.derive[List]('\u0009') should be (List(Some(EpsExp())))
     rh.derive[List]('a') should be (Nil)
@@ -152,14 +136,6 @@ class RegExpSpec extends FlatSpec with Matchers {
     val rH = parseWithStartEnd("""\H""")
     rH.derive[List]('a') should be (List(Some(EpsExp())))
     rH.derive[List]('\u0009') should be (Nil)
-
-    val rn = parseWithStartEnd("""\n""")
-    rn.derive[List]('\n') should be (List(Some(EpsExp())))
-    rn.derive[List]('a') should be (Nil)
-
-    val rr = parseWithStartEnd("""\r""")
-    rr.derive[List]('\r') should be (List(Some(EpsExp())))
-    rr.derive[List]('a') should be (Nil)
 
     val rR = parseWithStartEnd("""\R""")
     rR.derive[List]('\r') should be (List(Some(EpsExp())))
@@ -181,10 +157,6 @@ class RegExpSpec extends FlatSpec with Matchers {
     rS.derive[List]('\n') should be (Nil)
     rS.derive[List]('\r') should be (Nil)
     rS.derive[List]('\f') should be (Nil)
-
-    val rt = parseWithStartEnd("""\t""")
-    rt.derive[List]('\t') should be (List(Some(EpsExp())))
-    rt.derive[List]('a') should be (Nil)
 
     val rv = parseWithStartEnd("""\v""")
     rv.derive[List]('\u000B') should be (List(Some(EpsExp())))

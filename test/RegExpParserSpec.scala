@@ -86,19 +86,13 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse meta character" in {
-    RegExpParser("""\a""") should be (withStartEnd(MetaCharExp('a')))
     RegExpParser("""\d""") should be (withStartEnd(MetaCharExp('d')))
     RegExpParser("""\D""") should be (withStartEnd(MetaCharExp('D')))
-    RegExpParser("""\e""") should be (withStartEnd(MetaCharExp('e')))
-    RegExpParser("""\f""") should be (withStartEnd(MetaCharExp('f')))
     RegExpParser("""\h""") should be (withStartEnd(MetaCharExp('h')))
     RegExpParser("""\H""") should be (withStartEnd(MetaCharExp('H')))
-    RegExpParser("""\n""") should be (withStartEnd(MetaCharExp('n')))
-    RegExpParser("""\r""") should be (withStartEnd(MetaCharExp('r')))
     RegExpParser("""\R""") should be (withStartEnd(MetaCharExp('R')))
     RegExpParser("""\s""") should be (withStartEnd(MetaCharExp('s')))
     RegExpParser("""\S""") should be (withStartEnd(MetaCharExp('S')))
-    RegExpParser("""\t""") should be (withStartEnd(MetaCharExp('t')))
     RegExpParser("""\v""") should be (withStartEnd(MetaCharExp('v')))
     RegExpParser("""\V""") should be (withStartEnd(MetaCharExp('V')))
     RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
@@ -183,6 +177,15 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\\""") should be (withStartEnd(ElemExp('\\')))
   }
 
+  it should "parse special escape characters" in {
+    RegExpParser("""\a""") should be (withStartEnd(ElemExp('\u0007')))
+    RegExpParser("""\e""") should be (withStartEnd(ElemExp('\u001B')))
+    RegExpParser("""\f""") should be (withStartEnd(ElemExp('\f')))
+    RegExpParser("""\n""") should be (withStartEnd(ElemExp('\n')))
+    RegExpParser("""\r""") should be (withStartEnd(ElemExp('\r')))
+    RegExpParser("""\t""") should be (withStartEnd(ElemExp('\t')))
+  }
+
   it should "parse character class" in {
     RegExpParser("[abc]") should be (withStartEnd(CharClassExp(Seq(
       SingleCharExp('a'),
@@ -205,6 +208,11 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       SingleCharExp('^'),
       SingleCharExp('['),
       SingleCharExp('-')
+    ), true)))
+    RegExpParser("""[a-\d]""") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('a'),
+      SingleCharExp('-'),
+      MetaCharExp('d')
     ), true)))
 
     RegExpParser("[^abc]") should be (
@@ -240,8 +248,14 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""[\W]""") should be (withStartEnd(CharClassExp(Seq(
       MetaCharExp('W')
     ), true)))
+  }
+
+  it should "parse special meta characters in character class" in {
     RegExpParser("""[\b]""") should be (withStartEnd(CharClassExp(Seq(
-      MetaCharExp('b')
+      SingleCharExp('\b')
+    ), true)))
+    RegExpParser("""[\n]""") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\n')
     ), true)))
   }
 
@@ -315,9 +329,9 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       withStartEnd(RepeatExp(OptionExp(StarExp(ElemExp('a'), true), true), Some(3), Some(5), false))
     )
 
-    RegExpParser("""[a-z\nA]""") should be (withStartEnd(CharClassExp(Seq(
+    RegExpParser("""[a-z\wA]""") should be (withStartEnd(CharClassExp(Seq(
       RangeExp('a','z'),
-      MetaCharExp('n'),
+      MetaCharExp('w'),
       SingleCharExp('A')
     ), true)))
 

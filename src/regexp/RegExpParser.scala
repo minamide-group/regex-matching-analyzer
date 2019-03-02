@@ -20,22 +20,35 @@ class RegExpParser() extends RegexParsers {
     }
   }
 
-  val metaChars = "adDefhHnrRsStvVwW"
+  val specialMetaChars = "aefnrt"
   val chars = """[^\s∅ε.|*+?^$(){}\[\]\\]""".r
-  val metas = s"[${metaChars}]".r
+  val metas = s"[dDhHRsSvVwW]".r
+  val spacialMetas = s"[${specialMetaChars}]".r
   val charsInCharClass = """[^\s\]\\]""".r
-  val metasInCharClass = s"[${metaChars}b]".r
+  val spacialMetasInCharClass = s"[${specialMetaChars}b]".r
 
   private def expAnchor: Parser[RegExp[Char]] = {
+    def convertSpecialMeta(c: Char): Char = {
+      c match {
+        case 'a' => '\u0007'
+        case 'b' => '\b'
+        case 'e' => '\u001B'
+        case 'f' => '\f'
+        case 'n' => '\n'
+        case 'r' => '\r'
+        case 't' => '\t'
+      }
+    }
+
     def term: Parser[RegExp[Char]] = {
       def quantifiedFactor: Parser[RegExp[Char]] = {
         def factor: Parser[RegExp[Char]] = {
           def elem: Parser[RegExp[Char]] = {
-            def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
             def atom: Parser[Char] = {
               def char: Parser[Char] = chars ^^ {_.head}
+              def specialMeta: Parser[Char] = "\\" ~> spacialMetas ^^ {c => convertSpecialMeta(c.head)}
 
-              char | hex | unicode | esc
+              char | specialMeta | hex | unicode | esc
             }
 
             meta | atom ^^ {ElemExp(_)}
@@ -57,14 +70,15 @@ class RegExpParser() extends RegexParsers {
           def charClassElems: Parser[Seq[CharClassElem]] = {
             def charClassAtom: Parser[Seq[Char]] = {
               def charClassChar: Parser[Char] = charsInCharClass ^^ {_.head}
+              def charClassSpecialMeta: Parser[Char] = "\\" ~> spacialMetasInCharClass ^^ {c => convertSpecialMeta(c.head)}
               def oct: Parser[Seq[Char]] = "\\" ~> """\d+""".r ^^ { d =>
                 val (octalPart, elemsPart) = d.take(3).span(_ < '8')
                 Integer.parseInt(s"0${octalPart}", 8).toChar + (elemsPart + d.drop(3))
               }
 
-              oct | (charClassChar | hex | unicode | esc) ^^ {List(_)}
+              oct | (charClassChar | charClassSpecialMeta | hex | unicode | esc) ^^ {List(_)}
             }
-            def charClassMeta: Parser[List[MetaCharExp]] = "\\" ~> metasInCharClass ^^ {s => List(MetaCharExp(s.last))}
+            def charClassMeta: Parser[List[MetaCharExp]] = meta ^^ {List(_)}
             def hyphen: Parser[List[Unit]] = "-" ^^ {_ => List(())}
 
             rep1(hyphen | charClassMeta | charClassAtom) ^^ { ll =>
@@ -100,6 +114,7 @@ class RegExpParser() extends RegexParsers {
             else throw RegExpParser.ParseException(s"illegal unicode representation: \\u${code}")
           }
           def esc: Parser[Char] = "\\" ~> ".".r ^^ {_.head}
+          def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
 
           backReferenceOrOct | elem | empty | eps | dot | group | charClassNeg | charClass
         }

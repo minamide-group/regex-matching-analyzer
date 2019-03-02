@@ -51,24 +51,17 @@ case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegEx
   def accept(c: Char): Boolean = cs.exists(_.accept(c)) ^ !positive
 }
 case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
-  val negetiveChar = Set('S', 'H', 'V', 'W', 'D')
+  val negetiveChar = Set('D', 'H', 'S', 'V', 'W')
 
   val charSet = c match {
-    case 'a' => Set('\u0007')
-    case 'b' => Set('\b')
     case 'd' | 'D' => ('0' to '9').toSet
-    case 'e' => Set('\u001B')
-    case 'f' => Set('\f')
     case 'h' | 'H' => Set('\u0009')
-    case 'n' => Set('\n')
-    case 'r' => Set('\r')
     case 'R' => Set('\r', '\n')
     case 's' | 'S' => Set(' ', '\t', '\n', '\r', '\f')
-    case 't' => Set('\t')
     case 'v' | 'V' => Set('\u000B')
     case 'w' | 'W' => ('a' to 'z').toSet | ('A' to 'Z').toSet | ('0' to '9').toSet + '_'
 
-    case _ => throw new Exception(s"illegal meta character: \${c}")
+    case _ => throw new Exception(s"illegal meta character: \\${c}")
   }
 
   val negative = negetiveChar(c)
