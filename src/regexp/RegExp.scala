@@ -75,6 +75,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 
   def accept(c: Char): Boolean = charSet.contains(c) ^ negative
 }
+case class BackReferenceExp[A](n: Int) extends RegExp[A]
 
 
 object RegExp {
@@ -89,11 +90,12 @@ object RegExp {
       case PlusExp(r,greedy) => s"(${r})+${if (greedy) "" else "?"}"
       case OptionExp(r,greedy) => s"(${r})?${if (greedy) "" else "?"}"
       case DotExp() => "."
-      case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
-      case MetaCharExp(c) => s"\\${c}"
       case RepeatExp(r,min,max,greedy) =>
         if (min == max) s"${r}{${min.get}}${if (greedy) "" else "?"}"
         else s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
+      case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
+      case MetaCharExp(c) => s"\\${c}"
+      case BackReferenceExp(n) => s"\\${n}"
     }
   }
 
@@ -167,6 +169,7 @@ object RegExp {
         if (r.accept(a)) m(Some(EpsExp())) else m.fail
       case r @ MetaCharExp(_) =>
         if (r.accept(a)) m(Some(EpsExp())) else m.fail
+      case _ => throw new Exception(s"derive unsupported expression: ${r}")
     }
   }
 
@@ -179,6 +182,7 @@ object RegExp {
         case AltExp(r1,r2) => nullable(r1) || nullable(r2)
         case PlusExp(r,_) => nullable(r)
         case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
+        case _ => throw new Exception(s"nullable unsupported expression: ${r}")
       }
     }
 

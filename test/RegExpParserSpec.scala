@@ -33,12 +33,10 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("a|b|c") should be (withStartEnd(AltExp(AltExp(ElemExp('a'), ElemExp('b')), ElemExp('c'))))
   }
 
-  it should "parse (a)" in {
-    RegExpParser("(a)") should be (withStartEnd(ElemExp('a')))
-  }
-
   it should "parse a*" in {
     RegExpParser("a*") should be (withStartEnd(StarExp(ElemExp('a'), true)))
+
+    a [Exception] should be thrownBy {RegExpParser("*ab")}
   }
 
   it should "parse a+" in {
@@ -51,6 +49,14 @@ class RegExpParserSpec extends FlatSpec with Matchers {
 
   it should "parse ." in {
     RegExpParser(".") should be (withStartEnd(DotExp()))
+  }
+
+  it should "parse group" in {
+    RegExpParser("(a)") should be (withStartEnd(ElemExp('a')))
+    RegExpParser("(?:a)") should be (withStartEnd(ElemExp('a')))
+
+    a [Exception] should be thrownBy {RegExpParser("(a(b)")}
+    a [Exception] should be thrownBy {RegExpParser("a(b))")}
   }
 
   it should "parse | with empty string" in {
@@ -66,48 +72,17 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("a{,5}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(5),true)))
     RegExpParser("a{0,2}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(2),true)))
     RegExpParser("a{0}") should be (withStartEnd(EpsExp()))
-  }
 
-  it should "parse character class" in {
-    RegExpParser("[abc]") should be (withStartEnd(CharClassExp(Seq(
-      SingleCharExp('a'),
-      SingleCharExp('b'),
-      SingleCharExp('c')
-    ), true)))
-    RegExpParser("[a-zA-Z]") should be (withStartEnd(CharClassExp(Seq(
-      RangeExp('a','z'),
-      RangeExp('A','Z')
-    ), true)))
-    RegExpParser("""[\w\d\b]""") should be (withStartEnd(CharClassExp(Seq(
-      MetaCharExp('w'),
-      MetaCharExp('d'),
-      MetaCharExp('b')
-    ), true)))
-    RegExpParser("""[ab-def-h\n]""") should be (withStartEnd(CharClassExp(Seq(
-      SingleCharExp('a'),
-      RangeExp('b','d'),
-      SingleCharExp('e'),
-      RangeExp('f','h'),
-      MetaCharExp('n')
-    ), true)))
-    RegExpParser("""[a^[-]""") should be (withStartEnd(CharClassExp(Seq(
-      SingleCharExp('a'),
-      SingleCharExp('^'),
-      SingleCharExp('['),
-      SingleCharExp('-')
-    ), true)))
-
-    RegExpParser("[^abc]") should be (
-      withStartEnd(CharClassExp(Seq(
-        SingleCharExp('a'),
-        SingleCharExp('b'),
-        SingleCharExp('c')
-      ), false))
-    )
-    RegExpParser("[^a-zA-Z]") should be (withStartEnd(CharClassExp(Seq(
-      RangeExp('a','z'),
-      RangeExp('A','Z')
-    ), false)))
+    a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
+    a [Exception] should be thrownBy {RegExpParser("a{x,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,y}")}
+    a [Exception] should be thrownBy {RegExpParser("a{,3,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,5,}")}
+    a [Exception] should be thrownBy {RegExpParser("a{3,5")}
+    a [Exception] should be thrownBy {RegExpParser("a3,5}")}
+    a [Exception] should be thrownBy {RegExpParser("a{,}")}
+    a [Exception] should be thrownBy {RegExpParser("a{}")}
   }
 
   it should "parse meta character" in {
@@ -130,6 +105,61 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\W""") should be (withStartEnd(MetaCharExp('W')))
   }
 
+  it should "parse octal representation" in {
+    RegExpParser("\\001") should be (withStartEnd(ElemExp('\u0001')))
+    RegExpParser("\\10") should be (withStartEnd(ElemExp('\u0008')))
+    RegExpParser("\\123") should be (withStartEnd(ElemExp('\u0053')))
+    RegExpParser("\\567") should be (withStartEnd(ElemExp('\u0177')))
+    RegExpParser("\\001") should be (withStartEnd(ElemExp('\u0001')))
+    RegExpParser("\\01") should be (withStartEnd(ElemExp('\u0001')))
+    RegExpParser("\\0") should be (withStartEnd(ElemExp('\u0000')))
+    RegExpParser("\\1111") should be (withStartEnd(ConcatExp(ElemExp('\u0049'), ElemExp('1'))))
+    RegExpParser("\\18") should be (withStartEnd(ConcatExp(ElemExp('\u0001'), ElemExp('8'))))
+    RegExpParser("\\81") should be (withStartEnd(ConcatExp(ConcatExp(ElemExp('\u0000'), ElemExp('8')), ElemExp('1'))))
+  }
+
+  it should "parse hexadecimal representation" in {
+    RegExpParser("\\x01") should be (withStartEnd(ElemExp('\u0001')))
+    RegExpParser("\\xab") should be (withStartEnd(ElemExp('\u00AB')))
+    RegExpParser("\\xEF") should be (withStartEnd(ElemExp('\u00EF')))
+    RegExpParser("\\x2") should be (withStartEnd(ElemExp('\u0002')))
+    RegExpParser("\\x") should be (withStartEnd(ElemExp('\u0000')))
+    RegExpParser("\\x111") should be (withStartEnd(ConcatExp(ElemExp('\u0011'), ElemExp('1'))))
+  }
+
+  it should "parse unicode representation" in {
+    RegExpParser("\\u0001") should be (withStartEnd(ElemExp('\u0001')))
+    RegExpParser("\\u1234") should be (withStartEnd(ElemExp('\u1234')))
+    RegExpParser("\\uabcd") should be (withStartEnd(ElemExp('\uABCD')))
+    RegExpParser("\\uCDEF") should be (withStartEnd(ElemExp('\uCDEF')))
+
+    a [Exception] should be thrownBy {RegExpParser("\\u")}
+    a [Exception] should be thrownBy {RegExpParser("\\u1")}
+    a [Exception] should be thrownBy {RegExpParser("\\u12")}
+    a [Exception] should be thrownBy {RegExpParser("\\u123")}
+  }
+
+  it should "parse back reference" in {
+    RegExpParser("(a)\\1") should be (withStartEnd(ConcatExp(ElemExp('a'),BackReferenceExp(1))))
+    RegExpParser("(a|\\1b)*") should be (withStartEnd(
+      StarExp(
+        AltExp(
+          ElemExp('a'),
+          ConcatExp(
+            BackReferenceExp(1),
+            ElemExp('b')
+          )
+        )
+      , true)
+    ))
+    RegExpParser(s"${"(a)" * 20}\\20") should be (withStartEnd(
+      ConcatExp(
+        (1 until 20).foldLeft(ElemExp('a'): RegExp[Char])((r,_) => ConcatExp(r,ElemExp('a'))),
+        BackReferenceExp(20)
+      )
+    ))
+  }
+
   it should "parse lazy operations" in {
     RegExpParser("a*?") should be (withStartEnd(StarExp(ElemExp('a'), false)))
     RegExpParser("a+?") should be (withStartEnd(PlusExp(ElemExp('a'), false)))
@@ -141,6 +171,109 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("^a") should be (ConcatExp(ElemExp('a'), StarExp(DotExp(),true)))
     RegExpParser("a$") should be (ConcatExp(StarExp(DotExp(),false),ElemExp('a')))
     RegExpParser("^a$") should be (ElemExp('a'))
+
+    a [Exception] should be thrownBy {RegExpParser("a^b")}
+    a [Exception] should be thrownBy {RegExpParser("a$b")}
+  }
+
+  it should "parse escape characters" in {
+    RegExpParser("""\.""") should be (withStartEnd(ElemExp('.')))
+    RegExpParser("""\*""") should be (withStartEnd(ElemExp('*')))
+    RegExpParser("""\!""") should be (withStartEnd(ElemExp('!')))
+    RegExpParser("""\\""") should be (withStartEnd(ElemExp('\\')))
+  }
+
+  it should "parse character class" in {
+    RegExpParser("[abc]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('a'),
+      SingleCharExp('b'),
+      SingleCharExp('c')
+    ), true)))
+    RegExpParser("[a-zA-Z]") should be (withStartEnd(CharClassExp(Seq(
+      RangeExp('a','z'),
+      RangeExp('A','Z')
+    ), true)))
+
+    RegExpParser("""[ab-def-h]""") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('a'),
+      RangeExp('b','d'),
+      SingleCharExp('e'),
+      RangeExp('f','h')
+    ), true)))
+    RegExpParser("""[a^[-]""") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('a'),
+      SingleCharExp('^'),
+      SingleCharExp('['),
+      SingleCharExp('-')
+    ), true)))
+
+    RegExpParser("[^abc]") should be (
+      withStartEnd(CharClassExp(Seq(
+        SingleCharExp('a'),
+        SingleCharExp('b'),
+        SingleCharExp('c')
+      ), false))
+    )
+    RegExpParser("[^a-zA-Z]") should be (withStartEnd(CharClassExp(Seq(
+      RangeExp('a','z'),
+      RangeExp('A','Z')
+    ), false)))
+
+    a [Exception] should be thrownBy {RegExpParser("a[]b")}
+    a [Exception] should be thrownBy {RegExpParser("a[bc")}
+    a [Exception] should be thrownBy {RegExpParser("abc]")}
+  }
+
+  it should "parse escape characters in character class" in {
+    RegExpParser("""[\^]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('^')), true)))
+    RegExpParser("""[\]]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp(']')), true)))
+    RegExpParser("""[\-]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('-')), true)))
+    RegExpParser("""[\.]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('.')), true)))
+    RegExpParser("""[\!]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('!')), true)))
+    RegExpParser("""[\\]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('\\')), true)))
+  }
+
+  it should "parse meta characters in character class" in {
+    RegExpParser("""[\s]""") should be (withStartEnd(CharClassExp(Seq(
+      MetaCharExp('s')
+    ), true)))
+    RegExpParser("""[\W]""") should be (withStartEnd(CharClassExp(Seq(
+      MetaCharExp('W')
+    ), true)))
+    RegExpParser("""[\b]""") should be (withStartEnd(CharClassExp(Seq(
+      MetaCharExp('b')
+    ), true)))
+  }
+
+  it should "parse octal representation in character class" in {
+    RegExpParser("[\\001]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\u0001')
+    ), true)))
+    RegExpParser("[\\1111]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\u0049'),
+      SingleCharExp('1')
+    ), true)))
+    RegExpParser("[\\81]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\u0000'),
+      SingleCharExp('8'),
+      SingleCharExp('1')
+    ), true)))
+  }
+
+  it should "parse hexadecimal representation in character class" in {
+    RegExpParser("[\\x01]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\u0001')
+    ), true)))
+    RegExpParser("[\\x111]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\u0011'),
+      SingleCharExp('1')
+    ), true)))
+  }
+
+  it should "parse unicode representation in character class" in {
+    RegExpParser("[\\u0001]") should be (withStartEnd(CharClassExp(Seq(
+      SingleCharExp('\u0001')
+    ), true)))
   }
 
   it should "parse complex expression" in {
@@ -181,47 +314,17 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("((a*)?){3,5}?") should be (
       withStartEnd(RepeatExp(OptionExp(StarExp(ElemExp('a'), true), true), Some(3), Some(5), false))
     )
-  }
 
-  it should "parse escape characters" in {
-    RegExpParser("""\.""") should be (withStartEnd(ElemExp('.')))
-    RegExpParser("""\*""") should be (withStartEnd(ElemExp('*')))
-    RegExpParser("""\!""") should be (withStartEnd(ElemExp('!')))
-    RegExpParser("""\\""") should be (withStartEnd(ElemExp('\\')))
-  }
+    RegExpParser("""[a-z\nA]""") should be (withStartEnd(CharClassExp(Seq(
+      RangeExp('a','z'),
+      MetaCharExp('n'),
+      SingleCharExp('A')
+    ), true)))
 
-  it should "parse escape characters in character class" in {
-    RegExpParser("""[\^]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('^')), true)))
-    RegExpParser("""[\]]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp(']')), true)))
-    RegExpParser("""[\-]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('-')), true)))
-    RegExpParser("""[\.]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('.')), true)))
-    RegExpParser("""[\!]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('!')), true)))
-    RegExpParser("""[\\]""") should be (withStartEnd(CharClassExp(Seq(SingleCharExp('\\')), true)))
-  }
+    RegExpParser("""[\x10-\u00EF]""") should be (withStartEnd(CharClassExp(Seq(
+      RangeExp('\u0010','\u00EF')
+    ), true)))
 
-  it should "ignore spaces" in {
-    RegExpParser("a \t \n b") should be (withStartEnd(ConcatExp(ElemExp('a'), ElemExp('b'))))
-  }
-
-  it should "throw exception when given illegal expressions" in {
-    a [Exception] should be thrownBy {RegExpParser("a^b")}
-    a [Exception] should be thrownBy {RegExpParser("a$b")}
-    a [Exception] should be thrownBy {RegExpParser("*ab")}
     a [Exception] should be thrownBy {RegExpParser("a*+")}
-    a [Exception] should be thrownBy {RegExpParser("(a(b)")}
-    a [Exception] should be thrownBy {RegExpParser("a(b))")}
-    a [Exception] should be thrownBy {RegExpParser("a[]b")}
-    a [Exception] should be thrownBy {RegExpParser("a[bc")}
-    a [Exception] should be thrownBy {RegExpParser("abc]")}
-    a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
-    a [Exception] should be thrownBy {RegExpParser("a{x,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,y}")}
-    a [Exception] should be thrownBy {RegExpParser("a{,3,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,5,}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,5")}
-    a [Exception] should be thrownBy {RegExpParser("a3,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{,}")}
-    a [Exception] should be thrownBy {RegExpParser("a{}")}
   }
 }
