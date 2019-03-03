@@ -326,4 +326,14 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
     r.derive('a') should be (List(Some(EpsExp())))
     r.derive('\n') should be (List(Some(EpsExp())))
   }
+
+  "derive with ungreedy option" should "derive repeat expression" in {
+    deriver = new RegExpDeriver[List](Seq('U'))
+
+    val r1 = parseWithStartEnd("a*")
+    r1.derive('a') should be (List(None, Some(StarExp(ElemExp('a'), true))))
+
+    val r2 = parseWithStartEnd("a*?")
+    r2.derive('a') should be (List(Some(StarExp(ElemExp('a'), false)), None))
+  }
 }
