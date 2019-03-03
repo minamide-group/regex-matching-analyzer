@@ -22,11 +22,11 @@ class RegExpParser() extends RegexParsers {
   }
 
   val specialMetaChars = "aefnrt"
-  val chars = """[^\s∅ε.|*+?^$(){}\[\]\\]""".r
+  val chars = """[^∅ε.|*+?^$()\[\]\\]""".r
   val metas = s"[dDhHRsSvVwW]".r
   val backslashAssertions = s"[AbBzZ]".r
   val spacialMetas = s"[${specialMetaChars}]".r
-  val charsInCharClass = """[^\s\]\\]""".r
+  val charsInCharClass = """[^\]\\]""".r
   val spacialMetasInCharClass = s"[${specialMetaChars}b]".r
 
   private def expAnchor: Parser[RegExp[Char]] = {
@@ -167,7 +167,8 @@ class RegExpParser() extends RegexParsers {
   private def groupCount: Parser[Int] = {
     def group: Parser[Int] = "(" ~> groupCount <~ ")" ^^ {_ + 1}
     def nonCaptureGroup: Parser[Int] = "(?:" ~> groupCount <~ ")"
-    def other: Parser[Int] = rep1("[^()]".r) ^^ {_ => 0}
+    def charClass: Parser[Int] = "[" ~> """[^\]]*""".r <~ "]" ^^ {_ => 0}
+    def other: Parser[Int] = rep1("""\\.""".r | charClass | "[^()]".r) ^^ {_ => 0}
 
     rep1(nonCaptureGroup | group | other) ^^ {_.sum}
   }

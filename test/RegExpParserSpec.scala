@@ -74,15 +74,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("a{0}") should be (withStartEnd(EpsExp()))
 
     a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
-    a [Exception] should be thrownBy {RegExpParser("a{x,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,y}")}
-    a [Exception] should be thrownBy {RegExpParser("a{,3,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,5,}")}
-    a [Exception] should be thrownBy {RegExpParser("a{3,5")}
-    a [Exception] should be thrownBy {RegExpParser("a3,5}")}
-    a [Exception] should be thrownBy {RegExpParser("a{,}")}
-    a [Exception] should be thrownBy {RegExpParser("a{}")}
   }
 
   it should "parse meta character" in {
