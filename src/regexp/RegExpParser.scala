@@ -1,6 +1,7 @@
 package matching.regexp
 
 import scala.util.parsing.combinator._
+import RegExp.optConcatExp
 
 class RegExpParser() extends RegexParsers {
   override val skipWhitespace = false
@@ -149,12 +150,12 @@ class RegExpParser() extends RegexParsers {
         }
       }
 
-      rep(quantifiedFactor) ^^ {_.foldLeft(EpsExp(): RegExp[Char])(RegExp.optConcatExp(_,_))}
+      rep(quantifiedFactor) ^^ {_.foldLeft(EpsExp(): RegExp[Char])(optConcatExp(_,_))}
     }
 
     opt("^") ~ rep1sep(term,"|") ~ opt("$") ^^ { case start ~ ts ~ end =>
-      RegExp.optConcatExp(
-        RegExp.optConcatExp(
+      optConcatExp(
+        optConcatExp(
           if (start.isDefined) EpsExp() else StarExp(DotExp(),false),
           ts.reduceLeft(AltExp(_,_))
         ),

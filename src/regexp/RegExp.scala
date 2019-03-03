@@ -8,7 +8,7 @@ import matching.tool.{Analysis, Debug}
 
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
-  def derive[M[_]](a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = RegExp.derive[M,A](this,a)
+  def derive[M[_]](a: A)(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,a)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -39,11 +39,11 @@ object RepeatExp {
 
     validate()
 
-    (min, max) match {
+    (min,max) match {
       case (min,Some(0)) => EpsExp()
       case (Some(0),None) => StarExp(r,greedy)
       case (Some(0),max) => new RepeatExp(r,None,max,greedy)
-      case (min,max) => new RepeatExp(r,min,max,greedy)
+      case _ => new RepeatExp(r,min,max,greedy)
     }
   }
 }
@@ -104,70 +104,6 @@ object RegExp {
     }
   }
 
-  def derive[M[_],A](r: RegExp[A], a: A)(implicit m: Monad[M]): M[Option[RegExp[A]]] = {
-    Analysis.checkInterrupted("calculating derivative")
-    r match {
-      case ElemExp(b) => if (a == b) m(Some(EpsExp())) else m.fail
-      case EmptyExp() => m.fail
-      case EpsExp() => m(None)
-      case ConcatExp(r1,r2) =>
-        r1.derive[M](a) >>= {
-          case Some(r) => m(Some(optConcatExp(r,r2)))
-          case None => r2.derive[M](a)
-        }
-      case AltExp(r1,r2) =>
-        r1.derive[M](a) ++ r2.derive[M](a)
-      case StarExp(r,greedy) =>
-        if (greedy) {
-          (r.derive[M](a) >>= {
-            case Some(r1) => m(Some(optConcatExp(r1,StarExp(r,true))))
-            case None => m(None)
-          }: M[Option[RegExp[A]]]) ++ m(None)
-        } else {
-          (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a) >>= {
-            case Some(r1) => m(Some(optConcatExp(r1,StarExp(r,false))))
-            case None => m(None)
-          }
-        }
-      case PlusExp(r,greedy) =>
-        if (greedy) {
-          r.derive[M](a) >>= {
-            case Some(r1) => m(Some(optConcatExp(r1,StarExp(r,true))))
-            case None => StarExp(r,true).derive[M](a)
-          }
-        } else {
-          r.derive[M](a) >>= {
-            case Some(EpsExp()) => m(Some(StarExp(r,false)))
-            case Some(r1) => m(Some(ConcatExp(r1,StarExp(r,false))))
-            case None => StarExp(r,false).derive[M](a)
-          }
-        }
-      case OptionExp(r,greedy) =>
-        if (greedy) {
-          r.derive[M](a) ++ m(None)
-        } else {
-          (m(None): M[Option[RegExp[A]]]) ++ r.derive[M](a)
-        }
-      case DotExp() => m(Some(EpsExp()))
-      case RepeatExp(r1,min,max,greedy) =>
-        val rd = r1.derive[M](a) >>= {
-          case Some(r2) => m(Some(optConcatExp(r2,RepeatExp(r1,min.map(_-1),max.map(_-1),greedy))))
-          case None => RepeatExp(r1,min.map(_-1),max.map(_-1),greedy).derive[M](a)
-        }: M[Option[RegExp[A]]]
-        if (min.isDefined) rd
-        else if (greedy) {
-          rd ++ m(None)
-        } else {
-          (m(None): M[Option[RegExp[A]]]) ++ rd
-        }
-      case r @ CharClassExp(_,_) =>
-        if (r.accept(a)) m(Some(EpsExp())) else m.fail
-      case r @ MetaCharExp(_) =>
-        if (r.accept(a)) m(Some(EpsExp())) else m.fail
-      case _ => throw new Exception(s"derive unsupported expression: ${r}")
-    }
-  }
-
   def constructMorphs[M[_],A](r: RegExp[A], sigma: Set[A])(implicit m: Monad[M]): IndexedMorphs[A,RegExp[A],M] = {
     def nullable(r: RegExp[A]): Boolean = {
       r match {
@@ -184,11 +120,12 @@ object RegExp {
     var regExps = Set(r)
     val stack = Stack(r)
     var morphs = sigma.map(_ -> Map[RegExp[A], M[RegExp[A]]]()).toMap
+    implicit val deriver = new RegExpDeriver[M]()
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("constructing morphisms")
       val r = stack.pop
       sigma.foreach{ e =>
-        val rd: M[RegExp[A]] = r.derive[M](e) >>= {
+        val rd: M[RegExp[A]] = r.derive(e) >>= {
           case Some(r) => m(r)
           case None => m.fail
         }
