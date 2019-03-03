@@ -7,9 +7,11 @@ import RegExp.optConcatExp
 
 class RegExpDeriver[M[_]](options: Seq[Char] = Seq())(implicit m: Monad[M]) {
   var ignoreCase = false
+  var dotAll = false
 
   options.foreach{
     case 'i' => ignoreCase = true
+    case 's' => dotAll = true
     case c => throw new Exception(s"illegal option: ${c}")
   }
 
@@ -50,7 +52,7 @@ class RegExpDeriver[M[_]](options: Seq[Char] = Seq())(implicit m: Monad[M]) {
             case None => false
           }
           case DotExp() => a match {
-            case Some(a) => a != '\n'
+            case Some(a) => dotAll || a != '\n'
             case None => true
           }
           case CharClassExp(es,positive) => es.exists(acceptCharClass(_,a)) ^ !positive

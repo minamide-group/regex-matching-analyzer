@@ -318,4 +318,12 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
     r2.derive('a') should be (Nil)
     r2.derive('A') should be (Nil)
   }
+
+  "derive with dot all option" should "derive dot" in {
+    deriver = new RegExpDeriver[List](Seq('s'))
+
+    val r = parseWithStartEnd(".")
+    r.derive('a') should be (List(Some(EpsExp())))
+    r.derive('\n') should be (List(Some(EpsExp())))
+  }
 }
