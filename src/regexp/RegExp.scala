@@ -49,9 +49,7 @@ object RepeatExp {
 }
 case class BackReferenceExp[A](n: Int) extends RegExp[A]
 case class DotExp() extends RegExp[Char]
-case class CharClassExp(es: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
-  def accept(c: Option[Char]): Boolean = es.exists(_.accept(c)) ^ !positive
-}
+case class CharClassExp(es: Seq[CharClassElem], positive: Boolean) extends RegExp[Char]
 case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
   val negetiveChar = Set('D', 'H', 'S', 'V', 'W')
 
@@ -67,13 +65,6 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
   }
 
   val negative = negetiveChar(c)
-
-  def accept(c: Option[Char]): Boolean = {
-    c match {
-      case Some(c) => charSet.contains(c) ^ negative
-      case None => negative
-    }
-  }
 }
 case class UnsupportedExp(s: String) extends RegExp[Char]
 
@@ -201,28 +192,14 @@ object RegExp {
 
 sealed trait CharClassElem {
   val charSet: Set[Char]
-  def accept(c: Option[Char]): Boolean
   override def toString(): String = CharClassElem.toString(this)
 }
 
 case class SingleCharExp(c: Char) extends CharClassElem {
   val charSet = Set(c)
-  def accept(c1: Option[Char]): Boolean = {
-    c1 match {
-      case Some(c1) => c == c1
-      case None => false
-    }
-  }
 }
 case class RangeExp(start: Char, end: Char) extends CharClassElem {
   val charSet = (start to end).toSet
-
-  def accept(c: Option[Char]): Boolean = {
-    c match {
-      case Some(c) => charSet.contains(c)
-      case None => false
-    }
-  }
 }
 
 

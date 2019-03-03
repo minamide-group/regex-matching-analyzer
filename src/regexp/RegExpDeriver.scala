@@ -7,13 +7,46 @@ import RegExp.optConcatExp
 
 class RegExpDeriver[M[_]](implicit m: Monad[M]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
+    def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
+      def accept(a: Option[A]): Boolean = {
+        def acceptCharClass(r: CharClassElem, a: Option[Char]): Boolean = {
+          r match {
+            case SingleCharExp(c) => a match {
+              case Some(a) => c == a
+              case None => false
+            }
+            case RangeExp(start, end) => a match {
+              case Some(a) => r.charSet.contains(a)
+              case None => false
+            }
+            case r @ MetaCharExp(_) => a match {
+              case Some(a) => r.charSet.contains(a) ^ r.negative
+              case None => r.negative
+            }
+          }
+        }
+
+        r match {
+          case ElemExp(b) => a match {
+            case Some(a) => a == b
+            case None => false
+          }
+          case DotExp() => a match {
+            case Some(a) => a != '\n'
+            case None => true
+          }
+          case CharClassExp(es,positive) => es.exists(acceptCharClass(_,a)) ^ !positive
+          case r @ MetaCharExp(_) => acceptCharClass(r,a)
+          case _ => throw new Exception(s"accept unsupported expression: ${r}")
+        }
+      }
+
+      if (accept(a)) m(Some(EpsExp())) else m.fail
+    }
+
     Analysis.checkInterrupted("calculating derivative")
     r match {
-      case ElemExp(b) =>
-        a match {
-          case Some(a) => if (a == b) m(Some(EpsExp())) else m.fail
-          case None => m.fail
-        }
+      case ElemExp(_) | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => consume(r,a)
       case EmptyExp() => m.fail
       case EpsExp() => m(None)
       case ConcatExp(r1,r2) =>
@@ -38,11 +71,6 @@ class RegExpDeriver[M[_]](implicit m: Monad[M]) {
       case OptionExp(r,greedy) =>
         val dr = derive(r,a)
         if (greedy) dr ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ dr
-      case DotExp() =>
-        a match {
-          case Some(a) => if (a != '\n') m(Some(EpsExp())) else m.fail
-          case None => m(Some(EpsExp()))
-        }
       case RepeatExp(r1,min,max,greedy) =>
         val rDec = RepeatExp(r1,min.map(_-1),max.map(_-1),greedy)
         val rd: M[Option[RegExp[A]]] = derive(r1,a) >>= {
@@ -51,10 +79,6 @@ class RegExpDeriver[M[_]](implicit m: Monad[M]) {
         }
         if (min.isDefined) rd
         else if (greedy) rd ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ rd
-      case r @ CharClassExp(_,_) =>
-        if (r.accept(a)) m(Some(EpsExp())) else m.fail
-      case r @ MetaCharExp(_) =>
-        if (r.accept(a)) m(Some(EpsExp())) else m.fail
       case _ => throw new Exception(s"derive unsupported expression: ${r}")
     }
   }
