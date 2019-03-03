@@ -1,0 +1,339 @@
+!\d!
+#&\#x([0-9a-f]+);#i
+%^(\s*)(>|/>)%s
+'&#[0-9]+;'
+/# Database Name: `(.+?)`/i
+/# LANG: (.*)/i
+/([0-9A-F]){6}/i
+/(\.|\.\.)$/
+/(\d+)/
+/.gif/i
+/.jpg/i
+/.png/i
+/400/
+/400/i
+/:/
+/<!DOCTYPE\W*X?HTML/sim
+/<\?php/i
+/FLAGS(.*)/i
+/INSERT INTO `(.*?)`/i
+/MSIE ([0-9]\.[0-9]{1,2})/
+/MSIE ([0-9]\.[0-9]{1,2})/i
+/MSIE 5.5/
+/OK/
+/PERMANENTFLAGS(.*)/i
+/[ ]/u
+/[A-Z0-9\xc0-\xdc\.]+/
+/[\n]/u
+/\#/
+/\.([a-zA-Z0-9]+)$/
+/\.css$/i
+/\/forum\//i
+/\?>/i
+/^'[\w -]+(\:[\w -]+)?'\!([A-Ia-i]?[A-Za-z])?(\d+)\:([A-Ia-i]?[A-Za-z])?(\d+)$/u
+/^'[\w -]+(\:[\w -]+)?'\!([A-Ia-i]?[A-Za-z])?[0-9]+:([A-Ia-i]?[A-Za-z])?[0-9]+$/u
+/^'[\w -]+(\:[\w -]+)?'\![A-Ia-i]?[A-Za-z](\d+)$/u
+/^'[\w -]+(\:[\w -]+)?'\![A-Ia-i]?[A-Za-z][0-9]+$/u
+/^(.+):(?:[ ]?)(\\w+)$/
+/^(.+):(?:[ ]?)\\w+$/
+/^(.+)\((\d+),(\d+)/
+/^(.+)\((\d+)/
+/^(.+)\((\d+)\)$/
+/^(.+)\/.+$/
+/^(>+)/
+/^(?:(?:vedr|sv|re|aw|fw|fwd|\[\w\]):\s*)*\s*(.*)$/si
+/^(Location: |URI: )/i
+/^(Location: |URI:)\s+(.*)/
+/^(Location:|URI:)/i
+/^(Location:|URI:)[ ]+(.*)/i
+/^([0-9]{4})([0-9]{2})([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})$/
+/^([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)$/i
+/^([A-Ia-i]?[A-Za-z])(\d+)\.\.([A-Ia-i]?[A-Za-z])(\d+)$/
+/^([A-Ia-i]?[A-Za-z])(\d+)\:([A-Ia-i]?[A-Za-z])(\d+)$/
+/^([\/\\\\]|[a-zA-Z]:[\/\\\\])/
+/^([\t >]*)([^\t >].*)?$/
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)$/
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)\.\.(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)$/
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)\:(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)$/
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+:(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+$/
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+\.\.(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+$/
+/^(\$|SM_PATH)/
+/^(\/|http)/
+/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/
+/^(enum)\((.*)\)$/i
+/^(off|false|no)$/i
+/^(on|true|yes)$/i
+/^.*(content-type:)\s*(\w+)\/(\w+).*/i
+/^.*\/.*\/.*\/.*\/.*\/.*$/
+/^.+,/
+/^=/
+/^@/
+/^CREATE TABLE `(.*?)`/im
+/^DROP TABLE IF EXISTS `(.*?)`/im
+/^[-0-9A-Z_@\s]+$/i
+/^[-0-9A-Z_\.\[\]\s]+$/i
+/^[-0-9A-Z_\.\[\]]+$/i
+/^[-0-9A-Z_\[\]]+$/i
+/^[.]{1,2}$/
+/^[0-9A-F]{32}:.+$/
+/^[0-9A-Z@]{6,20}$/i
+/^[0-9A-Z]$/
+/^[0-9A-Za-z]+$/
+/^[0-9]+$/
+/^[0-9]{3,4}$/
+/^[1-9]{1}(\.[0-9]+)?E{1}$/
+/^[A-Ia-i]?[A-Za-z](\d+)\.\.[A-Ia-i]?[A-Za-z](\d+)$/
+/^[A-Z0-9\xc0-\xdc\.]+$/
+/^[A-Z_]+=.*$/
+/^[^\?]+/
+/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i
+/^[a-zA-Z_]\w*$/
+/^[a-z\-]+$/
+/^[hmsdy]/i
+/^\* ([0-9]+) FETCH/i
+/^\* SEARCH (.+)$/
+/^\* SORT (.+)$/
+/^\* THREAD (.+)$/
+/^\/|\w:/
+/^\:\:([0-9a-h\:]+)$/i
+/^\d+$/
+/^\s*SELECT\s+DISTINCT/is
+/^\s*select/is
+/^\w+(\:\w+)?\!([A-Ia-i]?[A-Za-z])?(\d+)\:([A-Ia-i]?[A-Za-z])?(\d+)$/u
+/^\w+(\:\w+)?\!([A-Ia-i]?[A-Za-z])?[0-9]+:([A-Ia-i]?[A-Za-z])?[0-9]+$/u
+/^\w+(\:\w+)?\![A-Ia-i]?[A-Za-z](\d+)$/u
+/^\w+(\:\w+)?\![A-Ia-i]?[A-Za-z][0-9]+$/u
+/^cavt/
+/^http:\/\/(www\.)?youtube\.com\/watch\?v=(.*)/i
+/^http[s]*:\/\//i
+/^iso-8859/i
+/_include.php/i
+/_var.php/i
+/include.php/i
+/include_button.php/i
+/index\.php$/i
+/maincore.php/i
+/nextval\('([^']+)'::text\)/
+/primary/i
+/settings_forum.php/i
+/settings_main.php/i
+/settings_messages.php/i
+/settings_misc.php/i
+/settings_photo.php/i
+/settings_registration.php/i
+/settings_time.php/i
+/unique/i
+|[\w/>]|
+|\:\/\/|
+|^([^:]+)://([^:/]+)(:[\d]+)*(.*)|
+|^/|
+|^HTTP/[^\s]*\s(.*?)\s|
+|^HTTP/|
+!%(\w+)\.(\w+)%!
+!Buffer pool hit rate\s*([0-9]*) / ([0-9]*)!
+!\D!
+!\w!
+!^((//)|([a-zA-Z]:/))!
+!^(.*)(\?.*)$!
+!^(\+|\-)\s*(\d+)$!
+!^(http|ftp)://!i
+!^-\d+$!
+!^\.\w+$!
+!^\[(.*?)\]!
+!^http://!i
+#&(quot|lt|gt|nbsp|<?php);#i
+#&\#([0-9]+);#i
+#[0-9]#
+#[a-zA-Z]{2,}#
+#^[0-9a-fA-F]{4}$#s
+#^http://#
+&(?:\\\|\\/)([^\\\\\/]*)(?:\\\|\\/)$&i
+/"([^"]*)"/
+/%$/
+/(=\?([^?]*)\?(Q|B)\?([^?]*)\?=)(.*)/Ui
+/(=\?([^?]*)\?(Q|B)\?([^?]*)\?=)(\s+|.*)/Ui
+/([0-9.]+)/
+/([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})/
+/([a-zA-Z0-9]*)/
+/(\$)?([A-I]?[A-Z])(\$)?(\d+)/
+/(\.gif|\.jpg|\.png)$/i
+/(\.htm|\.html|\.xhtml)$/i
+/(\.php)$/i
+/(\x36MDNSent|\\\\\*)/i
+/(^|[^\\\\])(_|%)/
+/(char)|(text)|(enum)|(set)/
+/(char|text)/i
+/(enum)|(set)/
+/,/
+/<--PAGEBREAK-->/
+/=\?([^?]+)\?(q|b)\?([^?]+)\?=/i
+/BINARY/i
+/FULLTEXT/
+/MESSAGES\s+([0-9]+)/i
+/NOT NULL/i
+/ORDER[ \t\r\n]+BY/is
+/RECENT\s+([0-9]+)/i
+/UNSEEN\s+([0-9]+)/i
+/UNSIGNED/i
+/ZEROFILL/i
+/[ :|#"!]/
+/[,.]$/
+/[.\/\\\\]+/i
+/[: |#"!]/
+/[^a-z_]+/i
+/\!/
+/\%[\%bcdeufFosxX]/
+/\* [0-9]+ FETCH.*/i
+/\+|\(/
+/\-/
+/\.([^.]+)$/
+/\.[#0]+/i
+/\<\/\s*style\s*\>/i
+/\=(.)/
+/\S/
+/\W/
+/\\\\%|\\\\_/
+/\\\\(?:_|%)/i
+/\^/
+/\d/
+/\s(FOR UPDATE.*)/is
+/\s(LIMIT\s.*)/is
+/\s(ORDER\s.*)/is
+/\s/
+/\sORDER\s+BY\s*\(/i
+/\sWHERE\s(.*)/is
+/^&#(\d+);/
+/^&([a-z]+);/i
+/^&gt;/i
+/^&x([0-9a-f]+);/i
+/^( )+/
+/^( *)([^ ]*)$/
+/^( *)([^ ]*)/
+/^(.*)=\?([^?]*)\?(Q|B)\?([^?]*)\?=(.*)$/Ui
+/^(.+)\?.+$/
+/^(=\?([^?]*)\?(Q|B)\?([^?]*)\?=)(.*)/Ui
+/^(CREATE|ALTER|DROP)\s+(VIEW|TABLE|DATABASE|SCHEMA)\s+/i
+/^(MyISAM|ISAM|HEAP|InnoDB)$/i
+/^([0-9]+).*/
+/^([A-Ia-i]?[A-Za-z])(\d+)$/
+/^([\/\\\\]|[a-zA-Z]:[\/\\\\])/
+/^([\s]*;)*$/
+/^([\t >]*)([^\t >].*)?$/
+/^([\w_]+,)*TZ/
+/^([^ ]+) .*DEFAULT ([^ ]+)/
+/^([^:]+):(.+)/
+/^(\d+)\.(\d+)\.(\d+)((\.|-(pl|rc|dev|beta|alpha))(\d+)?)?$/
+/^(\d{0,4}-\d{0,2}-\d{0,2})/
+/^(\d{2}){3,7}$/
+/^(\d|[0-1]\d|2[0-3]):[0-5]\d$/
+/^(\s*)/s
+/^(set|enum)\((.+)\)$/i
+/^-\d+$/
+/^[ ]*"(.*)"[ ]*$/
+/^[ |\t]/
+/^[#0]+/
+/^[+-]{1}[0-9]{4}$/
+/^[0-9.]+(px|em|pt|\%)$/
+/^[0-9]+$/
+/^[0-9]\d{1,9}$/
+/^[0-9a-z_]*$/i
+/^[1-9]\d{1,9}$/
+/^[>\s]*$/
+/^[A-Z0-9._%-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i
+/^[A-Z]:\\\\/i
+/^[A-Za-z]$/
+/^[\.]{1,2}$/
+/^[\s]*(SELECT|SHOW|HANDLER)/i
+/^[\t\n\x0b\x0c ]$/
+/^[\t\n\x0b\x0c ]+$/
+/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i
+/^[a-z0-9]*$/i
+/^[a-zA-Z0-9_\.\-`]*$/
+/^[a-z]$/
+/^\$?([A-Ia-i]?[A-Za-z])\$?(\d+)$/
+/^\$?[A-Ia-i]?[A-Za-z]\$?[0-9]+$/
+/^\( *\((.*)\) *\)/
+/^\* \d+ FETCH/
+/^\*\s([0-9]+)\s(\w+)/
+/^\*\s+OK\s\[(\w+)\s(\w+)\]/
+/^\*\s\d+\sFETCH/
+/^\-?[0-9]*\\.?[0-9]*$/
+/^\.\r\n/
+/^\[(.+)\]/
+/^\\.(.*)$/
+/^\\.+$/
+/^\d+(\.\d+)*$/
+/^\d+\.\d+\.\d+\.\d+$/
+/^\d{14}$/
+/^\s*(\.?\w+)\s*=\s*(.*)/s
+/^`(.+)`$/
+/^ed2k*:\/\//i
+/^ftp*:\/\//i
+/^http[s]*:\/\//i
+/^msgid "(.*)"$/
+/^msgstr "(.*)"$/
+/^mysql/
+/^pgsql/
+/compatible; MSIE ([0-9]+)/
+/error code = ([\-0-9]*)/i
+/mysql/i
+/postgres/i
+@(GROUP[[:space:]]+BY|HAVING|SELECT[[:space:]]+DISTINCT)[[:space:]]+@i
+@BINARY[\(]@i
+@CONSTRAINT|FOREIGN[\s]+KEY@
+@DATE|TIME@i
+@ISAM|HEAP@i
+@MSIE ([0-9].[0-9]{1,2})@
+@MSIE ([0-9].[0-9]{1,2})@
+@OmniWeb/([0-9].[0-9]{1,2})@
+@Opera(/| )([0-9].[0-9]{1,2})@
+@Safari/([0-9]*)@
+@[^[:print:]]@
+@^(CHECK|ANALYZE|REPAIR|OPTIMIZE)[[:space:]]+TABLE[[:space:]]+@i
+@^(DATE|DATETIME|TIME|TINYBLOB|TINYTEXT|BLOB|TEXT|MEDIUMBLOB|MEDIUMTEXT|LONGBLOB|LONGTEXT)$@i
+@^(INSERT|LOAD[[:space:]]+DATA|REPLACE)[[:space:]]+@i
+@^(REPLACE)[[:space:]]+@i
+@^(SELECT|SHOW)[[:space:]]+@i
+@^(TINYTEXT|TEXT|MEDIUMTEXT|LONGTEXT|VARCHAR|CHAR|ENUM|SET)$@i
+@^(db|tbl)_@
+@^(server|db|tbl)(_[a-z]*)*\.php$@i
+@^(set|enum)\((.+)\)$@i
+@^DELETE[[:space:]]+@i
+@^EXPLAIN[[:space:]]+@i
+@^EXPLAIN[[:space:]]+SELECT[[:space:]]+@i
+@^SELECT@i
+@^SELECT[[:space:]]+@i
+@^SHOW[[:space:]]+(VARIABLES|(FULL[[:space:]]+)?PROCESSLIST|STATUS|TABLE|GRANTS|CREATE|LOGS|DATABASES|FIELDS)@i
+@^UPDATE[[:space:]]+@i
+@^[[:space:]]*DROP[[:space:]]+(IF EXISTS[[:space:]]+)?DATABASE @i
+@^[[:space:]]*SHOW[[:space:]]+@i
+@^[\s]*(CONSTRAINT|FOREIGN[\s]+KEY)@
+@^[\s]*(DROP|CREATE)[\s]+(IF EXISTS[[:space:]]+)?(TABLE|DATABASE)[[:space:]]+(.+)@im
+@^[\s]*`[^`]*` = [0-9]+@
+@^[\s]*`[^`]*`[\.]`[^`]*` = [0-9]+@
+@^[^\.](.)*\.php$@i
+@^[a-z_]+\.php$@
+@^tbl_@
+@^tbl_[a-z]*\.php$@
+@char|blob|text|set@i
+@float|double@
+@in_use=[1-9]+@i
+@time|date@i
+[^external:\\\\]
+[^external:]
+[^internal:]
+{(\d+)}
+|\[([0-9]+)\-([0-9]+)\]|
+|^(?:[0-9]{1,3}\.){3,3}[0-9]{1,3}$|
+|^([^@%/]+)[@%/](.+)$|
+|^.*\.inc\.php$|
+~(^|\|)smarty:nodefaults($|\|)~
+~^(\.|\[|->)~
+~^(off|no|false)$~
+~^(on|yes|true)$~
+~^\w+$~
+/^\*\s[0-9]+\sEXPUNGE/AUi
+/^\\*\s+([0-9]+)\s+FETCH.*UID\s+([0-9]+)\s+/iAU
+/^\\*\s+([0-9]+)\s+FETCH/iAU
+/^.*(content-transfer-encoding:)\s*(\w+-?(\w+)?).*/i
+@char|binary|blob|text|set|date|time|year@i

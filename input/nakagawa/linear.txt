@@ -1,0 +1,339 @@
+!\d!s
+#&\#x([0-9a-f]+);#is
+%^(\s*)(>|/>)%s
+'&#[0-9]+;'s
+/# Database Name: `(.+?)`/is
+/# LANG: (.*)/is
+/([0-9A-F]){6}/is
+/(\.|\.\.)$/s
+/(\d+)/s
+/.gif/is
+/.jpg/is
+/.png/is
+/400/s
+/400/is
+/:/s
+/<!DOCTYPE\W*X?HTML/si
+/<\?php/is
+/FLAGS(.*)/is
+/INSERT INTO `(.*?)`/is
+/MSIE ([0-9]\.[0-9]{1,2})/s
+/MSIE ([0-9]\.[0-9]{1,2})/is
+/MSIE 5.5/s
+/OK/s
+/PERMANENTFLAGS(.*)/is
+/[ ]/s
+/[A-Z0-9\xc0-\xdc\.]+/s
+/[\n]/s
+/\#/s
+/\.([a-zA-Z0-9]+)$/s
+/\.css$/is
+/\/forum\//is
+/\?>/is
+/^'[\w -]+(\:[\w -]+)?'\!([A-Ia-i]?[A-Za-z])?(\d+)\:([A-Ia-i]?[A-Za-z])?(\d+)$/s
+/^'[\w -]+(\:[\w -]+)?'\!([A-Ia-i]?[A-Za-z])?[0-9]+:([A-Ia-i]?[A-Za-z])?[0-9]+$/s
+/^'[\w -]+(\:[\w -]+)?'\![A-Ia-i]?[A-Za-z](\d+)$/s
+/^'[\w -]+(\:[\w -]+)?'\![A-Ia-i]?[A-Za-z][0-9]+$/s
+/^(.+):(?:[ ]?)(\\w+)$/s
+/^(.+):(?:[ ]?)\\w+$/s
+/^(.+)\((\d+),(\d+)/s
+/^(.+)\((\d+)/s
+/^(.+)\((\d+)\)$/s
+/^(.+)\/.+$/s
+/^(>+)/s
+/^(?:(?:vedr|sv|re|aw|fw|fwd|\[\w\]):\s*)*\s*(.*)$/si
+/^(Location: |URI: )/is
+/^(Location: |URI:)\s+(.*)/s
+/^(Location:|URI:)/is
+/^(Location:|URI:)[ ]+(.*)/is
+/^([0-9]{4})([0-9]{2})([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})$/s
+/^([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)$/is
+/^([A-Ia-i]?[A-Za-z])(\d+)\.\.([A-Ia-i]?[A-Za-z])(\d+)$/s
+/^([A-Ia-i]?[A-Za-z])(\d+)\:([A-Ia-i]?[A-Za-z])(\d+)$/s
+/^([\/\\\\]|[a-zA-Z]:[\/\\\\])/s
+/^([\t >]*)([^\t >].*)?$/s
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)$/s
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)\.\.(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)$/s
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)\:(\$)?[A-Ia-i]?[A-Za-z](\$)?(\d+)$/s
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+:(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+$/s
+/^(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+\.\.(\$)?[A-Ia-i]?[A-Za-z](\$)?[0-9]+$/s
+/^(\$|SM_PATH)/s
+/^(\/|http)/s
+/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/s
+/^(enum)\((.*)\)$/is
+/^(off|false|no)$/is
+/^(on|true|yes)$/is
+/^.*(content-type:)\s*(\w+)\/(\w+).*/is
+/^.*\/.*\/.*\/.*\/.*\/.*$/s
+/^.+,/s
+/^=/s
+/^@/s
+/^CREATE TABLE `(.*?)`/is
+/^DROP TABLE IF EXISTS `(.*?)`/is
+/^[-0-9A-Z_@\s]+$/is
+/^[-0-9A-Z_\.\[\]\s]+$/is
+/^[-0-9A-Z_\.\[\]]+$/is
+/^[-0-9A-Z_\[\]]+$/is
+/^[.]{1,2}$/s
+/^[0-9A-F]{32}:.+$/s
+/^[0-9A-Z@]{6,20}$/is
+/^[0-9A-Z]$/s
+/^[0-9A-Za-z]+$/s
+/^[0-9]+$/s
+/^[0-9]{3,4}$/s
+/^[1-9]{1}(\.[0-9]+)?E{1}$/s
+/^[A-Ia-i]?[A-Za-z](\d+)\.\.[A-Ia-i]?[A-Za-z](\d+)$/s
+/^[A-Z0-9\xc0-\xdc\.]+$/s
+/^[A-Z_]+=.*$/s
+/^[^\?]+/s
+/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/is
+/^[a-zA-Z_]\w*$/s
+/^[a-z\-]+$/s
+/^[hmsdy]/is
+/^\* ([0-9]+) FETCH/is
+/^\* SEARCH (.+)$/s
+/^\* SORT (.+)$/s
+/^\* THREAD (.+)$/s
+/^\/|\w:/s
+/^\:\:([0-9a-h\:]+)$/is
+/^\d+$/s
+/^\s*SELECT\s+DISTINCT/is
+/^\s*select/is
+/^\w+(\:\w+)?\!([A-Ia-i]?[A-Za-z])?(\d+)\:([A-Ia-i]?[A-Za-z])?(\d+)$/s
+/^\w+(\:\w+)?\!([A-Ia-i]?[A-Za-z])?[0-9]+:([A-Ia-i]?[A-Za-z])?[0-9]+$/s
+/^\w+(\:\w+)?\![A-Ia-i]?[A-Za-z](\d+)$/s
+/^\w+(\:\w+)?\![A-Ia-i]?[A-Za-z][0-9]+$/s
+/^cavt/s
+/^http:\/\/(www\.)?youtube\.com\/watch\?v=(.*)/is
+/^http[s]*:\/\//is
+/^iso-8859/is
+/_include.php/is
+/_var.php/is
+/include.php/is
+/include_button.php/is
+/index\.php$/is
+/maincore.php/is
+/nextval\('([^']+)'::text\)/s
+/primary/is
+/settings_forum.php/is
+/settings_main.php/is
+/settings_messages.php/is
+/settings_misc.php/is
+/settings_photo.php/is
+/settings_registration.php/is
+/settings_time.php/is
+/unique/is
+|[\w/>]|s
+|\:\/\/|s
+|^([^:]+)://([^:/]+)(:[\d]+)*(.*)|s
+|^/|s
+|^HTTP/[^\s]*\s(.*?)\s|s
+|^HTTP/|s
+!%(\w+)\.(\w+)%!s
+!Buffer pool hit rate\s*([0-9]*) / ([0-9]*)!s
+!\D!s
+!\w!s
+!^((//)|([a-zA-Z]:/))!s
+!^(.*)(\?.*)$!s
+!^(\+|\-)\s*(\d+)$!s
+!^(http|ftp)://!is
+!^-\d+$!s
+!^\.\w+$!s
+!^\[(.*?)\]!s
+!^http://!is
+#&(quot|lt|gt|nbsp|<?php);#is
+#&\#([0-9]+);#is
+#[0-9]#s
+#[a-zA-Z]{2,}#s
+#^[0-9a-fA-F]{4}$#s
+#^http://#s
+&(?:\\\|\\/)([^\\\\\/]*)(?:\\\|\\/)$&is
+/"([^"]*)"/s
+/%$/s
+/(=\?([^?]*)\?(Q|B)\?([^?]*)\?=)(.*)/Uis
+/(=\?([^?]*)\?(Q|B)\?([^?]*)\?=)(\s+|.*)/Uis
+/([0-9.]+)/s
+/([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})/s
+/([a-zA-Z0-9]*)/s
+/(\$)?([A-I]?[A-Z])(\$)?(\d+)/s
+/(\.gif|\.jpg|\.png)$/is
+/(\.htm|\.html|\.xhtml)$/is
+/(\.php)$/is
+/(\x36MDNSent|\\\\\*)/is
+/^(|.*?[^\\\\])(_|%)/s
+/(char)|(text)|(enum)|(set)/s
+/(char|text)/is
+/(enum)|(set)/s
+/,/s
+/<--PAGEBREAK-->/s
+/=\?([^?]+)\?(q|b)\?([^?]+)\?=/is
+/BINARY/is
+/FULLTEXT/s
+/MESSAGES\s+([0-9]+)/is
+/NOT NULL/is
+/ORDER[ \t\r\n]+BY/is
+/RECENT\s+([0-9]+)/is
+/UNSEEN\s+([0-9]+)/is
+/UNSIGNED/is
+/ZEROFILL/is
+/[ :|#"!]/s
+/[,.]$/s
+/[.\/\\\\]+/is
+/[: |#"!]/s
+/[^a-z_]+/is
+/\!/s
+/\%[\%bcdeufFosxX]/s
+/\* [0-9]+ FETCH.*/is
+/\+|\(/s
+/\-/s
+/\.([^.]+)$/s
+/\.[#0]+/is
+/\<\/\s*style\s*\>/is
+/\=(.)/s
+/\S/s
+/\W/s
+/\\\\%|\\\\_/s
+/\\\\(?:_|%)/is
+/\^/s
+/\d/s
+/\s(FOR UPDATE.*)/is
+/\s(LIMIT\s.*)/is
+/\s(ORDER\s.*)/is
+/\s/s
+/\sORDER\s+BY\s*\(/is
+/\sWHERE\s(.*)/is
+/^&#(\d+);/s
+/^&([a-z]+);/is
+/^&gt;/is
+/^&x([0-9a-f]+);/is
+/^( )+/s
+/^( *)([^ ]*)$/s
+/^( *)([^ ]*)/s
+/^(.*)=\?([^?]*)\?(Q|B)\?([^?]*)\?=(.*)$/Uis
+/^(.+)\?.+$/s
+/^(=\?([^?]*)\?(Q|B)\?([^?]*)\?=)(.*)/Uis
+/^(CREATE|ALTER|DROP)\s+(VIEW|TABLE|DATABASE|SCHEMA)\s+/is
+/^(MyISAM|ISAM|HEAP|InnoDB)$/is
+/^([0-9]+).*/s
+/^([A-Ia-i]?[A-Za-z])(\d+)$/s
+/^([\/\\\\]|[a-zA-Z]:[\/\\\\])/s
+/^([\s]*;)*$/s
+/^([\t >]*)([^\t >].*)?$/s
+/^([\w_]+,)*TZ/s
+/^([^ ]+) .*DEFAULT ([^ ]+)/s
+/^([^:]+):(.+)/s
+/^(\d+)\.(\d+)\.(\d+)((\.|-(pl|rc|dev|beta|alpha))(\d+)?)?$/s
+/^(\d{0,4}-\d{0,2}-\d{0,2})/s
+/^(\d{2}){3,7}$/s
+/^(\d|[0-1]\d|2[0-3]):[0-5]\d$/s
+/^(\s*)/s
+/^(set|enum)\((.+)\)$/is
+/^-\d+$/s
+/^[ ]*"(.*)"[ ]*$/s
+/^[ |\t]/s
+/^[#0]+/s
+/^[+-]{1}[0-9]{4}$/s
+/^[0-9.]+(px|em|pt|\%)$/s
+/^[0-9]+$/s
+/^[0-9]\d{1,9}$/s
+/^[0-9a-z_]*$/is
+/^[1-9]\d{1,9}$/s
+/^[>\s]*$/s
+/^[A-Z0-9._%-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/is
+/^[A-Z]:\\\\/is
+/^[A-Za-z]$/s
+/^[\.]{1,2}$/s
+/^[\s]*(SELECT|SHOW|HANDLER)/is
+/^[\t\n\x0b\x0c ]$/s
+/^[\t\n\x0b\x0c ]+$/s
+/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/is
+/^[a-z0-9]*$/is
+/^[a-zA-Z0-9_\.\-`]*$/s
+/^[a-z]$/s
+/^\$?([A-Ia-i]?[A-Za-z])\$?(\d+)$/s
+/^\$?[A-Ia-i]?[A-Za-z]\$?[0-9]+$/s
+/^\( *\((.*)\) *\)/s
+/^\* \d+ FETCH/s
+/^\*\s([0-9]+)\s(\w+)/s
+/^\*\s+OK\s\[(\w+)\s(\w+)\]/s
+/^\*\s\d+\sFETCH/s
+/^\-?[0-9]*\\.?[0-9]*$/s
+/^\.\r\n/s
+/^\[(.+)\]/s
+/^\\.(.*)$/s
+/^\\.+$/s
+/^\d+(\.\d+)*$/s
+/^\d+\.\d+\.\d+\.\d+$/s
+/^\d{14}$/s
+/^\s*(\.?\w+)\s*=\s*(.*)/s
+/^`(.+)`$/s
+/^ed2k*:\/\//is
+/^ftp*:\/\//is
+/^http[s]*:\/\//is
+/^msgid "(.*)"$/s
+/^msgstr "(.*)"$/s
+/^mysql/s
+/^pgsql/s
+/compatible; MSIE ([0-9]+)/s
+/error code = ([\-0-9]*)/is
+/mysql/is
+/postgres/is
+@(GROUP\s+BY|HAVING|SELECT\s+DISTINCT)\s+@is
+@BINARY[\(]@is
+@CONSTRAINT|FOREIGN[\s]+KEY@s
+@DATE|TIME@is
+@ISAM|HEAP@is
+@MSIE ([0-9].[0-9]{1,2})@s
+@MSIE ([0-9].[0-9]{1,2})@s
+@OmniWeb/([0-9].[0-9]{1,2})@s
+@Opera(/| )([0-9].[0-9]{1,2})@s
+@Safari/([0-9]*)@s
+@[^ -~]@s
+@^(CHECK|ANALYZE|REPAIR|OPTIMIZE)\s+TABLE\s+@is
+@^(DATE|DATETIME|TIME|TINYBLOB|TINYTEXT|BLOB|TEXT|MEDIUMBLOB|MEDIUMTEXT|LONGBLOB|LONGTEXT)$@is
+@^(INSERT|LOAD\s+DATA|REPLACE)\s+@is
+@^(REPLACE)\s+@is
+@^(SELECT|SHOW)\s+@is
+@^(TINYTEXT|TEXT|MEDIUMTEXT|LONGTEXT|VARCHAR|CHAR|ENUM|SET)$@is
+@^(db|tbl)_@s
+@^(server|db|tbl)(_[a-z]*)*\.php$@is
+@^(set|enum)\((.+)\)$@is
+@^DELETE\s+@is
+@^EXPLAIN\s+@is
+@^EXPLAIN\s+SELECT\s+@is
+@^SELECT@is
+@^SELECT\s+@is
+@^SHOW\s+(VARIABLES|(FULL\s+)?PROCESSLIST|STATUS|TABLE|GRANTS|CREATE|LOGS|DATABASES|FIELDS)@is
+@^UPDATE\s+@is
+@^\s*DROP\s+(IF EXISTS\s+)?DATABASE @is
+@^\s*SHOW\s+@is
+@^[\s]*(CONSTRAINT|FOREIGN[\s]+KEY)@s
+@^[\s]*(DROP|CREATE)[\s]+(IF EXISTS\s+)?(TABLE|DATABASE)\s+(.+)@is
+@^[\s]*`[^`]*` = [0-9]+@s
+@^[\s]*`[^`]*`[\.]`[^`]*` = [0-9]+@s
+@^[^\.](.)*\.php$@is
+@^[a-z_]+\.php$@s
+@^tbl_@s
+@^tbl_[a-z]*\.php$@s
+@char|blob|text|set@is
+@float|double@s
+@in_use=[1-9]+@is
+@time|date@is
+[^external:\\\\]s
+[^external:]s
+[^internal:]s
+{(\d+)}s
+|\[([0-9]+)\-([0-9]+)\]|s
+|^(?:[0-9]{1,3}\.){3,3}[0-9]{1,3}$|s
+|^([^@%/]+)[@%/](.+)$|s
+|^.*\.inc\.php$|s
+~^(|.*?\|)smarty:nodefaults(|\|.*)$~s
+~^(\.|\[|->)~s
+~^(off|no|false)$~s
+~^(on|yes|true)$~s
+~^\w+$~s
+/^\*\s[0-9]+\sEXPUNGE/Uis
+/^\\*\s+([0-9]+)\s+FETCH.*UID\s+([0-9]+)\s+/iUs
+/^\\*\s+([0-9]+)\s+FETCH/iUs
+/^.*(content-transfer-encoding:)\s*(\w+-?(\w+)?).*/is
+@char|binary|blob|text|set|date|time|year@is
