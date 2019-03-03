@@ -349,4 +349,18 @@ class RegExpParserSpec extends FlatSpec with Matchers {
 
     a [Exception] should be thrownBy {RegExpParser("a*+")}
   }
+
+  "parsePHP" should "parse PHP style regexp" in {
+    RegExpParser.parsePHP("/a/") should be ((withStartEnd(ElemExp('a')), Seq()))
+    RegExpParser.parsePHP("#a#") should be ((withStartEnd(ElemExp('a')), Seq()))
+    RegExpParser.parsePHP("(a)") should be ((withStartEnd(ElemExp('a')), Seq()))
+    RegExpParser.parsePHP("{a}") should be ((withStartEnd(ElemExp('a')), Seq()))
+    RegExpParser.parsePHP("[a]") should be ((withStartEnd(ElemExp('a')), Seq()))
+    RegExpParser.parsePHP("<a>") should be ((withStartEnd(ElemExp('a')), Seq()))
+    RegExpParser.parsePHP("/a/i") should be ((withStartEnd(ElemExp('a')), Seq('i')))
+    RegExpParser.parsePHP("#a#A") should be ((withStartEnd(ElemExp('a')), Seq('A')))
+    RegExpParser.parsePHP("{a}isA") should be ((withStartEnd(ElemExp('a')), Seq('i','s','A')))
+
+    a [Exception] should be thrownBy {RegExpParser.parsePHP("/abc#i")}
+  }
 }

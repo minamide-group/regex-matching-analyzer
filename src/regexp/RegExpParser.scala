@@ -179,4 +179,23 @@ object RegExpParser {
   def apply(s: String): RegExp[Char] = {
     new RegExpParser().parseAll(s)
   }
+
+  def parsePHP(s: String): (RegExp[Char], Seq[Char]) = {
+    val endDelimiter = s.head match {
+      case '(' => ')'
+      case '{' => '}'
+      case '[' => ']'
+      case '<' => '>'
+      case c => c
+    }
+
+    val endBodyIndex = s.lastIndexWhere(_ == endDelimiter)
+    if (endBodyIndex == 0) throw new ParseException("illegal PHP style expression.")
+    else {
+      val body = s.slice(1,endBodyIndex)
+      val options = s.drop(endBodyIndex+1)
+
+      (new RegExpParser().parseAll(body), options)
+    }
+  }
 }
