@@ -70,6 +70,19 @@ case class UnsupportedExp(s: String) extends RegExp[Char]
 
 
 object RegExp {
+  class PHPOption(s: String = "") {
+    var ignoreCase = false
+    var dotAll = false
+    var ungreedy = false
+
+    s.foreach{
+      case 'i' => ignoreCase = true
+      case 's' => dotAll = true
+      case 'U' => ungreedy = true
+      case c => throw new Exception(s"illegal option: ${c}")
+    }
+  }
+
   def toString[A](r: RegExp[A]): String = {
     r match {
       case ElemExp(a) => a.toString
@@ -101,20 +114,34 @@ object RegExp {
     }
   }
 
-  def constructMorphs[M[_]](r: RegExp[Char])(implicit m: Monad[M]): IndexedMorphs[Option[Char],RegExp[Char],M] = {
+  def constructMorphs[M[_]](r: RegExp[Char], option: PHPOption = new PHPOption())(implicit m: Monad[M]): IndexedMorphs[Option[Char],RegExp[Char],M] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
-        case ElemExp(a) => Set(a)
+        case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
         case EmptyExp() | EpsExp() | BackReferenceExp(_) => Set()
         case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
         case AltExp(r1,r2) => getElems(r1) | getElems(r2)
         case StarExp(r,greedy) => getElems(r)
         case PlusExp(r,greedy) => getElems(r)
         case OptionExp(r,greedy) => getElems(r)
-        case DotExp() => Set('\n')
+        case DotExp() => if (option.dotAll) Set() else Set('\n')
         case RepeatExp(r,min,max,greedy) => getElems(r)
-        case r @ CharClassExp(es,positive) => es.flatMap(_.charSet).toSet
-        case r @ MetaCharExp(c) => r.charSet
+        case r @ CharClassExp(es,positive) =>
+          val s = es.flatMap(_.charSet).toSet
+          if (option.ignoreCase) {
+            s.map{
+              case a if a.isLetter => a.toLower
+              case a => a
+            }
+          } else s
+        case r @ MetaCharExp(c) =>
+          val s = r.charSet
+          if (option.ignoreCase) {
+            s.map{
+              case a if a.isLetter => a.toLower
+              case a => a
+            }
+          } else s
         case _ => throw new Exception(s"getElems unsupported expression: ${r}")
       }
     }
@@ -135,7 +162,7 @@ object RegExp {
     var regExps = Set(r)
     val stack = Stack(r)
     var morphs = sigma.map(_ -> Map[RegExp[Char], M[RegExp[Char]]]()).toMap
-    implicit val deriver = new RegExpDeriver[M]()
+    implicit val deriver = new RegExpDeriver[M](option)
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("constructing morphisms")
       val r = stack.pop
@@ -154,8 +181,8 @@ object RegExp {
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def calcGrowthRate(r: RegExp[Char]): Option[Int] = {
-    val indexedMorphs = constructMorphs[List](r).rename()
+  def calcGrowthRate(r: RegExp[Char], option: PHPOption = new PHPOption()): Option[Int] = {
+    val indexedMorphs = constructMorphs[List](r,option).rename()
     val nfa = indexedMorphs.toNFA().reachablePart()
     if (!nfa.hasLoop()) Some(0)
     else {
@@ -166,9 +193,9 @@ object RegExp {
     }
   }
 
-  def calcBtrGrowthRate(r: RegExp[Char]): Option[Int] = {
+  def calcBtrGrowthRate(r: RegExp[Char], option: PHPOption = new PHPOption()): Option[Int] = {
     val indexedMorphs = Debug.time("consruct IndexedMorphs") {
-      constructMorphs[List](r).rename()
+      constructMorphs[List](r,option).rename()
     }
     val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
       indexedMorphs.toIndexedMorphsWithTransition().rename()

@@ -1,6 +1,7 @@
 package matching.regexp
 
 import org.scalatest._
+import RegExp._
 
 class RegExpDeriverSpec extends FlatSpec with Matchers {
   implicit var deriver = new RegExpDeriver[List]()
@@ -284,7 +285,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
 
 
   "derive with ignore case option" should "derive character" in {
-    deriver = new RegExpDeriver[List](Seq('i'))
+    deriver = new RegExpDeriver[List](new PHPOption("i"))
 
     val r1 = parseWithStartEnd("a")
     r1.derive('a') should be (List(Some(EpsExp())))
@@ -300,7 +301,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   it should "derive character class" in {
-    deriver = new RegExpDeriver[List](Seq('i'))
+    deriver = new RegExpDeriver[List](new PHPOption("i"))
 
     val r1 = parseWithStartEnd("[ac-e]")
     r1.derive('a') should be (List(Some(EpsExp())))
@@ -320,7 +321,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   "derive with dot all option" should "derive dot" in {
-    deriver = new RegExpDeriver[List](Seq('s'))
+    deriver = new RegExpDeriver[List](new PHPOption("s"))
 
     val r = parseWithStartEnd(".")
     r.derive('a') should be (List(Some(EpsExp())))
@@ -328,7 +329,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   "derive with ungreedy option" should "derive repeat expression" in {
-    deriver = new RegExpDeriver[List](Seq('U'))
+    deriver = new RegExpDeriver[List](new PHPOption("U"))
 
     val r1 = parseWithStartEnd("a*")
     r1.derive('a') should be (List(None, Some(StarExp(ElemExp('a'), true))))

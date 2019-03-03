@@ -3,23 +3,9 @@ package matching.regexp
 import matching.monad._
 import matching.monad.Monad._
 import matching.tool.Analysis
-import RegExp.optConcatExp
+import RegExp._
 
-class RegExpDeriver[M[_]](options: Seq[Char] = Seq())(implicit m: Monad[M]) {
-  class DeriveOption() {
-    var ignoreCase = false
-    var dotAll = false
-    var ungreedy = false
-  }
-  val option = new DeriveOption()
-
-  options.foreach{
-    case 'i' => option.ignoreCase = true
-    case 's' => option.dotAll = true
-    case 'U' => option.ungreedy = true
-    case c => throw new Exception(s"illegal option: ${c}")
-  }
-
+class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad[M]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
     def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]]] = {
       def accept(a: Option[Char]): Boolean = {

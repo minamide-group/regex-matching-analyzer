@@ -342,15 +342,31 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   "parsePHP" should "parse PHP style regexp" in {
-    RegExpParser.parsePHP("/a/") should be ((withStartEnd(ElemExp('a')), Seq()))
-    RegExpParser.parsePHP("#a#") should be ((withStartEnd(ElemExp('a')), Seq()))
-    RegExpParser.parsePHP("(a)") should be ((withStartEnd(ElemExp('a')), Seq()))
-    RegExpParser.parsePHP("{a}") should be ((withStartEnd(ElemExp('a')), Seq()))
-    RegExpParser.parsePHP("[a]") should be ((withStartEnd(ElemExp('a')), Seq()))
-    RegExpParser.parsePHP("<a>") should be ((withStartEnd(ElemExp('a')), Seq()))
-    RegExpParser.parsePHP("/a/i") should be ((withStartEnd(ElemExp('a')), Seq('i')))
-    RegExpParser.parsePHP("#a#A") should be ((withStartEnd(ElemExp('a')), Seq('A')))
-    RegExpParser.parsePHP("{a}isA") should be ((withStartEnd(ElemExp('a')), Seq('i','s','A')))
+    val (r1,o1) = RegExpParser.parsePHP("/a/")
+    r1 should be (withStartEnd(ElemExp('a')))
+    o1.ignoreCase should be (false)
+    o1.dotAll should be (false)
+    o1.ungreedy should be (false)
+
+    val (_,o2) = RegExpParser.parsePHP("/a/i")
+    o2.ignoreCase should be (true)
+
+    val (_,o3) = RegExpParser.parsePHP("/a/s")
+    o3.dotAll should be (true)
+
+    val (_,o4) = RegExpParser.parsePHP("/a/U")
+    o4.ungreedy should be (true)
+
+    val (_,o5) = RegExpParser.parsePHP("/a/isU")
+    o5.ignoreCase should be (true)
+    o5.dotAll should be (true)
+    o5.ungreedy should be (true)
+
+    noException should be thrownBy {RegExpParser.parsePHP("#a#")}
+    noException should be thrownBy {RegExpParser.parsePHP("(a)")}
+    noException should be thrownBy {RegExpParser.parsePHP("{a}")}
+    noException should be thrownBy {RegExpParser.parsePHP("[a]")}
+    noException should be thrownBy {RegExpParser.parsePHP("<a>")}
 
     a [Exception] should be thrownBy {RegExpParser.parsePHP("/abc#i")}
   }

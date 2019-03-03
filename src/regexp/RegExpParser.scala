@@ -1,7 +1,7 @@
 package matching.regexp
 
 import scala.util.parsing.combinator._
-import RegExp.optConcatExp
+import RegExp._
 
 class RegExpParser() extends RegexParsers {
   override val skipWhitespace = false
@@ -181,7 +181,7 @@ object RegExpParser {
     new RegExpParser().parseAll(s)
   }
 
-  def parsePHP(s: String): (RegExp[Char], Seq[Char]) = {
+  def parsePHP(s: String): (RegExp[Char], PHPOption) = {
     val endDelimiter = s.head match {
       case '(' => ')'
       case '{' => '}'
@@ -195,8 +195,9 @@ object RegExpParser {
     else {
       val body = s.slice(1,endBodyIndex)
       val options = s.drop(endBodyIndex+1)
+      val option = new PHPOption(options)
 
-      (new RegExpParser().parseAll(body), options)
+      (new RegExpParser().parseAll(body), option)
     }
   }
 }

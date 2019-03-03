@@ -2,7 +2,6 @@ package matching
 
 import regexp._
 import regexp.RegExp._
-import regexp.RegExpParser._
 import tool.{Analysis, File}
 import scala.io.StdIn
 import java.util.Calendar
@@ -32,11 +31,11 @@ object Main {
       else {
         try {
           println(regExpStr)
-          val r = RegExpParser(regExpStr)
-          val result = calcBtrGrowthRate(r)
+          val (r,option) = RegExpParser.parsePHP(regExpStr)
+          val result = calcBtrGrowthRate(r,option)
           println(convertResult(result))
         } catch {
-          case e: ParseException => e.printStackTrace()
+          case e: Exception => e.printStackTrace()
         }
         println()
       }
@@ -66,9 +65,9 @@ object Main {
       println(s"${idx+1}/${total}")
       write(regExpStr)
       try {
-        val r = RegExpParser(regExpStr)
-        Analysis.runWithLimit(10000) {
-          calcBtrGrowthRate(r)
+        val (r,option) = RegExpParser.parsePHP(regExpStr)
+        Analysis.runWithLimit(1000000) {
+          calcBtrGrowthRate(r,option)
         } match {
           case (Some(result),time) =>
             write(s"${convertResult(result)}, ${time} ms")
@@ -76,7 +75,7 @@ object Main {
             write(s"timeout, ${time} ms")
         }
       } catch {
-        case e: ParseException => write(e.toString)
+        case e: Exception => write(e.toString)
       }
       write()
     }
