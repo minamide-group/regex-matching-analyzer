@@ -53,7 +53,7 @@ class RegExpParser() extends RegexParsers {
           }
           def empty: Parser[EmptyExp[Char]] = "∅" ^^ {_ => EmptyExp()}
           def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
-          def dot: Parser[DotExp[Char]] = "." ^^ {_ => DotExp()}
+          def dot: Parser[DotExp] = "." ^^ {_ => DotExp()}
           def group: Parser[RegExp[Char]] = {
             def exp: Parser[RegExp[Char]] = {
               rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}

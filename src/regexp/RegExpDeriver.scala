@@ -6,10 +6,14 @@ import matching.tool.Analysis
 import RegExp.optConcatExp
 
 class RegExpDeriver[M[_]](implicit m: Monad[M]) {
-  def derive[A](r: RegExp[A], a: A): M[Option[RegExp[A]]] = {
+  def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
     Analysis.checkInterrupted("calculating derivative")
     r match {
-      case ElemExp(b) => if (a == b) m(Some(EpsExp())) else m.fail
+      case ElemExp(b) =>
+        a match {
+          case Some(a) => if (a == b) m(Some(EpsExp())) else m.fail
+          case None => m.fail
+        }
       case EmptyExp() => m.fail
       case EpsExp() => m(None)
       case ConcatExp(r1,r2) =>
@@ -34,7 +38,11 @@ class RegExpDeriver[M[_]](implicit m: Monad[M]) {
       case OptionExp(r,greedy) =>
         val dr = derive(r,a)
         if (greedy) dr ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ dr
-      case DotExp() => if (a != '\n') m(Some(EpsExp())) else m.fail
+      case DotExp() =>
+        a match {
+          case Some(a) => if (a != '\n') m(Some(EpsExp())) else m.fail
+          case None => m(Some(EpsExp()))
+        }
       case RepeatExp(r1,min,max,greedy) =>
         val rDec = RepeatExp(r1,min.map(_-1),max.map(_-1),greedy)
         val rd: M[Option[RegExp[A]]] = derive(r1,a) >>= {

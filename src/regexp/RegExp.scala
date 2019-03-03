@@ -8,7 +8,8 @@ import matching.tool.{Analysis, Debug}
 
 sealed trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
-  def derive[M[_]](a: A)(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,a)
+  def derive[M[_]](a: A)(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,Some(a))
+  def derive[M[_]](a: Option[A])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,a)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -19,7 +20,6 @@ case class AltExp[A](r1: RegExp[A], r2: RegExp[A]) extends RegExp[A]
 case class StarExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class PlusExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
 case class OptionExp[A](r: RegExp[A], greedy: Boolean) extends RegExp[A]
-case class DotExp[A]() extends RegExp[A]
 case class RepeatExp[A](r: RegExp[A], var min: Option[Int], var max: Option[Int], greedy: Boolean) extends RegExp[A]
 object RepeatExp {
   def apply[A](r: RegExp[A], min: Option[Int], max: Option[Int], greedy: Boolean): RegExp[A] = {
@@ -47,8 +47,10 @@ object RepeatExp {
     }
   }
 }
-case class CharClassExp(cs: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
-  def accept(c: Char): Boolean = cs.exists(_.accept(c)) ^ !positive
+case class BackReferenceExp[A](n: Int) extends RegExp[A]
+case class DotExp() extends RegExp[Char]
+case class CharClassExp(es: Seq[CharClassElem], positive: Boolean) extends RegExp[Char] {
+  def accept(c: Option[Char]): Boolean = es.exists(_.accept(c)) ^ !positive
 }
 case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
   val negetiveChar = Set('D', 'H', 'S', 'V', 'W')
@@ -66,9 +68,13 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 
   val negative = negetiveChar(c)
 
-  def accept(c: Char): Boolean = charSet.contains(c) ^ negative
+  def accept(c: Option[Char]): Boolean = {
+    c match {
+      case Some(c) => charSet.contains(c) ^ negative
+      case None => negative
+    }
+  }
 }
-case class BackReferenceExp[A](n: Int) extends RegExp[A]
 case class UnsupportedExp(s: String) extends RegExp[Char]
 
 
@@ -104,8 +110,25 @@ object RegExp {
     }
   }
 
-  def constructMorphs[M[_],A](r: RegExp[A], sigma: Set[A])(implicit m: Monad[M]): IndexedMorphs[A,RegExp[A],M] = {
-    def nullable(r: RegExp[A]): Boolean = {
+  def constructMorphs[M[_]](r: RegExp[Char])(implicit m: Monad[M]): IndexedMorphs[Option[Char],RegExp[Char],M] = {
+    def getElems(r: RegExp[Char]): Set[Char] = {
+      r match {
+        case ElemExp(a) => Set(a)
+        case EmptyExp() | EpsExp() | BackReferenceExp(_) => Set()
+        case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
+        case AltExp(r1,r2) => getElems(r1) | getElems(r2)
+        case StarExp(r,greedy) => getElems(r)
+        case PlusExp(r,greedy) => getElems(r)
+        case OptionExp(r,greedy) => getElems(r)
+        case DotExp() => Set('\n')
+        case RepeatExp(r,min,max,greedy) => getElems(r)
+        case r @ CharClassExp(es,positive) => es.flatMap(_.charSet).toSet
+        case r @ MetaCharExp(c) => r.charSet
+        case _ => throw new Exception(s"getElems unsupported expression: ${r}")
+      }
+    }
+
+    def nullable[A](r: RegExp[A]): Boolean = {
       r match {
         case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
         case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => false
@@ -117,15 +140,16 @@ object RegExp {
       }
     }
 
+    val sigma = getElems(r).map(Some(_): Option[Char]) + None
     var regExps = Set(r)
     val stack = Stack(r)
-    var morphs = sigma.map(_ -> Map[RegExp[A], M[RegExp[A]]]()).toMap
+    var morphs = sigma.map(_ -> Map[RegExp[Char], M[RegExp[Char]]]()).toMap
     implicit val deriver = new RegExpDeriver[M]()
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("constructing morphisms")
       val r = stack.pop
       sigma.foreach{ e =>
-        val rd: M[RegExp[A]] = r.derive(e) >>= {
+        val rd: M[RegExp[Char]] = r.derive(e) >>= {
           case Some(r) => m(r)
           case None => m.fail
         }
@@ -139,8 +163,8 @@ object RegExp {
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def calcGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
-    val indexedMorphs = constructMorphs[List,A](r, sigma).rename()
+  def calcGrowthRate(r: RegExp[Char]): Option[Int] = {
+    val indexedMorphs = constructMorphs[List](r).rename()
     val nfa = indexedMorphs.toNFA().reachablePart()
     if (!nfa.hasLoop()) Some(0)
     else {
@@ -151,9 +175,9 @@ object RegExp {
     }
   }
 
-  def calcBtrGrowthRate[A](r: RegExp[A], sigma: Set[A]): Option[Int] = {
+  def calcBtrGrowthRate(r: RegExp[Char]): Option[Int] = {
     val indexedMorphs = Debug.time("consruct IndexedMorphs") {
-      constructMorphs[List,A](r, sigma).rename()
+      constructMorphs[List](r).rename()
     }
     val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
       indexedMorphs.toIndexedMorphsWithTransition().rename()
@@ -176,17 +200,29 @@ object RegExp {
 
 
 sealed trait CharClassElem {
-  def accept(c: Char): Boolean
+  val charSet: Set[Char]
+  def accept(c: Option[Char]): Boolean
   override def toString(): String = CharClassElem.toString(this)
 }
 
 case class SingleCharExp(c: Char) extends CharClassElem {
-  def accept(c1: Char): Boolean = c == c1
+  val charSet = Set(c)
+  def accept(c1: Option[Char]): Boolean = {
+    c1 match {
+      case Some(c1) => c == c1
+      case None => false
+    }
+  }
 }
 case class RangeExp(start: Char, end: Char) extends CharClassElem {
   val charSet = (start to end).toSet
 
-  def accept(c: Char): Boolean = charSet.contains(c)
+  def accept(c: Option[Char]): Boolean = {
+    c match {
+      case Some(c) => charSet.contains(c)
+      case None => false
+    }
+  }
 }
 
 

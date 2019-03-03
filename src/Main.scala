@@ -23,7 +23,7 @@ object Main {
     }
   }
 
-  def interactiveTest(sigma: Set[Char] = (' ' to '~').toSet) {
+  def interactiveTest() {
     var continue = true
     while (continue) {
       println("please input expression. (input blank line to quit)")
@@ -33,7 +33,7 @@ object Main {
         try {
           println(regExpStr)
           val r = RegExpParser(regExpStr)
-          val result = calcBtrGrowthRate(r,sigma)
+          val result = calcBtrGrowthRate(r)
           println(convertResult(result))
         } catch {
           case e: ParseException => e.printStackTrace()
@@ -43,14 +43,14 @@ object Main {
     }
   }
 
-  def test(inputFile: String, sigma: Set[Char] = (' ' to '~').toSet) {
+  def test(inputFile: String) {
     val textFile = """(?:.*?)([^/]+)\.txt""".r
     val name = inputFile match {
       case textFile(name) => name
       case _ => throw new Exception("invalid file name")
     }
     val now = Calendar.getInstance()
-    val timeStamp = f"${now.get(Calendar.YEAR)}-${now.get(Calendar.MONTH)}%02d-${now.get(Calendar.DATE)}%02d-${now.get(Calendar.HOUR_OF_DAY)}%02d-${now.get(Calendar.MINUTE)}%02d-${now.get(Calendar.SECOND)}%02d"
+    val timeStamp = f"${now.get(Calendar.YEAR)}-${now.get(Calendar.MONTH)+1}%02d-${now.get(Calendar.DATE)}%02d-${now.get(Calendar.HOUR_OF_DAY)}%02d-${now.get(Calendar.MINUTE)}%02d-${now.get(Calendar.SECOND)}%02d"
 
     val outputFile = File.makeFile(s"output/${name}_${timeStamp}.txt")
 
@@ -68,7 +68,7 @@ object Main {
       try {
         val r = RegExpParser(regExpStr)
         Analysis.runWithLimit(10000) {
-          calcBtrGrowthRate(r,sigma)
+          calcBtrGrowthRate(r)
         } match {
           case (Some(result),time) =>
             write(s"${convertResult(result)}, ${time} ms")

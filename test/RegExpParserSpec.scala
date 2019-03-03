@@ -3,7 +3,7 @@ package matching.regexp
 import org.scalatest._
 
 class RegExpParserSpec extends FlatSpec with Matchers {
-  def withStartEnd[A](r: RegExp[A]): RegExp[A] = {
+  def withStartEnd(r: RegExp[Char]): RegExp[Char] = {
     RegExp.optConcatExp(
       RegExp.optConcatExp(
         StarExp(DotExp(),false),

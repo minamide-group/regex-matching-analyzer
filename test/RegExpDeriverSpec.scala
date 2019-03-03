@@ -239,4 +239,45 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
     r2.derive('a') should be (List(Some(parseWithStartEnd("a*(a*)*")), None, None))
     r2.derive('b') should be (List(None, None))
   }
+
+  "derive with character not appear in given expression" should "derive a" in {
+    val r = parseWithStartEnd("a")
+    r.derive(None) should be (Nil)
+  }
+
+  it should "derive ." in {
+    val r = parseWithStartEnd(".")
+    r.derive(None) should be (List(Some(EpsExp())))
+  }
+
+  it should "derive character class" in {
+    val r1 = parseWithStartEnd("""[a-z]""")
+    r1.derive(None) should be (Nil)
+
+    val r2 = parseWithStartEnd("""[^a-z]""")
+    r2.derive(None) should be (List(Some(EpsExp())))
+
+    val r3 = parseWithStartEnd("""[\w]""")
+    r3.derive(None) should be (Nil)
+
+    val r4 = parseWithStartEnd("""[\W]""")
+    r4.derive(None) should be (List(Some(EpsExp())))
+
+    val r6 = parseWithStartEnd("""[0-9\w]""")
+    r6.derive(None) should be (Nil)
+
+    val r7 = parseWithStartEnd("""[0-9\W]""")
+    r7.derive(None) should be (List(Some(EpsExp())))
+
+    val r8 = parseWithStartEnd("""[^0-9\W]""")
+    r8.derive(None) should be (Nil)
+  }
+
+  it should "derive meta character" in {
+    val r1 = parseWithStartEnd("""\w""")
+    r1.derive(None) should be (Nil)
+
+    val r2 = parseWithStartEnd("""\W""")
+    r2.derive(None) should be (List(Some(EpsExp())))
+  }
 }
