@@ -5,22 +5,38 @@ import matching.monad.Monad._
 import matching.tool.Analysis
 import RegExp.optConcatExp
 
-class RegExpDeriver[M[_]](implicit m: Monad[M]) {
+class RegExpDeriver[M[_]](options: Seq[Char] = Seq())(implicit m: Monad[M]) {
+  var ignoreCase = false
+
+  options.foreach{
+    case 'i' => ignoreCase = true
+    case c => throw new Exception(s"illegal option: ${c}")
+  }
+
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
-    def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
-      def accept(a: Option[A]): Boolean = {
+    def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]]] = {
+      def accept(a: Option[Char]): Boolean = {
         def acceptCharClass(r: CharClassElem, a: Option[Char]): Boolean = {
           r match {
             case SingleCharExp(c) => a match {
-              case Some(a) => c == a
+              case Some(a) =>
+                if (ignoreCase && a.isLetter) {
+                  a.toLower == c || a.toUpper == c
+                } else a == c
               case None => false
             }
             case RangeExp(start, end) => a match {
-              case Some(a) => r.charSet.contains(a)
+              case Some(a) =>
+                if (ignoreCase && a.isLetter) {
+                  r.charSet.contains(a.toLower) || r.charSet.contains(a.toUpper)
+                } else r.charSet.contains(a)
               case None => false
             }
             case r @ MetaCharExp(_) => a match {
-              case Some(a) => r.charSet.contains(a) ^ r.negative
+              case Some(a) =>
+                if (ignoreCase && a.isLetter) {
+                  (r.charSet.contains(a.toLower) || r.charSet.contains(a.toUpper)) ^ r.negative
+                } else r.charSet.contains(a) ^ r.negative
               case None => r.negative
             }
           }
@@ -28,7 +44,9 @@ class RegExpDeriver[M[_]](implicit m: Monad[M]) {
 
         r match {
           case ElemExp(b) => a match {
-            case Some(a) => a == b
+            case Some(a) =>
+              if (ignoreCase && a.isLetter) a.toLower == b || a.toUpper == b
+              else a == b
             case None => false
           }
           case DotExp() => a match {

@@ -3,7 +3,7 @@ package matching.regexp
 import org.scalatest._
 
 class RegExpDeriverSpec extends FlatSpec with Matchers {
-  implicit val deriver = new RegExpDeriver[List]()
+  implicit var deriver = new RegExpDeriver[List]()
   def parseWithStartEnd(s: String): RegExp[Char] = {
     RegExpParser(s"^${s}${"$"}")
   }
@@ -240,6 +240,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
     r2.derive('b') should be (List(None, None))
   }
 
+
   "derive with character not appear in given expression" should "derive a" in {
     val r = parseWithStartEnd("a")
     r.derive(None) should be (Nil)
@@ -251,10 +252,10 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   it should "derive character class" in {
-    val r1 = parseWithStartEnd("""[a-z]""")
+    val r1 = parseWithStartEnd("[a-z]")
     r1.derive(None) should be (Nil)
 
-    val r2 = parseWithStartEnd("""[^a-z]""")
+    val r2 = parseWithStartEnd("[^a-z]")
     r2.derive(None) should be (List(Some(EpsExp())))
 
     val r3 = parseWithStartEnd("""[\w]""")
@@ -279,5 +280,42 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
 
     val r2 = parseWithStartEnd("""\W""")
     r2.derive(None) should be (List(Some(EpsExp())))
+  }
+
+
+  "derive with ignore case option" should "derive character" in {
+    deriver = new RegExpDeriver[List](Seq('i'))
+
+    val r1 = parseWithStartEnd("a")
+    r1.derive('a') should be (List(Some(EpsExp())))
+    r1.derive('A') should be (List(Some(EpsExp())))
+    r1.derive('b') should be (Nil)
+    r1.derive('B') should be (Nil)
+
+    val r2 = parseWithStartEnd("A")
+    r2.derive('a') should be (List(Some(EpsExp())))
+    r2.derive('A') should be (List(Some(EpsExp())))
+    r2.derive('b') should be (Nil)
+    r2.derive('B') should be (Nil)
+  }
+
+  it should "derive character class" in {
+    deriver = new RegExpDeriver[List](Seq('i'))
+
+    val r1 = parseWithStartEnd("[ac-e]")
+    r1.derive('a') should be (List(Some(EpsExp())))
+    r1.derive('A') should be (List(Some(EpsExp())))
+    r1.derive('d') should be (List(Some(EpsExp())))
+    r1.derive('D') should be (List(Some(EpsExp())))
+    r1.derive('b') should be (Nil)
+    r1.derive('B') should be (Nil)
+
+    val r2 = parseWithStartEnd("""[^abB]""")
+    r2.derive('c') should be (List(Some(EpsExp())))
+    r2.derive('C') should be (List(Some(EpsExp())))
+    r2.derive('b') should be (Nil)
+    r2.derive('B') should be (Nil)
+    r2.derive('a') should be (Nil)
+    r2.derive('A') should be (Nil)
   }
 }
