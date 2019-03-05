@@ -21,8 +21,8 @@ object Analysis {
           Some(proc)
         } catch {
           case e: InterruptedNotification =>
-          Debug.debug(s"interrupted: ${e.message}")
-          None
+            Debug.debug(s"interrupted: ${e.message}")
+            None
         }
         val finish = System.currentTimeMillis()
         result = (a, finish - start)

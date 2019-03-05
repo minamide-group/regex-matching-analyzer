@@ -2,7 +2,7 @@ package matching.transition
 
 import matching.monad._
 import matching.monad.Monad._
-import matching.tool.Analysis
+import matching.tool.{Analysis, Debug}
 
 class IndexedMorphs[A,B,M[_]](
   val morphs: Map[A,Map[B,M[B]]],
@@ -35,6 +35,11 @@ class IndexedMorphs[A,B,M[_]](
 
   def toIndexedMorphsWithTransition(): IndexedMorphsWithTransition[Set[B],A,B,M] = {
     val ladfa = toNFA().reverse().toDFA()
+
+    Debug.info("lookahead DFA info") (
+      ("number of states", ladfa.states.size)
+    )
+
     val morphCuts = morphs.mapValues(_.mapValues{ rd =>
       Analysis.checkInterrupted("constructing indexed morphisms with transition")
       (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
@@ -44,8 +49,14 @@ class IndexedMorphs[A,B,M[_]](
       }))
     })
 
-    var edge2Sigma = (for (p1 <- ladfa.states; p2 <- ladfa.states) yield (p1,p2) -> Set[A]()).toMap
-    ladfa.delta.foreach{case (q1,a,q2) => edge2Sigma += (q1,q2) -> (edge2Sigma((q1,q2)) + a)}
+    var edge2Sigma = (for (p1 <- ladfa.states; p2 <- ladfa.states) yield {
+      Analysis.checkInterrupted("constructing indexed morphisms with transition")
+      (p1,p2) -> Set[A]()
+    }).toMap
+    ladfa.delta.foreach{ case (q1,a,q2) =>
+      Analysis.checkInterrupted("constructing indexed morphisms with transition")
+      edge2Sigma += (q1,q2) -> (edge2Sigma((q1,q2)) + a)
+    }
 
     val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
       (p2,p1) -> as.map( a =>

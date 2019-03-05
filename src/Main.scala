@@ -66,7 +66,7 @@ object Main {
       write(regExpStr)
       try {
         val (r,option) = RegExpParser.parsePHP(regExpStr)
-        Analysis.runWithLimit(1000000) {
+        Analysis.runWithLimit(10000) {
           calcBtrGrowthRate(r,option)
         } match {
           case (Some(result),time) =>

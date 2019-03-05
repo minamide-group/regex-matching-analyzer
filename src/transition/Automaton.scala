@@ -97,7 +97,7 @@ class NFA[Q,A](
 
   private def calcAmbiguity(isIDA: (Set[Q],Set[Q]) => Boolean): Option[Int] = {
     Debug.info("NFA info") (
-      ("number of states", nodes.size),
+      ("number of states", states.size),
       ("number of transitions", delta.size),
       ("number of alphabets", sigma.size),
       ("number of strong components", scsGraph.nodes.size)
