@@ -5,24 +5,31 @@ import scala.concurrent.duration._
 import ExecutionContext.Implicits.global
 
 object Analysis {
+  sealed trait AnalysisResult[+A]
+  case class Success[A](result: A) extends AnalysisResult[A]
+  case class Failure(message: String) extends AnalysisResult[Nothing]
+  case class Timeout(message: String) extends AnalysisResult[Nothing]
+
   case class InterruptedNotification(message: String) extends Exception(message)
 
   def checkInterrupted(message: String = "") = {
     if (Thread.currentThread().isInterrupted()) throw InterruptedNotification(message)
   }
 
-  def runWithLimit[A](limit: Long)(proc: => A): (Option[A], Long) = {
-    var result = (None: Option[A], limit)
+  def runWithLimit[A](limit: Long)(proc: => A): (AnalysisResult[A], Long) = {
+    var result: (AnalysisResult[A], Long) = (Failure(""), 0)
 
     val thread = new Thread {
       override def run() {
         val start = System.currentTimeMillis()
         val a = try {
-          Some(proc)
+          Success(proc)
         } catch {
           case e: InterruptedNotification =>
             Debug.debug(s"interrupted: ${e.message}")
-            None
+            Timeout(e.message)
+          case e: Exception =>
+            Failure(e.getMessage())
         }
         val finish = System.currentTimeMillis()
         result = (a, finish - start)

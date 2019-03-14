@@ -2,7 +2,8 @@ package matching
 
 import regexp._
 import regexp.RegExp._
-import tool.{Analysis, File}
+import tool.Analysis._
+import tool.File
 import scala.io.StdIn
 import java.util.Calendar
 
@@ -35,7 +36,7 @@ object Main {
           val result = calcBtrGrowthRate(r,option)
           println(convertResult(result))
         } catch {
-          case e: Exception => e.printStackTrace()
+          case e: RegExpParser.ParseException => e.printStackTrace()
         }
         println()
       }
@@ -66,16 +67,18 @@ object Main {
       write(regExpStr)
       try {
         val (r,option) = RegExpParser.parsePHP(regExpStr)
-        Analysis.runWithLimit(10000) {
+        runWithLimit(10000) {
           calcBtrGrowthRate(r,option)
         } match {
-          case (Some(result),time) =>
+          case (Success(result),time) =>
             write(s"${convertResult(result)}, ${time} ms")
-          case (None,time) =>
-            write(s"timeout, ${time} ms")
+          case (Failure(message),time) =>
+            write(s"error: ${message}, ${time} ms")
+          case (Timeout(message),time) =>
+            write(s"timeout: ${message}, ${time} ms")
         }
       } catch {
-        case e: Exception => write(e.toString)
+        case e: RegExpParser.ParseException => write(s"error: ${e.message}")
       }
       write()
     }

@@ -14,10 +14,15 @@ class RegExpParser() extends RegexParsers {
         throw RegExpParser.ParseException(s"${msg} at ${next.pos.line}:${next.pos.column} while checking groups count")
     }
 
-    parseAll(expAnchor, s) match {
-      case Success(r,_) => r
-      case NoSuccess(msg,next) =>
-        throw RegExpParser.ParseException(s"${msg} at ${next.pos.line}:${next.pos.column}")
+    try {
+      parseAll(expAnchor, s) match {
+        case Success(r,_) => r
+        case NoSuccess(msg,next) =>
+          throw RegExpParser.ParseException(s"${msg} at ${next.pos.line}:${next.pos.column}")
+      }
+    } catch {
+      case e: IllegalRegExpException =>
+        throw RegExpParser.ParseException(s"${e.message}")
     }
   }
 
@@ -113,7 +118,7 @@ class RegExpParser() extends RegexParsers {
             if (code.length == 4) Integer.parseInt(s"0${code}", 16).toChar
             else throw RegExpParser.ParseException(s"illegal unicode representation: \\u${code}")
           }
-          def esc: Parser[Char] = "\\" ~> ".".r ^^ {_.head}
+          def esc: Parser[Char] = "\\" ~> "[^a-zA-Z]".r ^^ {_.head}
 
 
           backReferenceOrOct | meta | backslashAssertion | elem | empty | eps | dot | group | charClassNeg | charClass
