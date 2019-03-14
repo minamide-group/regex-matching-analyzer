@@ -88,6 +88,8 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\V""") should be (withStartEnd(MetaCharExp('V')))
     RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
     RegExpParser("""\W""") should be (withStartEnd(MetaCharExp('W')))
+
+    a [Exception] should be thrownBy {RegExpParser("""\c""")}
   }
 
   it should "parse octal representation" in {
