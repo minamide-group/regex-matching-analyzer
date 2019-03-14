@@ -147,6 +147,18 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     ))
   }
 
+  it should "parse lookahead/lookbehind" in {
+    RegExpParser("""(?=a)""") should be (withStartEnd(LookAheadExp(ElemExp('a'), true)))
+    RegExpParser("""(?!a)""") should be (withStartEnd(LookAheadExp(ElemExp('a'), false)))
+    RegExpParser("""(?<=a)""") should be (withStartEnd(LookBehindExp(ElemExp('a'), true)))
+    RegExpParser("""(?<!a)""") should be (withStartEnd(LookBehindExp(ElemExp('a'), false)))
+  }
+
+  it should "parse if expression" in {
+    RegExpParser("""(?(a)b)""") should be (withStartEnd(IfExp(ElemExp('a'), ElemExp('b'), EpsExp())))
+    RegExpParser("""(?(a)b|c)""") should be (withStartEnd(IfExp(ElemExp('a'), ElemExp('b'), ElemExp('c'))))
+  }
+
   it should "parse lazy operations" in {
     RegExpParser("a*?") should be (withStartEnd(StarExp(ElemExp('a'), false)))
     RegExpParser("a+?") should be (withStartEnd(PlusExp(ElemExp('a'), false)))
@@ -177,14 +189,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\n""") should be (withStartEnd(ElemExp('\n')))
     RegExpParser("""\r""") should be (withStartEnd(ElemExp('\r')))
     RegExpParser("""\t""") should be (withStartEnd(ElemExp('\t')))
-  }
-
-  it should "parse backslash assertions" in {
-    RegExpParser("""\A""") should be (withStartEnd(UnsupportedExp("""\A""")))
-    RegExpParser("""\b""") should be (withStartEnd(UnsupportedExp("""\b""")))
-    RegExpParser("""\B""") should be (withStartEnd(UnsupportedExp("""\B""")))
-    RegExpParser("""\z""") should be (withStartEnd(UnsupportedExp("""\z""")))
-    RegExpParser("""\Z""") should be (withStartEnd(UnsupportedExp("""\Z""")))
   }
 
   it should "parse character class" in {
@@ -339,6 +343,12 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""[\x10-\u00EF]""") should be (withStartEnd(CharClassExp(Seq(
       RangeExp('\u0010','\u00EF')
     ), true)))
+
+    RegExpParser("""(?(a)bc|d|e)""") should be (withStartEnd(IfExp(
+      ElemExp('a'),
+      ConcatExp(ElemExp('b'), ElemExp('c')),
+      AltExp(ElemExp('d'), ElemExp('e'))
+    )))
 
     a [Exception] should be thrownBy {RegExpParser("a*+")}
   }

@@ -29,7 +29,6 @@ class RegExpParser() extends RegexParsers {
   val specialMetaChars = "aefnrt"
   val chars = """[^∅ε.|*+?^$()\[\]\\]""".r
   val metas = s"[dDhHRsSvVwW]".r
-  val backslashAssertions = s"[AbBzZ]".r
   val spacialMetas = s"[${specialMetaChars}]".r
   val charsInCharClass = """[^\]\\]""".r
   val spacialMetasInCharClass = s"[${specialMetaChars}b]".r
@@ -59,46 +58,58 @@ class RegExpParser() extends RegexParsers {
           def empty: Parser[EmptyExp[Char]] = "∅" ^^ {_ => EmptyExp()}
           def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
           def dot: Parser[DotExp] = "." ^^ {_ => DotExp()}
-          def group: Parser[RegExp[Char]] = {
-            def exp: Parser[RegExp[Char]] = {
-              rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
-            }
-
-            ("(" <~ opt("?:")) ~ exp <~ ")" ^^ {
-              case _ ~ e => e
-            }
+          def group: Parser[RegExp[Char]] = ("(" <~ opt("?:")) ~ exp <~ ")" ^^ {
+            case _ ~ e => e
           }
-          def charClass: Parser[CharClassExp] = "[" ~> charClassFactor <~ "]" ^^ {CharClassExp(_,true)}
-          def charClassNeg: Parser[CharClassExp] = "[^" ~> charClassFactor <~ "]" ^^ {CharClassExp(_,false)}
-          def charClassFactor: Parser[Seq[CharClassElem]] = {
-            def charClassElem: Parser[Seq[Char]] = {
-              def charClassChar: Parser[Char] = charsInCharClass ^^ {_.head}
-              def charClassSpecialMeta: Parser[Char] = "\\" ~> spacialMetasInCharClass ^^ {c => convertSpecialMeta(c.head)}
-              def oct: Parser[Seq[Char]] = "\\" ~> """\d+""".r ^^ { d =>
-                val (octalPart, elemsPart) = d.take(3).span(_ < '8')
-                Integer.parseInt(s"0${octalPart}", 8).toChar + (elemsPart + d.drop(3))
-              }
-
-              oct | (charClassChar | charClassSpecialMeta | hex | unicode | esc) ^^ {List(_)}
-            }
-            def charClassMeta: Parser[List[MetaCharExp]] = meta ^^ {List(_)}
-            def hyphen: Parser[List[Unit]] = "-" ^^ {_ => List(())}
-
-            rep1(hyphen | charClassMeta | charClassElem) ^^ { ll =>
-              def parseCharClassElems(ss: List[Any]): List[CharClassElem] = {
-                ss match {
-                  case (c1: Char) +: () +: (c2: Char) +: rest =>
-                    RangeExp(c1,c2) +: parseCharClassElems(rest)
-                  case (c: Char) +: rest => SingleCharExp(c) :: parseCharClassElems(rest)
-                  case (m: MetaCharExp) +: rest => m :: parseCharClassElems(rest)
-                  case () +: rest => SingleCharExp('-') :: parseCharClassElems(rest)
-                  case Nil => Nil
+          def charClass: Parser[CharClassExp] = {
+            def charClassFactors: Parser[Seq[CharClassElem]] = {
+              def charClassElem: Parser[Seq[Char]] = {
+                def charClassChar: Parser[Char] = charsInCharClass ^^ {_.head}
+                def charClassSpecialMeta: Parser[Char] = "\\" ~> spacialMetasInCharClass ^^ {c => convertSpecialMeta(c.head)}
+                def oct: Parser[Seq[Char]] = "\\" ~> """\d+""".r ^^ { d =>
+                  val (octalPart, elemsPart) = d.take(3).span(_ < '8')
+                  Integer.parseInt(s"0${octalPart}", 8).toChar + (elemsPart + d.drop(3))
                 }
-              }
 
-              parseCharClassElems(ll.flatten)
+                oct | (charClassChar | charClassSpecialMeta | hex | unicode | esc) ^^ {List(_)}
+              }
+              def charClassMeta: Parser[List[MetaCharExp]] = meta ^^ {List(_)}
+              def hyphen: Parser[List[Unit]] = "-" ^^ {_ => List(())}
+
+              rep1(hyphen | charClassMeta | charClassElem) ^^ { ll =>
+                def parseCharClassElems(ss: List[Any]): List[CharClassElem] = {
+                  ss match {
+                    case (c1: Char) +: () +: (c2: Char) +: rest =>
+                      RangeExp(c1,c2) +: parseCharClassElems(rest)
+                    case (c: Char) +: rest => SingleCharExp(c) :: parseCharClassElems(rest)
+                    case (m: MetaCharExp) +: rest => m :: parseCharClassElems(rest)
+                    case () +: rest => SingleCharExp('-') :: parseCharClassElems(rest)
+                    case Nil => Nil
+                  }
+                }
+
+                parseCharClassElems(ll.flatten)
+              }
+            }
+
+            "[" ~> opt("^") ~ charClassFactors <~ "]" ^^ {
+              case neg ~ fs => CharClassExp(fs,neg.isEmpty)
             }
           }
+          def lookaround: Parser[RegExp[Char]] = "(?" ~> opt("<") ~ "=|!".r ~ exp <~ ")" ^^ {
+            case behind ~ p ~ r =>
+            val positive = p == "="
+            if (behind.isEmpty) {
+              LookAheadExp(r, positive)
+            } else {
+              LookBehindExp(r, positive)
+            }
+          }
+          def ifCond: Parser[IfExp[Char]] = ("(?(" ~> exp <~ ")") ~ term ~ opt("|" ~> exp) <~ ")" ^^ {
+            case cond ~ rt ~ rf => IfExp(cond, rt, rf.getOrElse(EpsExp()))
+          }
+
+          def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
           def backReferenceOrOct: Parser[RegExp[Char]] = "\\" ~> """\d+""".r ^^ { d =>
             if (d.head != '0' && (d.length == 1 || d.toInt <= captureGroups)) {
               BackReferenceExp(d.toInt)
@@ -110,7 +121,6 @@ class RegExpParser() extends RegexParsers {
             }
           }
           def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
-          def backslashAssertion: Parser[UnsupportedExp] = "\\" ~> backslashAssertions ^^ {s => UnsupportedExp(s"\\${s}")}
           def hex: Parser[Char] = "\\x" ~> "[0-9a-fA-F]{0,2}".r ^^ { code =>
             Integer.parseInt(s"0${code}", 16).toChar
           }
@@ -121,7 +131,7 @@ class RegExpParser() extends RegexParsers {
           def esc: Parser[Char] = "\\" ~> "[^a-zA-Z]".r ^^ {_.head}
 
 
-          backReferenceOrOct | meta | backslashAssertion | elem | empty | eps | dot | group | charClassNeg | charClass
+          backReferenceOrOct | meta | elem | empty | eps | dot | group | charClass | lookaround | ifCond
         }
         def quantifier: Parser[Either[(Option[Int],Option[Int]),String]] = {
           def symbol: Parser[Right[Nothing,String]] = "[*+?]".r ^^ {Right(_)}

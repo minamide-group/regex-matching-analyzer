@@ -48,6 +48,9 @@ object RepeatExp {
   }
 }
 case class BackReferenceExp[A](n: Int) extends RegExp[A]
+case class LookAheadExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
+case class LookBehindExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
+case class IfExp[A](cond: RegExp[A], rt: RegExp[A], rf: RegExp[A]) extends RegExp[A]
 case class DotExp() extends RegExp[Char]
 case class CharClassExp(es: Seq[CharClassElem], positive: Boolean) extends RegExp[Char]
 case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
@@ -66,7 +69,6 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 
   val negative = negetiveChar(c)
 }
-case class UnsupportedExp(s: String) extends RegExp[Char]
 
 
 object RegExp {
@@ -102,7 +104,9 @@ object RegExp {
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
       case BackReferenceExp(n) => s"\\${n}"
-      case UnsupportedExp(s) => s
+      case LookAheadExp(r,positive) => s"(?${if (positive) "=" else "!"}${r})"
+      case LookBehindExp(r,positive) => s"(?<${if (positive) "=" else "!"}${r})"
+      case IfExp(cond,rt,rf) => s"(?(${cond})${rt}|${rf})"
     }
   }
 
@@ -128,6 +132,9 @@ object RegExp {
         case OptionExp(r,greedy) => getElems(r)
         case DotExp() => if (option.dotAll) Set() else Set('\n')
         case RepeatExp(r,min,max,greedy) => getElems(r)
+        case LookAheadExp(r,_) => getElems(r)
+        case LookBehindExp(r,_) => getElems(r)
+        case IfExp(cond,rt,rf) => getElems(cond) | getElems(rt) | getElems(rf)
         case r @ CharClassExp(es,positive) =>
           val s = es.flatMap(_.charSet).toSet
           if (option.ignoreCase) {
@@ -156,6 +163,8 @@ object RegExp {
         case AltExp(r1,r2) => nullable(r1) || nullable(r2)
         case PlusExp(r,_) => nullable(r)
         case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
+        case LookAheadExp(r,_) => nullable(r)
+        case LookBehindExp(r,_) => nullable(r)
         case _ => throw new Exception(s"nullable unsupported expression: ${r}")
       }
     }
