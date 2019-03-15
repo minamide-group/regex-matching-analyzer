@@ -90,6 +90,7 @@ class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad
         }
         if (min.isDefined) rd
         else if (greedy ^ option.ungreedy) rd ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ rd
+      case GroupExp(r,_,_) => derive(r,a)
       case _ => throw new Exception(s"derive unsupported expression: ${r}")
     }
   }

@@ -73,12 +73,12 @@ object Main {
           case (Success(result),time) =>
             write(s"${convertResult(result)}, ${time} ms")
           case (Failure(message),time) =>
-            write(s"error: ${message}, ${time} ms")
+            write(s"skipped: ${message}, ${time} ms")
           case (Timeout(message),time) =>
             write(s"timeout: ${message}, ${time} ms")
         }
       } catch {
-        case e: RegExpParser.ParseException => write(s"error: ${e.message}")
+        case e: RegExpParser.ParseException => write(s"parse error: ${e.message}")
       }
       write()
     }

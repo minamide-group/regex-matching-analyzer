@@ -6,7 +6,7 @@ import matching.monad.Monad._
 import matching.transition._
 import matching.tool.{Analysis, Debug}
 
-sealed trait RegExp[A] {
+trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,Some(a))
   def derive[M[_]](a: Option[A])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,a)
@@ -47,6 +47,7 @@ object RepeatExp {
     }
   }
 }
+case class GroupExp[A](r: RegExp[A], id: Int, name: Option[String]) extends RegExp[A]
 case class BackReferenceExp[A](n: Int) extends RegExp[A]
 case class LookAheadExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
 case class LookBehindExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
@@ -103,6 +104,10 @@ object RegExp {
         else s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
+      case GroupExp(r,_,name) => name match {
+        case Some(name) => s"(?<${name}>${r})"
+        case None => s"(${r})"
+      }
       case BackReferenceExp(n) => s"\\${n}"
       case LookAheadExp(r,positive) => s"(?${if (positive) "=" else "!"}${r})"
       case LookBehindExp(r,positive) => s"(?<${if (positive) "=" else "!"}${r})"
@@ -132,6 +137,7 @@ object RegExp {
         case OptionExp(r,greedy) => getElems(r)
         case DotExp() => if (option.dotAll) Set() else Set('\n')
         case RepeatExp(r,min,max,greedy) => getElems(r)
+        case GroupExp(r,_,_) => getElems(r)
         case LookAheadExp(r,_) => getElems(r)
         case LookBehindExp(r,_) => getElems(r)
         case IfExp(cond,rt,rf) => getElems(cond) | getElems(rt) | getElems(rf)
@@ -163,6 +169,7 @@ object RegExp {
         case AltExp(r1,r2) => nullable(r1) || nullable(r2)
         case PlusExp(r,_) => nullable(r)
         case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
+        case GroupExp(r,_,_) => nullable(r)
         case LookAheadExp(r,_) => nullable(r)
         case LookBehindExp(r,_) => nullable(r)
         case _ => throw new Exception(s"nullable unsupported expression: ${r}")

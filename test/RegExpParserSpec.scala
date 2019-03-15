@@ -1,5 +1,6 @@
 package matching.regexp
 
+import RegExpParser._
 import org.scalatest._
 
 class RegExpParserSpec extends FlatSpec with Matchers {
@@ -36,7 +37,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   it should "parse a*" in {
     RegExpParser("a*") should be (withStartEnd(StarExp(ElemExp('a'), true)))
 
-    a [Exception] should be thrownBy {RegExpParser("*ab")}
+    a [ParseException] should be thrownBy {RegExpParser("*ab")}
   }
 
   it should "parse a+" in {
@@ -52,11 +53,13 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse group" in {
-    RegExpParser("(a)") should be (withStartEnd(ElemExp('a')))
+    RegExpParser("(a)") should be (withStartEnd(GroupExp(ElemExp('a'), 1, None)))
     RegExpParser("(?:a)") should be (withStartEnd(ElemExp('a')))
+    RegExpParser("(?<hoge>a)") should be (withStartEnd(GroupExp(ElemExp('a'), 1, Some("hoge"))))
+    RegExpParser("(?'hoge'a)") should be (withStartEnd(GroupExp(ElemExp('a'), 1, Some("hoge"))))
 
-    a [Exception] should be thrownBy {RegExpParser("(a(b)")}
-    a [Exception] should be thrownBy {RegExpParser("a(b))")}
+    a [ParseException] should be thrownBy {RegExpParser("(a(b)")}
+    a [ParseException] should be thrownBy {RegExpParser("a(b))")}
   }
 
   it should "parse | with empty string" in {
@@ -73,7 +76,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("a{0,2}") should be (withStartEnd(RepeatExp(ElemExp('a'),None,Some(2),true)))
     RegExpParser("a{0}") should be (withStartEnd(EpsExp()))
 
-    a [Exception] should be thrownBy {RegExpParser("a{5,3}")}
+    a [ParseException] should be thrownBy {RegExpParser("a{5,3}")}
   }
 
   it should "parse meta character" in {
@@ -89,7 +92,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\w""") should be (withStartEnd(MetaCharExp('w')))
     RegExpParser("""\W""") should be (withStartEnd(MetaCharExp('W')))
 
-    a [Exception] should be thrownBy {RegExpParser("""\c""")}
+    a [ParseException] should be thrownBy {RegExpParser("""\c""")}
   }
 
   it should "parse octal representation" in {
@@ -120,31 +123,54 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("\\uabcd") should be (withStartEnd(ElemExp('\uABCD')))
     RegExpParser("\\uCDEF") should be (withStartEnd(ElemExp('\uCDEF')))
 
-    a [Exception] should be thrownBy {RegExpParser("\\u")}
-    a [Exception] should be thrownBy {RegExpParser("\\u1")}
-    a [Exception] should be thrownBy {RegExpParser("\\u12")}
-    a [Exception] should be thrownBy {RegExpParser("\\u123")}
+    a [ParseException] should be thrownBy {RegExpParser("\\u")}
+    a [ParseException] should be thrownBy {RegExpParser("\\u1")}
+    a [ParseException] should be thrownBy {RegExpParser("\\u12")}
+    a [ParseException] should be thrownBy {RegExpParser("\\u123")}
   }
 
   it should "parse back reference" in {
-    RegExpParser("(a)\\1") should be (withStartEnd(ConcatExp(ElemExp('a'),BackReferenceExp(1))))
-    RegExpParser("(a|\\1b)*") should be (withStartEnd(
-      StarExp(
-        AltExp(
-          ElemExp('a'),
-          ConcatExp(
-            BackReferenceExp(1),
-            ElemExp('b')
-          )
-        )
-      , true)
+    RegExpParser("""(a)\1""") should be (withStartEnd(
+      ConcatExp(GroupExp(ElemExp('a'),1,None),BackReferenceExp(1))
     ))
-    RegExpParser(s"${"(a)" * 20}\\20") should be (withStartEnd(
-      ConcatExp(
-        (1 until 20).foldLeft(ElemExp('a'): RegExp[Char])((r,_) => ConcatExp(r,ElemExp('a'))),
-        BackReferenceExp(20)
+    RegExpParser("""(a|\1b)*""") should be (withStartEnd(
+      StarExp(
+        GroupExp(
+          AltExp(
+            ElemExp('a'),
+            ConcatExp(
+              BackReferenceExp(1),
+              ElemExp('b')
+            )
+          ),
+          1,None
+        ),
+        true
       )
     ))
+    RegExpParser("""(a)(b)(c)\3""") should be (withStartEnd(
+      ConcatExp(
+        ConcatExp(
+          ConcatExp(
+            GroupExp(ElemExp('a'),1,None),
+            GroupExp(ElemExp('b'),2,None)
+          ),
+          GroupExp(ElemExp('c'),3,None)
+        ),
+        BackReferenceExp(3)
+      )
+    ))
+
+    val r = withStartEnd(ConcatExp(GroupExp(ElemExp('a'),1,Some("hoge")),BackReferenceExp(1)))
+    RegExpParser("(?<hoge>a)(?P=hoge)") should be (r)
+    RegExpParser("""(?<hoge>a)\k<hoge>""") should be (r)
+    RegExpParser("""(?<hoge>a)\k'hoge'""") should be (r)
+    RegExpParser("""(?<hoge>a)\k{hoge}""") should be (r)
+    RegExpParser("""(?<hoge>a)\1""") should be (r)
+
+    a [ParseException] should be thrownBy {RegExpParser("""(?<123>a)""")}
+    a [ParseException] should be thrownBy {RegExpParser("""(a)\k<hoge>""")}
+    a [ParseException] should be thrownBy {RegExpParser("""(a)\2""")}
   }
 
   it should "parse lookahead/lookbehind" in {
@@ -171,8 +197,8 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("a$") should be (ConcatExp(StarExp(DotExp(),false),ElemExp('a')))
     RegExpParser("^a$") should be (ElemExp('a'))
 
-    a [Exception] should be thrownBy {RegExpParser("a^b")}
-    a [Exception] should be thrownBy {RegExpParser("a$b")}
+    a [ParseException] should be thrownBy {RegExpParser("a^b")}
+    a [ParseException] should be thrownBy {RegExpParser("a$b")}
   }
 
   it should "parse escape characters" in {
@@ -232,9 +258,9 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       RangeExp('A','Z')
     ), false)))
 
-    a [Exception] should be thrownBy {RegExpParser("a[]b")}
-    a [Exception] should be thrownBy {RegExpParser("a[bc")}
-    a [Exception] should be thrownBy {RegExpParser("abc]")}
+    a [ParseException] should be thrownBy {RegExpParser("a[]b")}
+    a [ParseException] should be thrownBy {RegExpParser("a[bc")}
+    a [ParseException] should be thrownBy {RegExpParser("abc]")}
   }
 
   it should "parse escape characters in character class" in {
@@ -318,7 +344,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       ))
     )
 
-    RegExpParser("(a(bc))*") should be (
+    RegExpParser("(?:a(?:bc))*") should be (
       withStartEnd(StarExp(
         ConcatExp(
           ElemExp('a'),
@@ -330,9 +356,22 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       true))
     )
 
-    RegExpParser("((a*)?){3,5}?") should be (
+    RegExpParser("(?:(?:a*)?){3,5}?") should be (
       withStartEnd(RepeatExp(OptionExp(StarExp(ElemExp('a'), true), true), Some(3), Some(5), false))
     )
+
+    RegExpParser("((?<hoge>a)b)(c(?:d))") should be (withStartEnd(
+      ConcatExp(
+        GroupExp(
+          ConcatExp(
+            GroupExp(ElemExp('a'), 2, Some("hoge")),
+            ElemExp('b')
+          ),
+          1, None
+        ),
+        GroupExp(ConcatExp(ElemExp('c'),ElemExp('d')), 3, None)
+      )
+    ))
 
     RegExpParser("""[a-z\wA]""") should be (withStartEnd(CharClassExp(Seq(
       RangeExp('a','z'),
@@ -350,7 +389,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
       AltExp(ElemExp('d'), ElemExp('e'))
     )))
 
-    a [Exception] should be thrownBy {RegExpParser("a*+")}
+    a [ParseException] should be thrownBy {RegExpParser("a*+")}
   }
 
   "parsePHP" should "parse PHP style regexp" in {
@@ -380,6 +419,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     noException should be thrownBy {RegExpParser.parsePHP("[a]")}
     noException should be thrownBy {RegExpParser.parsePHP("<a>")}
 
-    a [Exception] should be thrownBy {RegExpParser.parsePHP("/abc#i")}
+    a [ParseException] should be thrownBy {RegExpParser.parsePHP("/abc#i")}
   }
 }
