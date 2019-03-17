@@ -7,8 +7,8 @@ import RegExp._
 
 class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad[M]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
-    def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]]] = {
-      def accept(a: Option[Char]): Boolean = {
+    def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
+      def accept(a: Option[A]): Boolean = {
         def acceptCharClass(r: CharClassElem, a: Option[Char]): Boolean = {
           r match {
             case SingleCharExp(c) => a match {
@@ -37,9 +37,10 @@ class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad
 
         r match {
           case ElemExp(b) => a match {
-            case Some(a) =>
+            case Some(a: Char) =>
               if (option.ignoreCase && a.isLetter) a.toLower == b || a.toUpper == b
               else a == b
+            case Some(a) => a == b
             case None => false
           }
           case DotExp() => a match {
