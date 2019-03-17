@@ -73,6 +73,8 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 
 
 object RegExp {
+  case class IllegalRegExpException(message: String) extends Exception(message: String)
+
   class PHPOption(s: String = "") {
     var ignoreCase = false
     var dotAll = false
@@ -82,11 +84,9 @@ object RegExp {
       case 'i' => ignoreCase = true
       case 's' => dotAll = true
       case 'U' => ungreedy = true
-      case c => throw RegExp.IllegalRegExpException(s"illegal option: ${c}")
+      case c => throw RegExp.IllegalRegExpException(s"unsupported PHP option: ${c}")
     }
   }
-
-  case class IllegalRegExpException(message: String) extends Exception(message: String)
 
   def toString[A](r: RegExp[A]): String = {
     r match {

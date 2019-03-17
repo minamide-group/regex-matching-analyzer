@@ -26,7 +26,7 @@ object Visualizer {
     }
 
     def visualize(name: String) {
-      val file = File.makeFile(s"${name}.dot")
+      val file = IO.createFile(s"${name}.dot", true)
       val renameMap = g.nodes.zipWithIndex.toMap
 
       file.writeln(s"digraph ${name.replace("/","_")} {")

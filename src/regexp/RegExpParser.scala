@@ -191,7 +191,12 @@ object RegExpParser {
     else {
       val body = s.slice(1,endBodyIndex)
       val options = s.drop(endBodyIndex+1)
-      val option = new PHPOption(options)
+      val option = try {
+        new PHPOption(options)
+      } catch {
+        case e: IllegalRegExpException =>
+          throw RegExpParser.ParseException(s"${e.message}")
+      }
 
       (new RegExpParser().parseAll(body), option)
     }

@@ -43,7 +43,7 @@ object Analysis {
     }
 
     try {
-      Await.result(future, Duration(limit, MILLISECONDS))
+      Await.result(future, Duration(limit, SECONDS))
     } catch {
       case _: TimeoutException =>
         thread.interrupt()
