@@ -16,7 +16,7 @@ object Analysis {
     if (Thread.currentThread().isInterrupted()) throw InterruptedNotification(message)
   }
 
-  def runWithLimit[A](limit: Long)(proc: => A): (AnalysisResult[A], Long) = {
+  def runWithLimit[A](limit: Option[Int])(proc: => A): (AnalysisResult[A], Long) = {
     var result: (AnalysisResult[A], Long) = (Failure(""), 0)
 
     val thread = new Thread {
@@ -43,7 +43,7 @@ object Analysis {
     }
 
     try {
-      Await.result(future, Duration(limit, SECONDS))
+      Await.result(future, if (limit.isDefined) Duration(limit.get, SECONDS) else Duration.Inf)
     } catch {
       case _: TimeoutException =>
         thread.interrupt()
