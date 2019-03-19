@@ -104,7 +104,7 @@ class RegExpParser() extends RegexParsers {
             }
             def unicode: Parser[Char] = "\\u" ~> "[0-9a-fA-F]{0,4}".r ^^ { code =>
               if (code.length == 4) Integer.parseInt(s"0${code}", 16).toChar
-              else throw RegExpParser.ParseException(s"illegal unicode representation: \\u${code}")
+              else throw RegExpParser.ParseException(s"invalid unicode representation: \\u${code}")
             }
             def esc: Parser[Char] = "\\" ~> "[^a-zA-Z]".r ^^ {_.head}
             def variable: Parser[String] = "[a-zA-Z][a-zA-Z0-9]*".r
@@ -164,7 +164,7 @@ class RegExpParser() extends RegexParsers {
           throw RegExpParser.ParseException(s"${msg} at ${next.pos.line}:${next.pos.column}")
       }
     } catch {
-      case e: IllegalRegExpException =>
+      case e: InvalidRegExpException =>
         throw RegExpParser.ParseException(s"${e.message}")
     }
   }
@@ -187,14 +187,14 @@ object RegExpParser {
     }
 
     val endBodyIndex = s.lastIndexWhere(_ == endDelimiter)
-    if (endBodyIndex == 0) throw new ParseException("illegal PHP style expression.")
+    if (endBodyIndex == 0) throw new ParseException("invalid PHP style expression.")
     else {
       val body = s.slice(1,endBodyIndex)
       val options = s.drop(endBodyIndex+1)
       val option = try {
         new PHPOption(options)
       } catch {
-        case e: IllegalRegExpException =>
+        case e: InvalidRegExpException =>
           throw RegExpParser.ParseException(s"${e.message}")
       }
 

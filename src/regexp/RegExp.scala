@@ -27,12 +27,12 @@ object RepeatExp {
       (min, max) match {
         case (Some(min),Some(max)) =>
           if (min < 0 || max < 0) {
-            throw RegExp.IllegalRegExpException(s"illegal repeat expression: min and max must be positive")
+            throw RegExp.InvalidRegExpException(s"invalid repeat expression: min and max must be positive")
           } else if (min > max) {
-            throw RegExp.IllegalRegExpException(s"illegal repeat expression: ${min} is larger than ${max}")
+            throw RegExp.InvalidRegExpException(s"invalid repeat expression: ${min} is larger than ${max}")
           }
         case (None,None) =>
-          throw RegExp.IllegalRegExpException("illegal repeat expression: either min or max must be specified")
+          throw RegExp.InvalidRegExpException("invalid repeat expression: either min or max must be specified")
         case _ =>
       }
     }
@@ -65,7 +65,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
     case 'v' | 'V' => Set('\u000B')
     case 'w' | 'W' => ('a' to 'z').toSet | ('A' to 'Z').toSet | ('0' to '9').toSet + '_'
 
-    case _ => throw RegExp.IllegalRegExpException(s"illegal meta character: \\${c}")
+    case _ => throw RegExp.InvalidRegExpException(s"invalid meta character: \\${c}")
   }
 
   val negative = negetiveChar(c)
@@ -73,7 +73,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 
 
 object RegExp {
-  case class IllegalRegExpException(message: String) extends Exception(message: String)
+  case class InvalidRegExpException(message: String) extends Exception(message: String)
 
   class PHPOption(s: String = "") {
     var ignoreCase = false
@@ -84,7 +84,7 @@ object RegExp {
       case 'i' => ignoreCase = true
       case 's' => dotAll = true
       case 'U' => ungreedy = true
-      case c => throw RegExp.IllegalRegExpException(s"unsupported PHP option: ${c}")
+      case c => throw RegExp.InvalidRegExpException(s"unsupported PHP option: ${c}")
     }
   }
 

@@ -49,7 +49,7 @@ object RegExpIR {
             name match {
               case Some(s) =>
                 if (!groupNameMap.contains(s)) groupNameMap += s -> id
-                else throw RegExp.IllegalRegExpException(s"duplicated group name: ${s}")
+                else throw RegExp.InvalidRegExpException(s"duplicated group name: ${s}")
               case None =>
             }
             GroupExp(convertGroup(r), id, name)
@@ -67,12 +67,12 @@ object RegExpIR {
               )
             } else {
               if (s.toInt <= captureGroups) BackReferenceExp(s.toInt)
-              else throw RegExp.IllegalRegExpException(s"undefined group: ${s}")
+              else throw RegExp.InvalidRegExpException(s"undefined group: ${s}")
             }
           case NamedBackReferenceExpIR(name) =>
             groupNameMap.get(name) match {
               case Some(id) => BackReferenceExp(id)
-              case None => throw RegExp.IllegalRegExpException(s"undefined group name: ${name}")
+              case None => throw RegExp.InvalidRegExpException(s"undefined group name: ${name}")
             }
           case _ => recursiveApply(r,convert)
         }
