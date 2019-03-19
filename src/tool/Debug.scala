@@ -3,7 +3,7 @@ package matching.tool
 import Console._
 
 object Debug {
-  val debugModeGlobal = true
+  var debugModeGlobal = false
 
   def debug(x: Any) {
     val DEBUG = "\u001b[38;5;111m"

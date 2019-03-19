@@ -4,99 +4,73 @@ import regexp._
 import regexp.RegExp._
 import tool.Analysis._
 import collection.mutable.{Map => MTMap}
-import tool.{IO, File}
+import tool.{IO, File, Debug}
 import java.util.Date
 import java.text.DateFormat
 import scala.io.StdIn
 
 object Main {
-  abstract class CommandArgs(rawArgs: Array[String]) {
-    def parseArgs(rawArgs: Array[String]): (List[String], Map[String, Option[String]]) = {
-      def parseOptions(options: List[String], m: Map[String, Option[String]] = Map()): Map[String, Option[String]] = {
-        options match {
-          case optName :: optArg :: options if optName.startsWith("--") && !optArg.startsWith("--") =>
-            val name = optName.drop(2)
-            if (!m.contains(name)) {
-              parseOptions(options,m + (name -> Some(optArg)))
-            } else throw new Exception(s"duplicated option: ${name}")
-          case optName :: options if optName.startsWith("--") =>
-              val name = optName.drop(2)
-              if (!m.contains(name)) {
-                parseOptions(options,m + (name -> None))
-              } else throw new Exception(s"duplicated option: ${name}")
-          case Nil => m
-          case _ => throw new Exception("invalid option")
-        }
-
-      }
-
-      val (args, optionStrs) = rawArgs.toList.span(!_.startsWith("--"))
-      (args, parseOptions(optionStrs))
-    }
-
-    val (args, options) = parseArgs(rawArgs)
-
-    final val help = options.contains("help")
-    val optionList = Map[String,String]()
-
-    def printHelp() {
-      println("options:")
-      val maxLength = optionList.keys.max.length
-      optionList.foreach{ case (key, text) =>
-        println(f"--${key}${" "*(maxLength - key.length)}  ${text}")
-      }
-    }
-  }
-
-  class MatchingCommandArgs(rawArgs: Array[String]) extends CommandArgs(rawArgs) {
+  class Settings() {
     var style = "raw"
     var timeout: Option[Int] = Some(10)
 
-    val styleList = List("raw", "PHP")
-
-    override val optionList = Map(
-      "style" -> s"regular expression style. (${styleList.mkString(", ")})",
-      "timeout" -> "time limit of execution (second). (set negative value to disable timeout)"
-    )
-
-    options.foreach{ case (key, value) => key match {
-      case "style" =>
-        style = value match {
-          case Some(s) =>
-            if (styleList.contains(s)) {
-              s
-            } else throw new Exception(s"invalid style option ${s}")
-          case None => throw new Exception("invalid style option")
-        }
-      case "timeout" =>
-        timeout = value match {
-          case Some(t) =>
-            val time = try {
-              t.toInt
-            } catch {
-              case e: NumberFormatException => throw new Exception(s"invalid timeout option: ${t}")
-            }
-            if (time >= 0) Some(time) else None
-          case None => throw new Exception("invalid timeout option")
-        }
-      case "help" =>
-      case _ => throw new Exception(s"invalid option: ${key}")
-    }}
+    override def toString(): String = {
+      List(
+        s"${"-"*3} settings ${"-"*27}",
+        s"style: ${style}",
+        s"timeout: ${if (timeout.isDefined) timeout.get else "disable"}",
+        s"${"-"*40}"
+      ).mkString("\n")
+    }
   }
 
   def main(args: Array[String]) {
-    implicit val cas = new MatchingCommandArgs(args)
+    def parseArgs(rawArgs: Array[String]): (Option[String], Settings) = {
+      def parseOptions(options: List[String], setting: Settings = new Settings()): Settings = {
+        options match {
+          case "--style" :: style :: options =>
+            val styleList = List("raw", "PHP")
+            if (styleList.contains(style)) {
+              setting.style = style
+              parseOptions(options, setting)
+            } else throw new Exception(s"invalid style option: ${style}")
+          case "--timeout" :: timeout :: options =>
+            val t = try {
+              timeout.toInt
+            } catch {
+              case e: NumberFormatException => throw new Exception(s"invalid timeout option: ${timeout}")
+            }
+            setting.timeout = if (t > 0) Some(t) else None
+            parseOptions(options, setting)
+          case "--debug" :: options =>
+            Debug.debugModeGlobal = true
+            parseOptions(options, setting)
+          case Nil => setting
+          case _ => throw new Exception("invalid option")
+        }
+      }
 
-    if (cas.help) {
-      cas.printHelp()
-    } else if (cas.args.isEmpty) {
-      interactiveTest()
-    } else if (cas.args.length == 1) {
-      fileInputTest(cas.args(0))
-    } else throw new Exception("invalid argument")
+      val (args, optionStrs) = rawArgs.toList.span(!_.startsWith("--"))
+      val inputFile = args match {
+        case arg :: Nil => Some(arg)
+        case Nil => None
+        case _ => throw new Exception("invalid arguments")
+      }
+
+      (inputFile, parseOptions(optionStrs))
+    }
+
+    val (inputFile, settings) = parseArgs(args)
+
+    println(settings)
+
+    inputFile match {
+      case Some(inputFile) => fileInputTest(inputFile, settings)
+      case None => interactiveTest(settings)
+    }
   }
 
-  def test(regExpStr: String)(implicit cas: MatchingCommandArgs): String = {
+  def test(regExpStr: String, settings: Settings): String = {
     def convertResult(result: Option[Int]): String = {
       result match {
         case Some(0) => "constant"
@@ -107,12 +81,12 @@ object Main {
     }
 
     try {
-      val (r,option) = if (cas.style == "raw") {
+      val (r,option) = if (settings.style == "raw") {
         (RegExpParser(regExpStr), new PHPOption())
-      } else if (cas.style == "PHP") {
+      } else if (settings.style == "PHP") {
         RegExpParser.parsePHP(regExpStr)
       } else throw new Exception("invalid style")
-      runWithLimit(cas.timeout) {
+      runWithLimit(settings.timeout) {
         calcBtrGrowthRate(r,option)
       } match {
         case (Success(result),time) => s"${convertResult(result)}, ${time} ms"
@@ -124,7 +98,7 @@ object Main {
     }
   }
 
-  def interactiveTest()(implicit cas: MatchingCommandArgs) {
+  def interactiveTest(settings: Settings) {
     var continue = true
     while (continue) {
       println("please input expression. (input blank line to quit)")
@@ -133,18 +107,17 @@ object Main {
         continue = false
       } else {
         println(regExpStr)
-        println(test(regExpStr))
+        println(test(regExpStr, settings))
         println()
       }
     }
   }
 
-  def fileInputTest(inputFile: String)(implicit cas: MatchingCommandArgs) {
+  def fileInputTest(inputFile: String, settings: Settings) {
     val regExpStrs = IO.loadFile(inputFile).getLines.toSeq
     val total = regExpStrs.length
 
     val timeStamp = DateFormat.getDateTimeInstance().format(new Date())
-    val timeout = 10
 
     val dirName = s"output/${inputFile.replaceAll("""\W""","_")}_${timeStamp.replaceAll("""\W""","-")}"
     IO.createDirectory(dirName)
@@ -162,7 +135,7 @@ object Main {
       println(s"${idx+1}/${total}")
       writeResult(regExpStr)
       resultListFile.writeln(regExpStr)
-      writeResult(test(regExpStr))
+      writeResult(test(regExpStr, settings))
       writeResult()
     }
     resultFile.close()
@@ -211,9 +184,7 @@ object Main {
     summaryFile.writeln(s"date: ${timeStamp}")
     summaryFile.writeln()
 
-    summaryFile.writeln(s"${"-"*3} settings ${"-"*27}")
-    summaryFile.writeln(s"timeout: ${timeout}s")
-    summaryFile.writeln(s"${"-"*40}")
+    summaryFile.writeln(settings.toString)
     summaryFile.writeln()
 
     summaryFile.writeln(s"${"-"*3} result ${"-"*29}")
