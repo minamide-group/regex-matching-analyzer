@@ -89,8 +89,18 @@ object RegExp {
   }
 
   def toString[A](r: RegExp[A]): String = {
+    def esc(a: A): String = {
+      a match {
+        case '\f' => "\\f"
+        case '\n' => "\\n"
+        case '\r' => "\\r"
+        case '\t' => "\\t"
+        case _ => a.toString
+      }
+    }
+
     r match {
-      case ElemExp(a) => a.toString
+      case ElemExp(a) => esc(a)
       case EmptyExp() => "∅"
       case EpsExp() => "ε"
       case ConcatExp(r1,r2) => s"(${r1}${r2})"
@@ -250,9 +260,19 @@ case class RangeExp(start: Char, end: Char) extends CharClassElem {
 
 object CharClassElem {
   def toString(e: CharClassElem): String = {
+    def esc(c: Char): String = {
+      c match {
+        case '\f' => "\\f"
+        case '\n' => "\\n"
+        case '\r' => "\\r"
+        case '\t' => "\\t"
+        case _ => c.toString
+      }
+    }
+
     e match {
-      case SingleCharExp(c) => c.toString
-      case RangeExp(start, end) => s"${start}-${end}"
+      case SingleCharExp(c) => esc(c)
+      case RangeExp(start, end) => s"${esc(start)}-${esc(end)}"
       case MetaCharExp(c) => s"\\${c}"
     }
   }
