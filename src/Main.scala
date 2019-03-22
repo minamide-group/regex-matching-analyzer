@@ -18,7 +18,7 @@ object Main {
       List(
         s"${"-"*3} settings ${"-"*27}",
         s"style: ${style}",
-        s"timeout: ${if (timeout.isDefined) timeout.get else "disable"}",
+        s"timeout: ${if (timeout.isDefined) s"${timeout.get}s" else "disable"}",
         s"${"-"*40}"
       ).mkString("\n")
     }
@@ -75,8 +75,8 @@ object Main {
       result match {
         case Some(0) => "constant"
         case Some(1) => "linear"
-        case Some(d) => s"polynomially, degree ${d}"
-        case None => "exponentially"
+        case Some(d) => s"polynomial, degree ${d}"
+        case None => "exponential"
       }
     }
 
@@ -117,9 +117,9 @@ object Main {
     val regExpStrs = IO.loadFile(inputFile).getLines.toSeq
     val total = regExpStrs.length
 
-    val timeStamp = DateFormat.getDateTimeInstance().format(new Date())
+    val startTime = DateFormat.getDateTimeInstance().format(new Date())
 
-    val dirName = s"output/${inputFile.replaceAll("""\W""","_")}_${timeStamp.replaceAll("""\W""","-")}"
+    val dirName = s"output/${inputFile.replaceAll("""\W""","_")}_${startTime.replaceAll("""\W""","-")}"
     IO.createDirectory(dirName)
 
     val resultName = s"${dirName}/result.txt"
@@ -141,8 +141,10 @@ object Main {
     resultFile.close()
     resultListFile.close()
 
+    val finishTime = DateFormat.getDateTimeInstance().format(new Date())
 
-    val resultStrs = List("constant", "linear", "polynomially", "exponentially", "timeout", "skipped", "error")
+
+    val resultStrs = List("constant", "linear", "polynomial", "exponential", "timeout", "skipped", "error")
     val detailDirNames = resultStrs.map(resultStr => resultStr -> s"${dirName}/${resultStr}").toMap
     resultStrs.foreach(resultStr => IO.createDirectory(detailDirNames(resultStr)))
     val detailFiles = resultStrs.map(resultStr => resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/result.txt")).toMap
@@ -161,15 +163,15 @@ object Main {
       detailFiles(r).writeln()
       detailListFiles(r).writeln(regExp)
       summaryCount(r) += 1
-      if (r == "polynomially") {
-        val polynomialResult = """polynomially, degree (\d*).*""".r
+      if (r == "polynomial") {
+        val polynomialResult = """polynomial, degree (\d*).*""".r
         result match {
           case polynomialResult(degree) =>
             val d = degree.toInt
             if (!degreeFiles.contains(d)) {
-              IO.createDirectory(s"${detailDirNames("polynomially")}/degree_${d}")
-              degreeFiles += d -> IO.createFile(s"${detailDirNames("polynomially")}/degree_${d}/result.txt")
-              degreeListFiles += d -> IO.createFile(s"${detailDirNames("polynomially")}/degree_${d}/list.txt")
+              IO.createDirectory(s"${detailDirNames("polynomial")}/degree_${d}")
+              degreeFiles += d -> IO.createFile(s"${detailDirNames("polynomial")}/degree_${d}/result.txt")
+              degreeListFiles += d -> IO.createFile(s"${detailDirNames("polynomial")}/degree_${d}/list.txt")
             }
             degreeFiles(d).writeln(regExp)
             degreeFiles(d).writeln(result)
@@ -180,24 +182,25 @@ object Main {
       }
     }
 
-    summaryFile.writeln(s"input file: ${inputFile}")
-    summaryFile.writeln(s"date: ${timeStamp}")
+    summaryFile.writeln(s"input file : ${inputFile}")
+    summaryFile.writeln(s"started at : ${startTime}")
+    summaryFile.writeln(s"finished at: ${finishTime}")
     summaryFile.writeln()
 
     summaryFile.writeln(settings.toString)
     summaryFile.writeln()
 
     summaryFile.writeln(s"${"-"*3} result ${"-"*29}")
-    summaryFile.writeln(f"${"total"}%-13s: ${total}")
+    summaryFile.writeln(f"${"total"}%-11s: ${total}")
     summaryFile.writeln()
     resultStrs.take(3).foreach{ resultStr =>
-      summaryFile.writeln(f"${resultStr}%-13s: ${summaryCount(resultStr)}")
+      summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount(resultStr)}")
     }
     degreeCount.toSeq.sortBy(_._1).foreach{ case (degree,count) =>
       summaryFile.writeln(f"degree ${degree}: ${count}", 10)
     }
     resultStrs.drop(3).foreach{ resultStr =>
-      summaryFile.writeln(f"${resultStr}%-13s: ${summaryCount(resultStr)}")
+      summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount(resultStr)}")
     }
     summaryFile.writeln(s"${"-"*40}")
 
