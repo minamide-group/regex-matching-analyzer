@@ -60,13 +60,13 @@ object RegExpIR {
       def convert(r: RegExp[Char]): RegExp[Char] = {
         r match {
           case NumExpIR(s) =>
-            if (s.head == '0' || captureGroups.max(9) < s.toInt) {
+            if (s.head == '0' || captureGroups.min(99).max(9) < s.toInt) {
               val (octalPart, elemsPart) = s.take(3).span(_ < '8')
               (elemsPart + s.drop(3)).foldLeft(ElemExp(Integer.parseInt(s"0${octalPart}", 8).toChar): RegExp[Char])(
                 (r,c) => ConcatExp(r, ElemExp(c))
               )
             } else {
-              if (s.toInt <= captureGroups) BackReferenceExp(s.toInt)
+              if (s.toInt <= captureGroups.min(99)) BackReferenceExp(s.toInt)
               else throw RegExp.InvalidRegExpException(s"undefined group: ${s}")
             }
           case NamedBackReferenceExpIR(name) =>

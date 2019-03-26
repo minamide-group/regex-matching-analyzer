@@ -57,6 +57,7 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("(?:a)") should be (withStartEnd(ElemExp('a')))
     RegExpParser("(?<hoge>a)") should be (withStartEnd(GroupExp(ElemExp('a'), 1, Some("hoge"))))
     RegExpParser("(?'hoge'a)") should be (withStartEnd(GroupExp(ElemExp('a'), 1, Some("hoge"))))
+    RegExpParser("(?P<hoge>a)") should be (withStartEnd(GroupExp(ElemExp('a'), 1, Some("hoge"))))
 
     a [ParseException] should be thrownBy {RegExpParser("(a(b)")}
     a [ParseException] should be thrownBy {RegExpParser("a(b))")}

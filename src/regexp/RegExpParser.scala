@@ -44,7 +44,7 @@ class RegExpParser() extends RegexParsers {
               def captureGroup: Parser[RegExp[Char]] = "(" ~> exp <~ ")" ^^ {GroupExpIR(_,None)}
               def unCaptureGroup: Parser[RegExp[Char]] = "(?:" ~> exp <~ ")"
               def namedCaptureGroup: Parser[RegExp[Char]] = {
-                "(?" ~> ("<" ~> variable <~ ">" | "'" ~> variable <~ "'") ~ exp <~ ")" ^^ {
+                "(?" ~> (opt("P") ~> "<" ~> variable <~ ">" | "'" ~> variable <~ "'") ~ exp <~ ")" ^^ {
                   case name ~ r => GroupExpIR(r,Some(name))
                 }
               }
