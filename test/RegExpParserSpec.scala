@@ -393,33 +393,33 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     a [ParseException] should be thrownBy {RegExpParser("a*+")}
   }
 
-  "parsePHP" should "parse PHP style regexp" in {
-    val (r1,o1) = RegExpParser.parsePHP("/a/")
+  "parsePCRE" should "parse PCRE style regexp" in {
+    val (r1,o1) = RegExpParser.parsePCRE("/a/")
     r1 should be (withStartEnd(ElemExp('a')))
     o1.ignoreCase should be (false)
     o1.dotAll should be (false)
     o1.ungreedy should be (false)
 
-    val (_,o2) = RegExpParser.parsePHP("/a/i")
+    val (_,o2) = RegExpParser.parsePCRE("/a/i")
     o2.ignoreCase should be (true)
 
-    val (_,o3) = RegExpParser.parsePHP("/a/s")
+    val (_,o3) = RegExpParser.parsePCRE("/a/s")
     o3.dotAll should be (true)
 
-    val (_,o4) = RegExpParser.parsePHP("/a/U")
+    val (_,o4) = RegExpParser.parsePCRE("/a/U")
     o4.ungreedy should be (true)
 
-    val (_,o5) = RegExpParser.parsePHP("/a/isU")
+    val (_,o5) = RegExpParser.parsePCRE("/a/isU")
     o5.ignoreCase should be (true)
     o5.dotAll should be (true)
     o5.ungreedy should be (true)
 
-    noException should be thrownBy {RegExpParser.parsePHP("#a#")}
-    noException should be thrownBy {RegExpParser.parsePHP("(a)")}
-    noException should be thrownBy {RegExpParser.parsePHP("{a}")}
-    noException should be thrownBy {RegExpParser.parsePHP("[a]")}
-    noException should be thrownBy {RegExpParser.parsePHP("<a>")}
+    noException should be thrownBy {RegExpParser.parsePCRE("#a#")}
+    noException should be thrownBy {RegExpParser.parsePCRE("(a)")}
+    noException should be thrownBy {RegExpParser.parsePCRE("{a}")}
+    noException should be thrownBy {RegExpParser.parsePCRE("[a]")}
+    noException should be thrownBy {RegExpParser.parsePCRE("<a>")}
 
-    a [ParseException] should be thrownBy {RegExpParser.parsePHP("/abc#i")}
+    a [ParseException] should be thrownBy {RegExpParser.parsePCRE("/abc#i")}
   }
 }

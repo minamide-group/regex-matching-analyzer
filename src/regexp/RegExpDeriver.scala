@@ -5,7 +5,7 @@ import matching.monad.Monad._
 import matching.tool.Analysis
 import RegExp._
 
-class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad[M]) {
+class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Monad[M]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
     def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]]] = {
       def accept(a: Option[A]): Boolean = {
@@ -38,8 +38,11 @@ class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad
         r match {
           case ElemExp(b) => a match {
             case Some(a: Char) =>
-              if (option.ignoreCase && a.isLetter) a.toLower == b || a.toUpper == b
-              else a == b
+              if (option.ignoreCase && a.isLetter) {
+                a.toLower == b || a.toUpper == b
+              } else {
+                a == b
+              }
             case Some(a) => a == b
             case None => false
           }
@@ -73,7 +76,11 @@ class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad
           case Some(r2) => m(Some(optConcatExp(r2,r)))
           case None => m(None)
         }
-        if (greedy ^ option.ungreedy) rd ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ rd
+        if (greedy ^ option.ungreedy) {
+          rd ++ m(None)
+        } else {
+          (m(None): M[Option[RegExp[A]]]) ++ rd
+        }
       case PlusExp(r,greedy) =>
         val rStar = StarExp(r,greedy)
         derive(r,a) >>= {
@@ -82,15 +89,24 @@ class RegExpDeriver[M[_]](option: PHPOption = new PHPOption())(implicit m: Monad
         }
       case OptionExp(r,greedy) =>
         val dr = derive(r,a)
-        if (greedy ^ option.ungreedy) dr ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ dr
+        if (greedy ^ option.ungreedy) {
+          dr ++ m(None)
+        } else {
+          (m(None): M[Option[RegExp[A]]]) ++ dr
+        }
       case RepeatExp(r1,min,max,greedy) =>
         val rDec = RepeatExp(r1,min.map(_-1),max.map(_-1),greedy)
         val rd: M[Option[RegExp[A]]] = derive(r1,a) >>= {
           case Some(r2) => m(Some(optConcatExp(r2,rDec)))
           case None => derive(rDec,a)
         }
-        if (min.isDefined) rd
-        else if (greedy ^ option.ungreedy) rd ++ m(None) else (m(None): M[Option[RegExp[A]]]) ++ rd
+        if (min.isDefined) {
+          rd
+        } else if (greedy ^ option.ungreedy) {
+          rd ++ m(None)
+        } else {
+          (m(None): M[Option[RegExp[A]]]) ++ rd
+        }
       case GroupExp(r,_,_) => derive(r,a)
       case _ => throw new Exception(s"derive unsupported expression: ${r}")
     }

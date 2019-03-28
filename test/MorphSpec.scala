@@ -3,7 +3,7 @@ package matching.transition
 import org.scalatest._
 
 class MorphSpec extends FlatSpec with Matchers {
-  "constructNFA" should "construct NFA" in {
+  "toNFA" should "construct NFA" in {
     val morphs = Map(
       1 -> Map(
         'a' -> "ab",

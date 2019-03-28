@@ -29,7 +29,7 @@ object Main {
       def parseOptions(options: List[String], setting: Settings = new Settings()): Settings = {
         options match {
           case "--style" :: style :: options =>
-            val styleList = List("raw", "PHP")
+            val styleList = List("raw", "PCRE")
             if (styleList.contains(style)) {
               setting.style = style
               parseOptions(options, setting)
@@ -82,9 +82,9 @@ object Main {
 
     try {
       val (r,option) = if (settings.style == "raw") {
-        (RegExpParser(regExpStr), new PHPOption())
-      } else if (settings.style == "PHP") {
-        RegExpParser.parsePHP(regExpStr)
+        (RegExpParser(regExpStr), new PCREOption())
+      } else if (settings.style == "PCRE") {
+        RegExpParser.parsePCRE(regExpStr)
       } else throw new Exception("invalid style")
       runWithLimit(settings.timeout) {
         calcBtrGrowthRate(r,option)

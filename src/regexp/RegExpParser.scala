@@ -103,8 +103,9 @@ class RegExpParser() extends RegexParsers {
               Integer.parseInt(s"0${code}", 16).toChar
             }
             def unicode: Parser[Char] = "\\u" ~> "[0-9a-fA-F]{0,4}".r ^^ { code =>
-              if (code.length == 4) Integer.parseInt(s"0${code}", 16).toChar
-              else throw RegExpParser.ParseException(s"invalid unicode representation: \\u${code}")
+              if (code.length == 4) {
+                Integer.parseInt(s"0${code}", 16).toChar
+              } else throw RegExpParser.ParseException(s"invalid unicode representation: \\u${code}")
             }
             def esc: Parser[Char] = "\\" ~> "[^a-zA-Z]".r ^^ {_.head}
             def variable: Parser[String] = "[a-zA-Z][a-zA-Z0-9]*".r
@@ -177,7 +178,7 @@ object RegExpParser {
     new RegExpParser().parseAll(s)
   }
 
-  def parsePHP(s: String): (RegExp[Char], PHPOption) = {
+  def parsePCRE(s: String): (RegExp[Char], PCREOption) = {
     val endDelimiter = s.head match {
       case '(' => ')'
       case '{' => '}'
@@ -187,12 +188,13 @@ object RegExpParser {
     }
 
     val endBodyIndex = s.lastIndexWhere(_ == endDelimiter)
-    if (endBodyIndex == 0) throw new ParseException("invalid PHP style expression.")
-    else {
+    if (endBodyIndex == 0) {
+      throw new ParseException("invalid PCRE style expression.")
+    } else {
       val body = s.slice(1,endBodyIndex)
       val options = s.drop(endBodyIndex+1)
       val option = try {
-        new PHPOption(options)
+        new PCREOption(options)
       } catch {
         case e: InvalidRegExpException =>
           throw RegExpParser.ParseException(s"${e.message}")

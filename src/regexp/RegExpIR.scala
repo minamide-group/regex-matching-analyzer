@@ -48,8 +48,9 @@ object RegExpIR {
             val id = captureGroups
             name match {
               case Some(s) =>
-                if (!groupNameMap.contains(s)) groupNameMap += s -> id
-                else throw RegExp.InvalidRegExpException(s"duplicated group name: ${s}")
+                if (!groupNameMap.contains(s)) {
+                  groupNameMap += s -> id
+                } else throw RegExp.InvalidRegExpException(s"duplicated group name: ${s}")
               case None =>
             }
             GroupExp(convertGroup(r), id, name)
@@ -66,8 +67,9 @@ object RegExpIR {
                 (r,c) => ConcatExp(r, ElemExp(c))
               )
             } else {
-              if (s.toInt <= captureGroups.min(99)) BackReferenceExp(s.toInt)
-              else throw RegExp.InvalidRegExpException(s"undefined group: ${s}")
+              if (s.toInt <= captureGroups.min(99)) {
+                BackReferenceExp(s.toInt)
+              } else throw RegExp.InvalidRegExpException(s"undefined group: ${s}")
             }
           case NamedBackReferenceExpIR(name) =>
             groupNameMap.get(name) match {

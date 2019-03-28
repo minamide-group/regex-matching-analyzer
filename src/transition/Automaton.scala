@@ -137,8 +137,9 @@ class NFA[Q,A](
           case Some(d) => d
           case None =>
             val children = scsGraph.adj(sc)
-            val degreeSc = if (children.isEmpty) 0
-            else {
+            val degreeSc = if (children.isEmpty) {
+              0
+            } else {
               val maxDegree = children.map(calcDegree).max
               maxDegree + (if (
                 canSkip(sc) && reachableFromScsGraph(sc).filter( end =>

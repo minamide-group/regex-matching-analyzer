@@ -12,15 +12,17 @@ object IO {
   def createFile(fileName: String, force: Boolean = false): File = {
     val file = Paths.get(fileName)
     if (force) Files.deleteIfExists(file)
-    if (Files.notExists(file)) Files.createFile(file)
-    else throw new Exception(s"file ${fileName} already exists")
+    if (Files.notExists(file)) {
+      Files.createFile(file)
+    } else throw new Exception(s"file ${fileName} already exists")
     new File(fileName)
   }
 
   def createDirectory(dirName: String) {
     val dir = Paths.get(dirName)
-    if (Files.notExists(dir)) Files.createDirectory(dir)
-    else throw new Exception(s"directory ${dirName} already exists")
+    if (Files.notExists(dir)) {
+      Files.createDirectory(dir)
+    } else throw new Exception(s"directory ${dirName} already exists")
   }
 }
 

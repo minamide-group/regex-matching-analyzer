@@ -75,7 +75,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 object RegExp {
   case class InvalidRegExpException(message: String) extends Exception(message: String)
 
-  class PHPOption(s: String = "") {
+  class PCREOption(s: String = "") {
     var ignoreCase = false
     var dotAll = false
     var ungreedy = false
@@ -84,7 +84,7 @@ object RegExp {
       case 'i' => ignoreCase = true
       case 's' => dotAll = true
       case 'U' => ungreedy = true
-      case c => throw RegExp.InvalidRegExpException(s"unsupported PHP option: ${c}")
+      case c => throw RegExp.InvalidRegExpException(s"unsupported PCRE option: ${c}")
     }
   }
 
@@ -110,8 +110,11 @@ object RegExp {
       case OptionExp(r,greedy) => s"(${r})?${if (greedy) "" else "?"}"
       case DotExp() => "."
       case RepeatExp(r,min,max,greedy) =>
-        if (min == max) s"${r}{${min.get}}${if (greedy) "" else "?"}"
-        else s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
+        if (min == max) {
+          s"${r}{${min.get}}${if (greedy) "" else "?"}"
+        } else {
+          s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
+        }
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
       case GroupExp(r,_,name) => name match {
@@ -135,7 +138,7 @@ object RegExp {
     }
   }
 
-  def constructMorphs[M[_]](r: RegExp[Char], option: PHPOption = new PHPOption())(implicit m: Monad[M]): IndexedMorphs[Option[Char],RegExp[Char],M] = {
+  def constructMorphs[M[_]](r: RegExp[Char], option: PCREOption = new PCREOption())(implicit m: Monad[M]): IndexedMorphs[Option[Char],RegExp[Char],M] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -209,11 +212,12 @@ object RegExp {
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def calcGrowthRate(r: RegExp[Char], option: PHPOption = new PHPOption()): Option[Int] = {
+  def calcGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): Option[Int] = {
     val indexedMorphs = constructMorphs[List](r,option).rename()
     val nfa = indexedMorphs.toNFA().reachablePart()
-    if (!nfa.hasLoop()) Some(0)
-    else {
+    if (!nfa.hasLoop()) {
+      Some(0)
+    } else {
       val ambiguity = Debug.time("calculate ambiguity") {
         nfa.calcAmbiguity()
       }
@@ -221,7 +225,7 @@ object RegExp {
     }
   }
 
-  def calcBtrGrowthRate(r: RegExp[Char], option: PHPOption = new PHPOption()): Option[Int] = {
+  def calcBtrGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): Option[Int] = {
     val indexedMorphs = Debug.time("consruct IndexedMorphs") {
       constructMorphs[List](r,option).rename()
     }
@@ -234,8 +238,9 @@ object RegExp {
     val nfa = Debug.time("consruct NFA") {
       productIndexedMorphs.toNFA().reachablePart()
     }
-    if (!nfa.hasLoop()) Some(0)
-    else {
+    if (!nfa.hasLoop()) {
+      Some(0)
+    } else {
       val ambiguity = Debug.time("calculate ambiguity") {
         nfa.calcAmbiguityWithTransition()
       }
