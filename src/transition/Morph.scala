@@ -2,17 +2,20 @@ package matching.transition
 
 import matching.monad._
 import matching.monad.Monad._
-import matching.tool.{Analysis, Debug}
+import matching.tool.Analysis
 
 class IndexedMorphs[A,B,M[_]](
   val morphs: Map[A,Map[B,M[B]]],
   val initials: Set[B],
   val finals: Set[B]
 )(implicit m: Monad[M]) {
+  lazy val indices = morphs.keySet
+  lazy val domain = morphs.values.flatMap( morph =>
+    morph.keySet ++ morph.values.flatMap(_.flat)
+  ).toSet | initials | finals
+
   def rename(): IndexedMorphs[A,Int,M] = {
-    val renameMap = morphs.values.flatMap( morph =>
-      morph.keySet ++ morph.values.flatMap(_.flat)
-    ).toSet.zipWithIndex.toMap
+    val renameMap = domain.zipWithIndex.toMap
     val newMorphs = morphs.mapValues(_.map{ case (b,bs) =>
       renameMap(b) -> (bs >>= ((b: B) => m(renameMap(b))))
     })
@@ -22,10 +25,8 @@ class IndexedMorphs[A,B,M[_]](
   }
 
   def toNFA(): NFA[B,A] = {
-    val states = morphs.values.flatMap( morph =>
-      morph.keySet ++ morph.values.flatMap(_.flat)
-    ).toSet
-    val sigma = morphs.keySet
+    val states = domain
+    val sigma = indices
     val delta = morphs.toSeq.flatMap{ case (a,h) =>
       h.flatMap{case (b,bs) => bs.flat.map((b,a,_))}
     }.toSeq
@@ -33,13 +34,7 @@ class IndexedMorphs[A,B,M[_]](
     new NFA(states, sigma, delta, initials, finals)
   }
 
-  def toIndexedMorphsWithTransition(): IndexedMorphsWithTransition[Set[B],A,B,M] = {
-    val ladfa = toNFA().reverse().toDFA()
-
-    Debug.info("lookahead DFA info") (
-      ("number of states", ladfa.states.size)
-    )
-
+  def toIndexedMorphsWithTransition(ladfa: DFA[Set[B],A]): IndexedMorphsWithTransition[Set[B],A,B,M] = {
     val morphCuts = morphs.mapValues(_.mapValues{ rd =>
       Analysis.checkInterrupted("constructing indexed morphisms with transition")
       (rd, ladfa.states.filter(state => rd.flat.forall(!state.contains(_)))) +:
@@ -49,28 +44,22 @@ class IndexedMorphs[A,B,M[_]](
       }))
     })
 
-    var edge2Sigma = (for (p1 <- ladfa.states; p2 <- ladfa.states) yield {
+    val btrMorphs = ladfa.delta.groupBy{case (p1,_,p2) => (p1,p2)}.mapValues(
+      _.map(_._2).toSet
+    ).map{ case ((p1,p2),as) =>
       Analysis.checkInterrupted("constructing indexed morphisms with transition")
-      (p1,p2) -> Set[A]()
-    }).toMap
-    ladfa.delta.foreach{ case (q1,a,q2) =>
-      Analysis.checkInterrupted("constructing indexed morphisms with transition")
-      edge2Sigma += (q1,q2) -> (edge2Sigma((q1,q2)) + a)
-    }
-
-    val btrMorphs = edge2Sigma.map{ case ((p1,p2),as) =>
       (p2,p1) -> as.map( a =>
         a -> morphCuts(a).map{ case (r,rds) =>
-          Analysis.checkInterrupted("constructing indexed morphisms with transition")
           r -> rds.find{case (rd,ps) => ps.contains(p1)}.get._1
         }
       ).toMap
-    }.filter(_._2.nonEmpty)
+    }
 
     new IndexedMorphsWithTransition(
       btrMorphs,
       initials,
       finals,
+      ladfa.states,
       Set(ladfa.initialState)
     )
   }
@@ -81,15 +70,26 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
   val morphs: Map[(A,A),Map[B,Map[C,M[C]]]],
   val initials: Set[C],
   val finals: Set[C],
+  val transitionInitials: Set[A],
   val transitionFinals: Set[A]
 )(implicit m: Monad[M]) {
-  def rename(): IndexedMorphsWithTransition[Int,B,C,M] = {
-    val renameMap = morphs.keySet.flatMap{case (a1,a2) => Set(a1,a2)}.zipWithIndex.toMap
+  def rename(ladfa: DFA[A,B]): (IndexedMorphsWithTransition[Int,B,C,M], DFA[Int,B]) = {
+    val renameMap = ladfa.states.zipWithIndex.toMap
+
     val newMorphs = morphs.map{ case ((a1,a2),indexedMorphs) =>
       (renameMap(a1),renameMap(a2)) -> indexedMorphs
     }
+    val newTransitionInitials = transitionInitials.map(renameMap)
     val newTransitionFinals = transitionFinals.map(renameMap)
-    new IndexedMorphsWithTransition(newMorphs, initials, finals, newTransitionFinals)
+    val newIndexedMorphsWithTransition = new IndexedMorphsWithTransition(newMorphs, initials, finals, newTransitionInitials, newTransitionFinals)
+
+    val newStates = renameMap.values.toSet
+    val newDeltaDet = ladfa.deltaDet.map{case ((a1,b),a2) => (renameMap(a1),b) -> renameMap(a2)}.toMap
+    val newInitialState = renameMap(ladfa.initialState)
+    val newFinalStates = ladfa.finalStates.map(renameMap)
+    val newLadfa = new DFA(newStates, ladfa.sigma, newDeltaDet, newInitialState, newFinalStates)
+
+    (newIndexedMorphsWithTransition, newLadfa)
   }
 
   def toIndexedMorphs(): IndexedMorphs[B,(C,A),M] = {
@@ -111,11 +111,8 @@ class IndexedMorphsWithTransition[A,B,C,M[_]](
         (m1: M[(C,A)], m2: M[(C,A)]) => m1 ++ m2
       )
     ))
-    val newStates = newMorphs.values.flatMap( morph =>
-      morph.keySet ++ morph.values.flatMap(_.flat)
-    ).toSet
-    val newInitials = newStates.filter{case (c,_) => initials.contains(c)}
-    val newFinals = for (c <- finals; a <- transitionFinals if newStates.contains((c,a))) yield (c,a)
+    val newInitials = for (c <- initials; a <- transitionInitials) yield (c,a)
+    val newFinals = for (c <- finals; a <- transitionFinals) yield (c,a)
 
     new IndexedMorphs(newMorphs, newInitials, newFinals)
   }
