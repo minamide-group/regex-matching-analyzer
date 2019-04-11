@@ -47,11 +47,15 @@ class MorphSpec extends FlatSpec with Matchers {
       )
     ).mapValues(_.mapValues(_.toList))
 
-    val indexedMorphsWithTransition = new IndexedMorphs(
+    val indexedMorphs = new IndexedMorphs(
       morphs,
       Set('a'),
       Set('c')
-    ).toIndexedMorphsWithTransition()
+    )
+
+    val indexedMorphsWithTransition = indexedMorphs.toIndexedMorphsWithTransition(
+      indexedMorphs.toNFA().reverse().toDFA()
+    )
 
     val m1 = Map(
       1 -> Map(
@@ -138,6 +142,7 @@ class MorphSpec extends FlatSpec with Matchers {
       morphs,
       Set('a'),
       Set('c'),
+      Set(1,2),
       Set(2)
     ).toIndexedMorphs()
     indexedMorphs.morphs should contain only (

@@ -4,7 +4,7 @@ import scala.collection.mutable.Stack
 import matching.monad._
 import matching.monad.Monad._
 import matching.transition._
-import matching.tool.{Analysis, Debug}
+import matching.tool.{Analysis, Debug, IO}
 
 trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
@@ -89,18 +89,8 @@ object RegExp {
   }
 
   def toString[A](r: RegExp[A]): String = {
-    def esc(a: A): String = {
-      a match {
-        case '\f' => "\\f"
-        case '\n' => "\\n"
-        case '\r' => "\\r"
-        case '\t' => "\\t"
-        case _ => a.toString
-      }
-    }
-
     r match {
-      case ElemExp(a) => esc(a)
+      case ElemExp(a) => IO.escape(a)
       case EmptyExp() => "∅"
       case EpsExp() => "ε"
       case ConcatExp(r1,r2) => s"(${r1}${r2})"
@@ -212,39 +202,54 @@ object RegExp {
     new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
   }
 
-  def calcGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): Option[Int] = {
+  private def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
+    val charForNone = '.'
+    Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
+  }
+
+  def calcGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
     val indexedMorphs = constructMorphs[List](r,option).rename()
     val nfa = indexedMorphs.toNFA().reachablePart()
     if (!nfa.hasLoop()) {
-      Some(0)
+      (Some(0), Witness.empty)
     } else {
-      val ambiguity = Debug.time("calculate ambiguity") {
+      val (ambiguity, witness) = Debug.time("calculate ambiguity") {
         nfa.calcAmbiguity()
       }
-      ambiguity.map(_+1)
+      (ambiguity.map(_+1), convertWitness(witness))
     }
   }
 
-  def calcBtrGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): Option[Int] = {
+  def calcBtrGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
     val indexedMorphs = Debug.time("consruct IndexedMorphs") {
       constructMorphs[List](r,option).rename()
     }
-    val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
-      indexedMorphs.toIndexedMorphsWithTransition().rename()
+
+    val ladfa = Debug.time("consruct lookahead DFA") {
+      indexedMorphs.toNFA().reverse().toDFA()
     }
+
+    Debug.info("lookahead DFA info") (
+      ("number of states", ladfa.states.size)
+    )
+
+    val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
+      indexedMorphs.toIndexedMorphsWithTransition(ladfa)
+    }
+    val (renamedIndexedMorphsWithTransition, renamedLadfa) = indexedMorphsWithTransition.rename(ladfa)
     val productIndexedMorphs = Debug.time("consruct product IndexedMorphs") {
-      indexedMorphsWithTransition.toIndexedMorphs()
+      renamedIndexedMorphsWithTransition.toIndexedMorphs()
     }
     val nfa = Debug.time("consruct NFA") {
       productIndexedMorphs.toNFA().reachablePart()
     }
     if (!nfa.hasLoop()) {
-      Some(0)
+      (Some(0), Witness.empty)
     } else {
-      val ambiguity = Debug.time("calculate ambiguity") {
-        nfa.calcAmbiguityWithTransition()
+      val (ambiguity, witness) = Debug.time("calculate ambiguity") {
+        nfa.calcAmbiguityWithTransition(renamedLadfa)
       }
-      ambiguity.map(_+1)
+      (ambiguity.map(_+1), convertWitness(witness))
     }
   }
 }
@@ -265,19 +270,9 @@ case class RangeExp(start: Char, end: Char) extends CharClassElem {
 
 object CharClassElem {
   def toString(e: CharClassElem): String = {
-    def esc(c: Char): String = {
-      c match {
-        case '\f' => "\\f"
-        case '\n' => "\\n"
-        case '\r' => "\\r"
-        case '\t' => "\\t"
-        case _ => c.toString
-      }
-    }
-
     e match {
-      case SingleCharExp(c) => esc(c)
-      case RangeExp(start, end) => s"${esc(start)}-${esc(end)}"
+      case SingleCharExp(c) => IO.escape(c)
+      case RangeExp(start, end) => s"${IO.escape(start)}-${IO.escape(end)}"
       case MetaCharExp(c) => s"\\${c}"
     }
   }

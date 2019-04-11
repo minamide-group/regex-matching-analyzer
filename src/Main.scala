@@ -3,6 +3,7 @@ package matching
 import regexp._
 import regexp.RegExp._
 import tool.Analysis._
+import transition.Witness
 import collection.mutable.{Map => MTMap}
 import tool.{IO, File, Debug}
 import java.util.Date
@@ -71,12 +72,12 @@ object Main {
   }
 
   def test(regExpStr: String, settings: Settings): String = {
-    def convertResult(result: Option[Int]): String = {
-      result match {
+    def convertResult(result: (Option[Int], Witness[Char])): String = {
+      result._1 match {
         case Some(0) => "constant"
         case Some(1) => "linear"
-        case Some(d) => s"polynomial, degree ${d}"
-        case None => "exponential"
+        case Some(d) => s"polynomial, degree ${d}, witness: ${result._2}"
+        case None => s"exponential, witness: ${result._2}"
       }
     }
 

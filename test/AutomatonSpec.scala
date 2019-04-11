@@ -187,7 +187,7 @@ class AutomatonSpec extends FlatSpec with Matchers {
     )
 
     val g3 = new NFA(
-      Set(1,2,3,4),
+      Set(1,2,3,4,5),
       Set('a','b','c'),
       Seq(
         (1,'a',1),
@@ -196,15 +196,16 @@ class AutomatonSpec extends FlatSpec with Matchers {
         (2,'b',3),
         (2,'b',3),
         (3,'c',4),
-        (4,'b',3)
+        (4,'b',3),
+        (5,'a',5)
       ),
-      Set(1),
+      Set(1,5),
       Set(4)
     )
 
-    g1.calcAmbiguity() should be (Some(0))
-    g2.calcAmbiguity() should be (Some(0))
-    g3.calcAmbiguity() should be (Some(0))
+    g1.calcAmbiguity()._1 should be (Some(0))
+    g2.calcAmbiguity()._1 should be (Some(0))
+    g3.calcAmbiguity()._1 should be (Some(0))
   }
 
   it should "decide polynomially ambiguous graph" in {
@@ -289,11 +290,11 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(4)
     )
 
-    g11.calcAmbiguity() should be (Some(1))
-    g12.calcAmbiguity() should be (Some(1))
-    g21.calcAmbiguity() should be (Some(2))
-    g22.calcAmbiguity() should be (Some(2))
-    g3.calcAmbiguity() should be (Some(3))
+    g11.calcAmbiguity()._1 should be (Some(1))
+    g12.calcAmbiguity()._1 should be (Some(1))
+    g21.calcAmbiguity()._1 should be (Some(2))
+    g22.calcAmbiguity()._1 should be (Some(2))
+    g3.calcAmbiguity()._1 should be (Some(3))
   }
 
   it should "decide exponentially ambiguous graph" in {
@@ -368,10 +369,10 @@ class AutomatonSpec extends FlatSpec with Matchers {
       Set(3)
     )
 
-    g1.calcAmbiguity() should be (None)
-    g2.calcAmbiguity() should be (None)
-    g3.calcAmbiguity() should be (None)
-    g4.calcAmbiguity() should be (None)
-    g5.calcAmbiguity() should be (None)
+    g1.calcAmbiguity()._1 should be (None)
+    g2.calcAmbiguity()._1 should be (None)
+    g3.calcAmbiguity()._1 should be (None)
+    g4.calcAmbiguity()._1 should be (None)
+    g5.calcAmbiguity()._1 should be (None)
   }
 }

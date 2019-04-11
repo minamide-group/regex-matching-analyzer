@@ -24,6 +24,17 @@ object IO {
       Files.createDirectory(dir)
     } else throw new Exception(s"directory ${dirName} already exists")
   }
+
+  def escape(a: Any): String = {
+    a match {
+      case '\f' => "\\f"
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case ' ' => "\u2423"
+      case _ => a.toString
+    }
+  }
 }
 
 class File(fileName: String) extends PrintWriter(fileName) {
