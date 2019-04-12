@@ -74,9 +74,8 @@ class NFA[Q,A](
       ("number of strong components", scsGraph.nodes.size)
     )
 
-    def checkEDA(): (Boolean, Pumps) = {
-      var pumps = Seq[(Q,Seq[A],Q)]()
-      def checkEDA(sc: Set[Q]): Boolean = {
+    def checkEDA(): Option[Pumps] = {
+      def checkEDA(sc: Set[Q]): Option[Pumps] = {
         Analysis.checkInterrupted("checking EDA")
         val labeledAdjSc = scPairLabeledAdj((sc,sc))
 
@@ -91,8 +90,7 @@ class NFA[Q,A](
           case Some((a,es)) =>
             val (q1,q2) = es.diff(es.distinct).head
             val back = getPath(q2,q1).get
-            pumps = Seq((q1, a +: back, q1))
-            true
+            Some(Seq((q1, a +: back, q1)))
           case None =>
             val g2 = constructG2(sc)
             g2.calcStrongComponents().find(
@@ -100,21 +98,17 @@ class NFA[Q,A](
             ) match {
               case Some(g2sc) => g2sc.find{
                 case (q1,q2) => q1 != q2
-              } match {
-                case Some((q1,q2)) =>
-                  val path1 = g2.getPath((q1,q1),(q1,q2)).get
-                  val path2 = g2.getPath((q1,q2),(q1,q1)).get
-                  pumps = Seq((q1, path1 ++ path2, q1))
-                  true
-                case None => false
+              }.map{ case (q1,q2) =>
+                val path1 = g2.getPath((q1,q1),(q1,q2)).get
+                val path2 = g2.getPath((q1,q2),(q1,q1)).get
+                Seq((q1, path1 ++ path2, q1))
               }
-              case None => false
+              case None => None
             }
         }
       }
 
-      val b = scsGraph.nodes.exists(checkEDA)
-      (b, pumps)
+      scsGraph.nodes.toStream.map(checkEDA).find(_.isDefined).map(_.get)
     }
 
     val hasSelfLoop = delta.collect{case (q1,a,q2) if q1 == q2 => q1}.toSet
@@ -151,11 +145,12 @@ class NFA[Q,A](
       (scsGraph.nodes.map(calcDegree).max, pumps)
     }
 
-    if (checkEDA()._1) {
-      (None, checkEDA()._2)
-    } else {
-      val (degree, pumps) = calcDegree()
-      (Some(degree), pumps)
+    checkEDA match {
+      case Some(pump) =>
+        (None, pump)
+      case None =>
+        val (degree, pumps) = calcDegree()
+        (Some(degree), pumps)
     }
   }
 
