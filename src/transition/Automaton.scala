@@ -1,7 +1,7 @@
 package matching.transition
 
 import scala.collection.mutable.Stack
-import matching.tool.{Analysis, Debug}
+import matching.tool.Analysis
 
 class NFA[Q,A](
   val states: Set[Q],
@@ -10,7 +10,7 @@ class NFA[Q,A](
   val initialStates: Set[Q],
   val finalStates: Set[Q]
 ) extends LabeledGraph[Q,A](states, delta) {
-  type Pumps = Seq[(Q,Seq[A],Q)]
+  type Pump = (Q,Seq[A],Q)
 
   lazy val reachableMapScsGraph = scsGraph.reachableMapDAG()
   lazy val reachableMapScsGraphRev = scsGraph.reverse().reachableMapDAG()
@@ -66,16 +66,9 @@ class NFA[Q,A](
     edges.exists{case (q1,q2) => q1 == q2} || scsGraph.nodes.size != states.size
   }
 
-  private def calcAmbiguity(checkIDA: (Set[Q],Set[Q]) => Boolean): (Option[Int], Pumps) = {
-    Debug.info("NFA info") (
-      ("number of states", states.size),
-      ("number of transitions", delta.size),
-      ("number of alphabets", sigma.size),
-      ("number of strong components", scsGraph.nodes.size)
-    )
-
-    def checkEDA(): Option[Pumps] = {
-      def checkEDA(sc: Set[Q]): Option[Pumps] = {
+  private def calcAmbiguity(checkIDA: (Set[Q],Set[Q]) => Option[Pump]): (Option[Int], Seq[Pump]) = {
+    def checkEDA(): Option[Pump] = {
+      def checkEDA(sc: Set[Q]): Option[Pump] = {
         Analysis.checkInterrupted("checking EDA")
         val labeledAdjSc = scPairLabeledAdj((sc,sc))
 
@@ -90,7 +83,7 @@ class NFA[Q,A](
           case Some((a,es)) =>
             val (q1,q2) = es.diff(es.distinct).head
             val back = getPath(q2,q1).get
-            Some(Seq((q1, a +: back, q1)))
+            Some((q1, a +: back, q1))
           case None =>
             val g2 = constructG2(sc)
             g2.calcStrongComponents().find(
@@ -101,7 +94,7 @@ class NFA[Q,A](
               }.map{ case (q1,q2) =>
                 val path1 = g2.getPath((q1,q1),(q1,q2)).get
                 val path2 = g2.getPath((q1,q2),(q1,q1)).get
-                Seq((q1, path1 ++ path2, q1))
+                (q1, path1 ++ path2, q1)
               }
               case None => None
             }
@@ -116,38 +109,40 @@ class NFA[Q,A](
       sc.size == 1 && !hasSelfLoop(sc.head)
     }
 
-    def calcDegree(): (Int, Pumps)  = {
-      var degree = Map[Set[Q], Int]()
-      var pumps = Seq[(Q,Seq[A],Q)]()
-      def calcDegree(sc: Set[Q]): Int = {
-        degree.get(sc) match {
-          case Some(d) => d
+    def calcDegree(): (Int, Seq[Pump])  = {
+      var result = Map[Set[Q], (Int,Seq[Pump])]()
+      def calcDegree(sc: Set[Q]): (Int,Seq[Pump]) = {
+        Analysis.checkInterrupted("calculating degree")
+        result.get(sc) match {
+          case Some(res) => res
           case None =>
             val children = scsGraph.adj(sc)
-            val degreeSc = if (children.isEmpty) {
-              0
+            val degreePumpSc = if (children.isEmpty) {
+              (0, Seq())
             } else {
-              val maxDegree = children.map(calcDegree).max
-              maxDegree + (if (
-                !canSkip(sc) && reachableMapScsGraph(sc).filter( end =>
-                  !canSkip(end) && degree.get(end) == Some(maxDegree)
-                ).exists{
-                  Analysis.checkInterrupted("calculating degree")
-                  checkIDA(sc,_)
+              val maxChild @ (maxDegree, _) = children.map(calcDegree).maxBy(_._1)
+              if (canSkip(sc)) {
+                maxChild
+              } else {
+                reachableMapScsGraph(sc).filter( end =>
+                  end != sc && !canSkip(end) && result(end)._1 == maxDegree
+                ).toStream.map(end => (end,checkIDA(sc,end))).find(_._2.isDefined) match {
+                  case Some((end,Some(pump))) => (maxDegree+1, pump +: result(end)._2)
+                  case _ => maxChild
                 }
-              ) 1 else 0)
+              }
             }
-            degree += sc -> degreeSc
-            degreeSc
+            result += sc -> degreePumpSc
+            degreePumpSc
         }
       }
 
-      (scsGraph.nodes.map(calcDegree).max, pumps)
+      scsGraph.nodes.map(calcDegree).maxBy(_._1)
     }
 
     checkEDA match {
       case Some(pump) =>
-        (None, pump)
+        (None, Seq(pump))
       case None =>
         val (degree, pumps) = calcDegree()
         (Some(degree), pumps)
@@ -155,8 +150,8 @@ class NFA[Q,A](
   }
 
   def calcAmbiguity(): (Option[Int], Witness[A]) = {
-    def checkIDA(start: Set[Q], end: Set[Q]): Boolean = {
-      def constructG3(): Graph[(Q,Q,Q)] = {
+    def checkIDA(start: Set[Q], end: Set[Q]): Option[Pump] = {
+      def constructG3(): LabeledGraph[(Q,Q,Q),A] = {
         val labeledAdjStart = scPairLabeledAdj((start,start))
         val passage = reachableMapScsGraph(start) & reachableMapScsGraphRev(end)
         val labeledAdjPassage = for (sc1 <- passage; sc2 <- passage) yield scPairLabeledAdj((sc1,sc2))
@@ -167,27 +162,33 @@ class NFA[Q,A](
             (p1,q1) <- labeledAdjStart(a);
             (p2,q2) <- labeledAdjPassage.flatMap(_(a));
             (p3,q3) <- labeledAdjEnd(a)
-          ) yield ((p1,p2,p3),(q1,q2,q3))) ++
-          (for (
-            p <- start;
-            q <- end
-            if p != q
-          ) yield ((p,q,q),(p,p,q)))
+          ) yield ((p1,p2,p3), a, (q1,q2,q3)))
         )
 
-        new Graph(e3)
+        new LabeledGraph(e3)
       }
 
-      constructG3().calcStrongComponents().exists{sc =>
+      val g3 = constructG3()
+      val e3WithBack = g3.labeledEdges.map{
+        case (v1,a,v2) => (v1,Some(a),v2)
+      } ++ (for (
+        p <- start;
+        q <- end
+      ) yield ((p,q,q), None, (p,p,q)))
+      val g3WithBack = new LabeledGraph(e3WithBack)
+
+      g3WithBack.calcStrongComponents().toStream.map{ sc =>
         sc.collect{
           case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
-        }.exists{
+        }.find{
           case (p,q) => sc.exists{case (q1,q2,q3) => q1 == p && q2 == p && q3 == q}
+        }.map{
+          case (p,q) => (p,g3.getPath((p,p,q),(p,q,q)).get,q)
         }
-      }
+      }.find(_.isDefined).map(_.get)
     }
 
-    def generateWitness(ps: Pumps): Witness[A] = {
+    def generateWitness(ps: Seq[Pump]): Witness[A] = {
       var separators = IndexedSeq[Seq[A]]()
       var pumps = IndexedSeq[Seq[A]]()
       if (ps.nonEmpty) {
@@ -209,7 +210,7 @@ class NFA[Q,A](
     (ambiguity, generateWitness(pumps))
   }
 
-  def calcAmbiguityWithTransition[R,P](ladfa: DFA[P,A])(implicit ev: Q <:< (R,P)): (Option[Int], Witness[A]) = {
+  def calcAmbiguityWithTransition[R,P](ladfa: DFA[P,A])(implicit ev1: Q <:< (R,P), ev2: (R,P) <:< Q): (Option[Int], Witness[A]) = {
     val scPairLabeledAdjRP = scPairLabeledAdj.map{ case (scp, m) =>
       scp -> m.map{ case (a,es) =>
         a -> es.map{ case (v1,v2) =>
@@ -219,11 +220,11 @@ class NFA[Q,A](
     }.withDefaultValue(Map().withDefaultValue(Seq()))
     val laSet = scsGraph.nodes.map(sc => sc -> sc.map(_._2)).toMap
 
-    def checkIDA(start: Set[Q], end: Set[Q]): Boolean = {
+    def checkIDA(start: Set[Q], end: Set[Q]): Option[Pump] = {
       val startRP = start.map(v1 => v1: (R,P))
       val endRP = end.map(v1 => v1: (R,P))
 
-      def constructG4(): Graph[((R,R,R),P)] = {
+      def constructG4(): LabeledGraph[((R,R,R),P), A] = {
         val labeledAdjStart = scPairLabeledAdjRP((start,start))
         val passage = reachableMapScsGraph(start) & reachableMapScsGraphRev(end)
         val labeledAdjPassage = for (sc1 <- passage; sc2 <- passage) yield scPairLabeledAdjRP((sc1,sc2))
@@ -235,30 +236,42 @@ class NFA[Q,A](
             ((r21,p21),(r22,p22)) <- labeledAdjPassage.flatMap(_(a));
             ((r31,p31),(r32,p32)) <- labeledAdjEnd(a)
             if p11 == p21 && p21 == p31 && p12 == p22 && p22 == p32
-          ) yield (((r11,r21,r31),p11),((r12,r22,r32),p12))) ++
-          (for (
-            (r1,p1) <- startRP;
-            (r2,p2) <- endRP
-            if r1 != r2 && p1 == p2
-          ) yield (((r1,r2,r2),p1),((r1,r1,r2),p1)))
+          ) yield (((r11,r21,r31),p11), a, ((r12,r22,r32),p12)))
+
         )
 
-        new Graph(e4)
+        new LabeledGraph(e4)
       }
 
-      (laSet(start) & laSet(end)).nonEmpty &&
-      constructG4().calcStrongComponents().exists{sc =>
-        sc.collect{
-          case ((r11,r12,r13),p1) if r12 == r13 && r11 != r12 => (r11,r12,p1)
-        }.exists{
-          case (r11,r12,p1) => sc.exists{ case ((r21,r22,r23),p2) =>
-            r21 == r11 && r22 == r11 && r23 == r12 && p1 == p2
+      if ((laSet(start) & laSet(end)).isEmpty) {
+        None
+      } else {
+        val g4 = constructG4()
+        val e4WithBack = g4.labeledEdges.map{
+          case (v1,a,v2) => (v1,Some(a),v2)
+        } ++
+        (for (
+          (r1,p1) <- startRP;
+          (r2,p2) <- endRP
+          if r1 != r2 && p1 == p2
+        ) yield (((r1,r2,r2),p1), None, ((r1,r1,r2),p1)))
+        val g4WithBack = new LabeledGraph(e4WithBack)
+
+        g4WithBack.calcStrongComponents().toStream.map{ sc =>
+          sc.collect{
+            case ((r11,r12,r13),p1) if r12 == r13 && r11 != r12 => (r11,r12,p1)
+          }.find{
+            case (r1,r2,p) => sc.exists{ case ((r21,r22,r23),p2) =>
+              r21 == r1 && r22 == r1 && r23 == r2 && p2 == p
+            }
+          }.map{
+            case (r1,r2,p) => ((r1,p): Q, g4.getPath(((r1,r1,r2),p),((r1,r2,r2),p)).get, (r2,p): Q)
           }
-        }
+        }.find(_.isDefined).map(_.get)
       }
     }
 
-    def generateWitness(ps: Pumps): Witness[A] = {
+    def generateWitness(ps: Seq[Pump]): Witness[A] = {
       var separators = IndexedSeq[Seq[A]]()
       var pumps = IndexedSeq[Seq[A]]()
       if (ps.nonEmpty) {

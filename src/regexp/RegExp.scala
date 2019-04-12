@@ -243,6 +243,14 @@ object RegExp {
     val nfa = Debug.time("consruct NFA") {
       productIndexedMorphs.toNFA().reachablePart()
     }
+
+    Debug.info("NFA info") (
+      ("number of states", nfa.states.size),
+      ("number of transitions", nfa.delta.size),
+      ("number of alphabets", nfa.sigma.size),
+      ("number of strong components", nfa.scsGraph.nodes.size)
+    )
+
     if (!nfa.hasLoop()) {
       (Some(0), Witness.empty)
     } else {

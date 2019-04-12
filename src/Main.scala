@@ -90,9 +90,9 @@ object Main {
       runWithLimit(settings.timeout) {
         calcBtrGrowthRate(r,option)
       } match {
-        case (Success(result),time) => s"${convertResult(result)}, ${time} ms"
-        case (Failure(message),time) => s"skipped: ${message}, ${time} ms"
-        case (Timeout(message),time) => s"timeout: ${message}, ${time} ms"
+        case (Success(result),time) => s"${convertResult(result)}, time: ${time} ms"
+        case (Failure(message),time) => s"skipped: ${message}, time: ${time} ms"
+        case (Timeout(message),time) => s"timeout: ${message}, time: ${time} ms"
       }
     } catch {
       case e: RegExpParser.ParseException => s"error: ${e.message}"
