@@ -117,6 +117,10 @@ class LabeledGraph[V,A](
     ).withDefaultValue(Seq())
   ).withDefaultValue(Map().withDefaultValue(Seq[V]()))
 
+  lazy val labeledAdjPair = labeledEdges.groupBy{case (v1,a,v2) => (v1,a)}.mapValues(
+    _.map(_._3)
+  ).withDefaultValue(Seq[V]())
+
   def getPath(srcs: Set[V], dest: V): Option[Seq[A]] = {
     var visited = srcs
     val queue = Queue[V]()

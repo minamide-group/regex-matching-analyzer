@@ -131,4 +131,28 @@ class GraphSpec extends FlatSpec with Matchers {
     g.labeledAdj(4)('a') should contain theSameElementsAs (Seq())
     g.labeledAdj(4)('b') should contain theSameElementsAs (Seq())
   }
+
+  "labeledAdjPair" should "be adjacency list with label of pair version" in {
+    val g = new LabeledGraph(
+      Set(1,2,3,4),
+      Seq(
+        (1,'a',2),
+        (1,'a',3),
+        (1,'b',4),
+        (2,'a',1),
+        (2,'a',1),
+        (2,'b',1),
+        (3,'a',3)
+      )
+    )
+
+    g.labeledAdjPair((1,'a')) should contain theSameElementsAs (Seq(2,3))
+    g.labeledAdjPair((1,'b')) should contain theSameElementsAs (Seq(4))
+    g.labeledAdjPair((2,'a')) should contain theSameElementsAs (Seq(1,1))
+    g.labeledAdjPair((2,'b')) should contain theSameElementsAs (Seq(1))
+    g.labeledAdjPair((3,'a')) should contain theSameElementsAs (Seq(3))
+    g.labeledAdjPair((3,'b')) should contain theSameElementsAs (Seq())
+    g.labeledAdjPair((4,'a')) should contain theSameElementsAs (Seq())
+    g.labeledAdjPair((4,'b')) should contain theSameElementsAs (Seq())
+  }
 }

@@ -48,7 +48,7 @@ class NFA[Q,A](
       Analysis.checkInterrupted("constructing DFA")
       val qs = stack.pop
       sigma.foreach{ a =>
-        val next = qs.flatMap(labeledAdj(_)(a))
+        val next = qs.flatMap(q => labeledAdjPair((q,a)))
         newDelta += (qs,a) -> next
         if (!newStates.contains(next)) {
           newStates += next
