@@ -2,6 +2,7 @@ package matching.regexp
 
 import scala.collection.mutable.Stack
 import matching.monad._
+import matching.monad.Tree._
 import matching.monad.Monad._
 import matching.transition._
 import matching.tool.{Analysis, Debug, IO}
@@ -10,6 +11,7 @@ trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
   def derive[M[_]](a: A)(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,Some(a))
   def derive[M[_]](a: Option[A])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,a)
+  def deriveEOL[M[_]](implicit deriver: RegExpDeriver[M]): M[Unit] = deriver.deriveEOL(this)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -128,7 +130,9 @@ object RegExp {
     }
   }
 
-  def constructMorphs[M[_]](r: RegExp[Char], option: PCREOption = new PCREOption())(implicit m: Monad[M]): IndexedMorphs[Option[Char],RegExp[Char],M] = {
+  def constructTransducer(
+    r: RegExp[Char], option: PCREOption = new PCREOption()
+  ): Transducer[RegExp[Char], Option[Char]] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -164,101 +168,73 @@ object RegExp {
       }
     }
 
-    def nullable[A](r: RegExp[A]): Boolean = {
-      r match {
-        case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
-        case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => false
-        case ConcatExp(r1,r2) => nullable(r1) && nullable(r2)
-        case AltExp(r1,r2) => nullable(r1) || nullable(r2)
-        case PlusExp(r,_) => nullable(r)
-        case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
-        case GroupExp(r,_,_) => nullable(r)
-        case LookAheadExp(r,_) => nullable(r)
-        case LookBehindExp(r,_) => nullable(r)
-        case _ => throw new Exception(s"nullable unsupported expression: ${r}")
-      }
-    }
-
     val sigma = getElems(r).map(Some(_): Option[Char]) + None
     var regExps = Set(r)
     val stack = Stack(r)
-    var morphs = sigma.map(_ -> Map[RegExp[Char], M[RegExp[Char]]]()).toMap
-    implicit val deriver = new RegExpDeriver[M](option)
+    var delta = Map[(RegExp[Char], Option[Option[Char]]), Tree[RegExp[Char]]]()
+    implicit val deriver = new RegExpDeriver[Tree](option)
     while (stack.nonEmpty) {
-      Analysis.checkInterrupted("constructing morphisms")
+      Analysis.checkInterrupted("constructing transducer")
       val r = stack.pop
-      sigma.foreach{ e =>
-        val rd: M[RegExp[Char]] = r.derive(e) >>= {
-          case Some(r) => m(r)
-          case None => m.fail
+      sigma.foreach{ a =>
+        val t = r.derive(a) >>= {
+          case Some(r) => Leaf(r)
+          case None => Fail
         }
-        morphs += (e -> (morphs(e) + (r -> rd)))
-        val rdNew = rd.flat.filterNot(regExps.contains)
-        regExps |= rdNew.toSet
-        stack.pushAll(rdNew)
+        delta += (r,Some(a)) -> t
+        val newExps = flat(t).filterNot(regExps.contains)
+        regExps |= newExps.toSet
+        stack.pushAll(newExps)
       }
+      val t = r.deriveEOL >>= (_ => Success)
+      delta += (r,None) -> t
     }
 
-    new IndexedMorphs(morphs, Set(r), regExps.filter(nullable))
-  }
-
-  private def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
-    val charForNone = '.'
-    Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
+    new Transducer(regExps, sigma, r, delta)
   }
 
   def calcGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
-    val indexedMorphs = constructMorphs[List](r,option).rename()
-    val nfa = indexedMorphs.toNFA().reachablePart()
-    if (!nfa.hasLoop()) {
-      (Some(0), Witness.empty)
-    } else {
-      val (ambiguity, witness) = Debug.time("calculate ambiguity") {
-        nfa.calcAmbiguity()
-      }
-      (ambiguity.map(_+1), convertWitness(witness))
+    def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
+      val charForNone = '.'
+      Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
     }
+
+    val transducer = constructTransducer(r,option).rename()
+    val dt0l = transducer.toDT0L()
+    val (ambiguity, witness) = dt0l.calcGrowthRate(transducer.initialState)
+    (ambiguity.map(_+1), convertWitness(witness))
   }
 
   def calcBtrGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
-    val indexedMorphs = Debug.time("consruct IndexedMorphs") {
-      constructMorphs[List](r,option).rename()
+    def convertWitness(w: Witness[(Option[Char], Int)]): Witness[Char] = {
+      val charForNone = '.'
+      Witness(w.separators.map(_.map(_._1.getOrElse(charForNone))), w.pumps.map(_.map(_._1.getOrElse(charForNone))))
     }
 
-    val ladfa = Debug.time("consruct lookahead DFA") {
-      indexedMorphs.toNFA().reverse().toDFA()
+    val transducer = Debug.time("consruct transducer") {
+      constructTransducer(r,option).rename()
     }
 
-    Debug.info("lookahead DFA info") (
-      ("number of states", ladfa.states.size)
-    )
-
-    val indexedMorphsWithTransition = Debug.time("consruct IndexedMorphsWithTransition") {
-      indexedMorphs.toIndexedMorphsWithTransition(ladfa)
-    }
-    val (renamedIndexedMorphsWithTransition, renamedLadfa) = indexedMorphsWithTransition.rename(ladfa)
-    val productIndexedMorphs = Debug.time("consruct product IndexedMorphs") {
-      renamedIndexedMorphsWithTransition.toIndexedMorphs()
-    }
-    val nfa = Debug.time("consruct NFA") {
-      productIndexedMorphs.toNFA().reachablePart()
+    val transducerWithLA = Debug.time("consruct transducer with lookahead") {
+      transducer.toTransducerWithLA().rename()
     }
 
-    Debug.info("NFA info") (
-      ("number of states", nfa.states.size),
-      ("number of transitions", nfa.delta.size),
-      ("number of alphabets", nfa.sigma.size),
-      ("number of strong components", nfa.scsGraph.nodes.size)
-    )
-
-    if (!nfa.hasLoop()) {
-      (Some(0), Witness.empty)
-    } else {
-      val (ambiguity, witness) = Debug.time("calculate ambiguity") {
-        nfa.calcAmbiguityWithTransition(renamedLadfa)
-      }
-      (ambiguity.map(_+1), convertWitness(witness))
+    Debug.info("lookahead DFA info") {
+      ("number of states", transducerWithLA.lookaheadDFA.states.size)
     }
+
+    val indexedDT0L = Debug.time("consruct transducer with lookahead") {
+      transducerWithLA.toIndexedDT0L()
+    }
+
+    val dt0l = Debug.time("consruct transducer with lookahead") {
+      indexedDT0L.toDT0L()
+    }
+
+    val (ambiguity, witness) = Debug.time("calculate ambiguity") {
+      dt0l.calcGrowthRate(transducerWithLA.lookaheadDFA.states.map((transducerWithLA.initialState,_)))
+    }
+    (ambiguity.map(_+1), convertWitness(witness))
   }
 }
 

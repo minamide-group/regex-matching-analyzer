@@ -59,7 +59,6 @@ class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Mon
       if (accept(a)) m(Some(EpsExp())) else m.fail
     }
 
-    Analysis.checkInterrupted("calculating derivative")
     r match {
       case ElemExp(_) | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => consume(r,a)
       case EmptyExp() => m.fail
@@ -94,10 +93,10 @@ class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Mon
         } else {
           (m(None): M[Option[RegExp[A]]]) ++ dr
         }
-      case RepeatExp(r1,min,max,greedy) =>
-        val rDec = RepeatExp(r1,min.map(_-1),max.map(_-1),greedy)
-        val rd: M[Option[RegExp[A]]] = derive(r1,a) >>= {
-          case Some(r2) => m(Some(optConcatExp(r2,rDec)))
+      case RepeatExp(r,min,max,greedy) =>
+        val rDec = RepeatExp(r,min.map(_-1),max.map(_-1),greedy)
+        val rd: M[Option[RegExp[A]]] = derive(r,a) >>= {
+          case Some(r1) => m(Some(optConcatExp(r1,rDec)))
           case None => derive(rDec,a)
         }
         if (min.isDefined) {
@@ -108,6 +107,59 @@ class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Mon
           (m(None): M[Option[RegExp[A]]]) ++ rd
         }
       case GroupExp(r,_,_) => derive(r,a)
+      case _ => throw new Exception(s"derive unsupported expression: ${r}")
+    }
+  }
+
+  def deriveEOL[A](r: RegExp[A]): M[Unit] = {
+    // def nullable[A](r: RegExp[A]): Boolean = {
+    //   r match {
+    //     case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
+    //     case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => false
+    //     case ConcatExp(r1,r2) => nullable(r1) && nullable(r2)
+    //     case AltExp(r1,r2) => nullable(r1) || nullable(r2)
+    //     case PlusExp(r,_) => nullable(r)
+    //     case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
+    //     case GroupExp(r,_,_) => nullable(r)
+    //     case LookAheadExp(r,_) => nullable(r)
+    //     case LookBehindExp(r,_) => nullable(r)
+    //     case _ => throw new Exception(s"nullable unsupported expression: ${r}")
+    //   }
+    // }
+
+    r match {
+      case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => m.fail
+      case EpsExp() => m(())
+      case ConcatExp(r1,r2) => deriveEOL(r1) >>= (_ => deriveEOL(r2))
+      case AltExp(r1,r2) => deriveEOL(r1) ++ deriveEOL(r2)
+      case StarExp(r,greedy) =>
+        val rd = deriveEOL(r)
+        if (greedy ^ option.ungreedy) {
+          rd ++ m(())
+        } else {
+          m(()) ++ rd
+        }
+      case PlusExp(r,greedy) =>
+        val rStar = StarExp(r,greedy)
+        deriveEOL(r) >>= (_ => deriveEOL(rStar))
+      case OptionExp(r,greedy) =>
+        val dr = deriveEOL(r)
+        if (greedy ^ option.ungreedy) {
+          dr ++ m(())
+        } else {
+          m(()) ++ dr
+        }
+      case RepeatExp(r,min,max,greedy) =>
+        val rDec = RepeatExp(r,min.map(_-1),max.map(_-1),greedy)
+        val rd = deriveEOL(r) >>= (_ => deriveEOL(rDec))
+        if (min.isDefined) {
+          rd
+        } else if (greedy ^ option.ungreedy) {
+          rd ++ m(())
+        } else {
+          m(()) ++ rd
+        }
+      case GroupExp(r,_,_) => deriveEOL(r)
       case _ => throw new Exception(s"derive unsupported expression: ${r}")
     }
   }

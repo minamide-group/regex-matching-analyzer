@@ -15,16 +15,6 @@ class Graph[V](
     _.map(_._2)
   ).withDefaultValue(Seq())
 
-  lazy val scsGraph = {
-    Analysis.checkInterrupted("constructing scs graph")
-    val scs = calcStrongComponents()
-    val scsMap = (for (sc <- scs; q <- sc) yield q -> sc).toMap
-    val scsEdges = edges.map{ case (q1,q2) =>
-      (scsMap(q1),scsMap(q2))
-    }.filter{case (sc1,sc2) => sc1 != sc2}.distinct
-    new Graph(scs, scsEdges)
-  }
-
   def reachableFrom(v: V): Set[V] = {
     var visited = Set[V]()
     val stack = Stack(v)
@@ -40,7 +30,7 @@ class Graph[V](
     visited
   }
 
-  /*
+  /**
    *  require: this graph is DAG.
    */
   def reachableMapDAG(): Map[V,Set[V]] = {
@@ -120,6 +110,14 @@ class LabeledGraph[V,A](
   lazy val labeledAdjPair = labeledEdges.groupBy{case (v1,a,v2) => (v1,a)}.mapValues(
     _.map(_._3)
   ).withDefaultValue(Seq[V]())
+
+  def reachablePartFrom(vs: Set[V]): LabeledGraph[V,A] = {
+    val reachableNodes = vs.flatMap(reachableFrom)
+    new LabeledGraph(
+      reachableNodes,
+      labeledEdges.filter{case (q1,a,q2) => reachableNodes(q1) && reachableNodes(q2)}
+    )
+  }
 
   def getPath(srcs: Set[V], dest: V): Option[Seq[A]] = {
     var visited = srcs
