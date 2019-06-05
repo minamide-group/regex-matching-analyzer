@@ -13,7 +13,7 @@ import scala.io.StdIn
 object Main {
   class Settings() {
     var style = "raw"
-    var method: Option[BackTrackMethod] = Some(LookAhead)
+    var method: Option[BacktrackMethod] = Some(LookAhead)
     var timeout: Option[Int] = Some(10)
 
     override def toString(): String = {

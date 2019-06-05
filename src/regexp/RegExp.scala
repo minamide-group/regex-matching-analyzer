@@ -168,7 +168,7 @@ object RegExp {
       }
     }
 
-    val sigma = getElems(r).map(Some(_): Option[Char]) + None
+    val sigma = getElems(r).map(Option(_)) + None
     var regExps = Set(r)
     val stack = Stack(r)
     var delta = Map[(RegExp[Char], Option[Option[Char]]), Tree[RegExp[Char]]]()
@@ -196,7 +196,7 @@ object RegExp {
   def calcTimeComplexity(
     r: RegExp[Char],
     option: PCREOption = new PCREOption(),
-    method: Option[BackTrackMethod]
+    method: Option[BacktrackMethod]
   ): (Option[Int], Witness[Char]) = {
     def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
       val charForNone = '.'
@@ -207,7 +207,10 @@ object RegExp {
       constructTransducer(r,option).rename()
     }
 
-    val (growthRate, witness) = transducer.calcGrowthRate(method)
+    val (growthRate, witness) = method match {
+      case Some(method) => transducer.calcGrowthRateBacktrack(method)
+      case None => transducer.calcGrowthRate()
+    }
     (growthRate, convertWitness(witness))
   }
 }

@@ -1,6 +1,6 @@
 package matching.transition
 
-sealed trait BackTrackMethod
-case object LookAhead extends BackTrackMethod
-case object EnsureFail extends BackTrackMethod
-case object Nondeterminism extends BackTrackMethod
+sealed trait BacktrackMethod
+case object LookAhead extends BacktrackMethod
+case object EnsureFail extends BacktrackMethod
+case object Nondeterminism extends BacktrackMethod

@@ -7,18 +7,18 @@ class DT0L[A,Q](
 ) {
   type Pump = (Q,Seq[A],Q)
 
-  def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
-    val labeledEdges = morphs.flatMap{ case (a,morph) =>
-      morph.flatMap{ case (q,qs) =>
-        qs.map((q,a,_))
-      }
-    }.toSeq
-
-    val graph = new LabeledGraph(labeledEdges)
-    graph.reachablePartFrom(initials)
-  }
-
   def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q]) = {
+    def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
+      val labeledEdges = morphs.flatMap{ case (a,morph) =>
+        morph.flatMap{ case (q,qs) =>
+          qs.map((q,a,_))
+        }
+      }.toSeq
+
+      val graph = new LabeledGraph(labeledEdges)
+      graph.reachablePartFrom(initials)
+    }
+
     val graph = toLabeledGraph(initials)
 
     def calcGrowthRate(): (Option[Int], Seq[Pump]) = {
@@ -264,19 +264,19 @@ class DT0L[A,Q](
 class IndexedDT0L[A,Q,P](
   indexedMorphs: Map[(P,P), Map[A, Map[Q,Seq[Q]]]]
 ) {
-  def toDT0L(): DT0L[(A,P),(Q,P)] = {
-    val morphs = indexedMorphs.flatMap{ case ((p1,p2),morphs) =>
-      morphs.map{ case (a,morph) =>
-        (a,p2) -> morph.map{ case (b,bs) =>
-           (b,p1) -> bs.map((_,p2))
+  def calcGrowthRate(initials: Set[(Q,P)], lookaheadDFA: DFA[P,A]): (Option[Int], Witness[A], Option[P]) = {
+    def toDT0L(): DT0L[(A,P),(Q,P)] = {
+      val morphs = indexedMorphs.flatMap{ case ((p1,p2),morphs) =>
+        morphs.map{ case (a,morph) =>
+          (a,p2) -> morph.map{ case (b,bs) =>
+             (b,p1) -> bs.map((_,p2))
+          }.toMap
         }.toMap
-      }.toMap
+      }
+
+      new DT0L(morphs)
     }
 
-    new DT0L(morphs)
-  }
-
-  def calcGrowthRate(initials: Set[(Q,P)], lookaheadDFA: DFA[P,A]): (Option[Int], Witness[A], Option[P]) = {
     def convertWitness(w: Witness[(A,P)]): Witness[A] = {
       Witness(w.separators.map(_.map(_._1)), w.pumps.map(_.map(_._1)))
     }
