@@ -3,7 +3,7 @@ package matching
 import regexp._
 import regexp.RegExp._
 import tool.Analysis._
-import transition.Witness
+import transition._
 import collection.mutable.{Map => MTMap}
 import tool.{IO, File, Debug}
 import java.util.Date
@@ -13,12 +13,14 @@ import scala.io.StdIn
 object Main {
   class Settings() {
     var style = "raw"
+    var method: Option[BackTrackMethod] = Some(LookAhead)
     var timeout: Option[Int] = Some(10)
 
     override def toString(): String = {
       List(
         s"${"-"*3} settings ${"-"*27}",
         s"style: ${style}",
+        s"method: ${if (method.isDefined) s"${method.get}" else "Exhaustive"}",
         s"timeout: ${if (timeout.isDefined) s"${timeout.get}s" else "disable"}",
         s"${"-"*40}"
       ).mkString("\n")
@@ -30,11 +32,20 @@ object Main {
       def parseOptions(options: List[String], setting: Settings = new Settings()): Settings = {
         options match {
           case "--style" :: style :: options =>
-            val styleList = List("raw", "PCRE")
-            if (styleList.contains(style)) {
-              setting.style = style
-              parseOptions(options, setting)
-            } else throw new Exception(s"invalid style option: ${style}")
+            setting.style = style match {
+              case "raw" | "PCRE" => style
+              case _ => throw new Exception(s"invalid style option: ${style}")
+            }
+            parseOptions(options, setting)
+          case "--method" :: method :: options =>
+            setting.method = method match {
+              case "LookAhead" => Some(LookAhead)
+              case "EnsureFail" => Some(EnsureFail)
+              case "Nondeterminism" => Some(Nondeterminism)
+              case "Exhaustive" => None
+              case _ => throw new Exception(s"invalid method option: ${method}")
+            }
+            parseOptions(options, setting)
           case "--timeout" :: timeout :: options =>
             val t = try {
               timeout.toInt
@@ -88,7 +99,7 @@ object Main {
         RegExpParser.parsePCRE(regExpStr)
       } else throw new Exception("invalid style")
       runWithLimit(settings.timeout) {
-        calcBtrTimeComplexity(r,option)
+        calcTimeComplexity(r,option,settings.method)
       } match {
         case (Success(result),time) => s"${convertResult(result)}, time: ${time} ms"
         case (Failure(message),time) => s"skipped: ${message}, time: ${time} ms"

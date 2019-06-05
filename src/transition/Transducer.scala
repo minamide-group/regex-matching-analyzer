@@ -68,21 +68,35 @@ class Transducer[Q,A](
     new TransducerWithLA(states, sigma, initialState, deltaLA, lookaheadDFA)
   }
 
-  def calcGrowthRate(): (Option[Int], Witness[A]) = {
-    val dt0l = toDT0L()
-    val (growthRate, witness, _) = dt0l.calcGrowthRate(initialState)
+  def calcGrowthRate(method: Option[BackTrackMethod]): (Option[Int], Witness[A]) = {
+    def calcGrowthRateExhaustive(): (Option[Int], Witness[A]) = {
+      val dt0l = toDT0L()
+      val (growthRate, witness, _) = dt0l.calcGrowthRate(initialState)
 
-    witness.separators :+= Seq()
+      witness.separators :+= Seq()
 
-    (growthRate.map(_+1), witness)
-  }
-
-  def calcBtrGrowthRate(): (Option[Int], Witness[A]) = {
-    val transducerWithLA = Debug.time("transducer -> transducer with lookahead") {
-      toTransducerWithLA().rename()
+      (growthRate.map(_+1), witness)
     }
 
-    transducerWithLA.calcGrowthRate()
+    def calcBtrGrowthRateLookAhead(): (Option[Int], Witness[A]) = {
+      val transducerWithLA = Debug.time("transducer -> transducer with lookahead") {
+        toTransducerWithLA().rename()
+      }
+
+      transducerWithLA.calcGrowthRate()
+    }
+
+    def calcBtrGrowthRateEnsureFail(): (Option[Int], Witness[A]) = {
+      ???
+    }
+
+
+    method match {
+      case Some(LookAhead) => calcBtrGrowthRateLookAhead()
+      case Some(EnsureFail) => calcBtrGrowthRateEnsureFail()
+      case Some(Nondeterminism) => ???
+      case None => calcGrowthRateExhaustive()
+    }
   }
 }
 

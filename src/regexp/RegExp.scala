@@ -193,23 +193,21 @@ object RegExp {
     new Transducer(regExps, sigma, r, delta)
   }
 
-  private def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
-    val charForNone = '.'
-    Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
-  }
+  def calcTimeComplexity(
+    r: RegExp[Char],
+    option: PCREOption = new PCREOption(),
+    method: Option[BackTrackMethod]
+  ): (Option[Int], Witness[Char]) = {
+    def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
+      val charForNone = '.'
+      Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
+    }
 
-  def calcTimeComplexity(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
-    val transducer = constructTransducer(r,option).rename()
-    val (growthRate, witness) = transducer.calcGrowthRate()
-    (growthRate, convertWitness(witness))
-  }
-
-  def calcBtrTimeComplexity(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
     val transducer = Debug.time("regular expression -> transducer") {
       constructTransducer(r,option).rename()
     }
 
-    val (growthRate, witness) = transducer.calcBtrGrowthRate()
+    val (growthRate, witness) = transducer.calcGrowthRate(method)
     (growthRate, convertWitness(witness))
   }
 }

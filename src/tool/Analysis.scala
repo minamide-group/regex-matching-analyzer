@@ -28,8 +28,8 @@ object Analysis {
           case e: InterruptedNotification =>
             Debug.debug(s"interrupted: ${e.message}")
             Timeout(e.message)
-          // case e: Exception =>
-          //   Failure(e.getMessage())
+          case e: Exception =>
+            Failure(e.getMessage())
         }
         val finish = System.currentTimeMillis()
         result = (a, finish - start)
