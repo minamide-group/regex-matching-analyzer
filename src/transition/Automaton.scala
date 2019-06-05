@@ -14,28 +14,21 @@ class NFA[Q,A](
     new NFA(states, sigma, delta.map{case (q1,a,q2) => (q2,a,q1)}, finalStates, initialStates)
   }
 
-  def reachablePart(): NFA[Q,A] = {
-    val reachableStates = initialStates.flatMap(reachableFrom)
-    new NFA(
-      reachableStates,
-      sigma,
-      delta.filter{case (q1,a,q2) => reachableStates(q1) && reachableStates(q2)},
-      initialStates.filter(reachableStates),
-      finalStates.filter(reachableStates)
-    )
-  }
-
   def toDFA(): DFA[Set[Q],A] = {
     val newInitial = initialStates
     var newStates = Set(initialStates)
     val stack = Stack(newInitial)
     var newDelta = Map[(Set[Q],A),Set[Q]]()
 
+    val delta1 = delta.groupBy{case (q1,a,_) => (q1,a)}.mapValues(
+      _.map(_._3)
+    ).withDefaultValue(Seq[Q]())
+
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("constructing DFA")
       val qs = stack.pop
       sigma.foreach{ a =>
-        val next = qs.flatMap(q => labeledAdjPair((q,a)))
+        val next = qs.flatMap(q => delta1((q,a)))
         newDelta += (qs,a) -> next
         if (!newStates.contains(next)) {
           newStates += next

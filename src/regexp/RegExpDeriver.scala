@@ -2,7 +2,6 @@ package matching.regexp
 
 import matching.monad._
 import matching.monad.Monad._
-import matching.tool.Analysis
 import RegExp._
 
 class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Monad[M]) {
@@ -112,21 +111,6 @@ class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Mon
   }
 
   def deriveEOL[A](r: RegExp[A]): M[Unit] = {
-    // def nullable[A](r: RegExp[A]): Boolean = {
-    //   r match {
-    //     case EpsExp() | StarExp(_,_) | OptionExp(_,_) => true
-    //     case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => false
-    //     case ConcatExp(r1,r2) => nullable(r1) && nullable(r2)
-    //     case AltExp(r1,r2) => nullable(r1) || nullable(r2)
-    //     case PlusExp(r,_) => nullable(r)
-    //     case RepeatExp(r,min,max,_) => min.isEmpty || nullable(r)
-    //     case GroupExp(r,_,_) => nullable(r)
-    //     case LookAheadExp(r,_) => nullable(r)
-    //     case LookBehindExp(r,_) => nullable(r)
-    //     case _ => throw new Exception(s"nullable unsupported expression: ${r}")
-    //   }
-    // }
-
     r match {
       case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => m.fail
       case EpsExp() => m(())

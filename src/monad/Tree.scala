@@ -20,29 +20,11 @@ object Tree {
         case Success => Success
         case Fail => Fail
         case Or(l,r) => Or(l >>= f, r >>= f)
+        case Lft(l) => Lft(l >>= f)
       }
     }
     def fail[A] = Fail
     def concat[A](m1: Tree[A], m2: Tree[A]) = Or(m1,m2)
-    def cuts[A](m: Tree[A]) = {
-      ???
-      // def cutsAll(m: Tree[A]): Seq[Tree[A]] = {
-      //   m match {
-      //     case Or(l,r) => l.cuts.map(Lft(_)) ++ r.cuts.map(Or(l,_))
-      //     case _ => Seq(m)
-      //   }
-      // }
-      // def isValidCut(m: Tree[A]): Boolean = {
-      //   m match {
-      //     case Leaf(a) => true
-      //     case Or(l,r) => isValidCut(r)
-      //     case Lft(l) => isValidCut(l)
-      //     case Fail => false
-      //   }
-      // }
-      //
-      // cutsAll(m).filter(isValidCut)
-    }
   }
 
   def flat[Q](m: Tree[Q]): Seq[Q] = {
@@ -60,6 +42,7 @@ object Tree {
       case Success => true
       case Fail => false
       case Or(l,r) => hasSuccess(l, qs) || hasSuccess(r, qs)
+      case Lft(l) => hasSuccess(l, qs)
     }
   }
 

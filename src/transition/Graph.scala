@@ -61,7 +61,7 @@ class Graph[V](
         val stack = Stack(Seq(v))
 
         while (stack.nonEmpty) {
-          Analysis.checkInterrupted("calculating strong components")
+          Analysis.checkInterrupted("calculate strong components")
           stack.pop match {
             case vs @ (v +: rest) =>
               if (!visited(v)) {
@@ -106,10 +106,6 @@ class LabeledGraph[V,A](
       _.map(_._3)
     ).withDefaultValue(Seq())
   ).withDefaultValue(Map().withDefaultValue(Seq[V]()))
-
-  lazy val labeledAdjPair = labeledEdges.groupBy{case (v1,a,v2) => (v1,a)}.mapValues(
-    _.map(_._3)
-  ).withDefaultValue(Seq[V]())
 
   def reachablePartFrom(vs: Set[V]): LabeledGraph[V,A] = {
     val reachableNodes = vs.flatMap(reachableFrom)

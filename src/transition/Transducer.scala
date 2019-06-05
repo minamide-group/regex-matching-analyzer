@@ -4,7 +4,7 @@ import matching.monad.Tree
 import matching.monad.Tree._
 import matching.monad._
 import matching.monad.Monad._
-
+import matching.tool.{Analysis, Debug}
 
 class Transducer[Q,A](
   val states: Set[Q],
@@ -57,6 +57,7 @@ class Transducer[Q,A](
     var deltaLA = Map[(Q,Option[(A,Set[Option[Q]])]), Tree[Q]]()
     delta.foreach{
       case ((q,Some(a)),t) =>
+        Analysis.checkInterrupted("transducer -> transducer with lookahead")
         lookaheadDFA.states.foreach( p =>
           deltaLA += (q,Some((a,p))) -> cut(delta((q,Some(a))), p.flatten)
         )
@@ -65,6 +66,23 @@ class Transducer[Q,A](
     }
 
     new TransducerWithLA(states, sigma, initialState, deltaLA, lookaheadDFA)
+  }
+
+  def calcGrowthRate(): (Option[Int], Witness[A]) = {
+    val dt0l = toDT0L()
+    val (growthRate, witness, _) = dt0l.calcGrowthRate(initialState)
+
+    witness.separators :+= Seq()
+
+    (growthRate.map(_+1), witness)
+  }
+
+  def calcBtrGrowthRate(): (Option[Int], Witness[A]) = {
+    val transducerWithLA = Debug.time("transducer -> transducer with lookahead") {
+      toTransducerWithLA().rename()
+    }
+
+    transducerWithLA.calcGrowthRate()
   }
 }
 
@@ -106,7 +124,8 @@ class TransducerWithLA[Q,A,P](
       case (p1,_,p2) => (p1,p2)
     }.mapValues(_.map(_._2)).withDefaultValue(Seq())
 
-    val indexedMorphs = lookaheadDFA.states.flatMap( p1 =>
+    val indexedMorphs = lookaheadDFA.states.flatMap{ p1 =>
+      Analysis.checkInterrupted("transducer with lookahead -> indexed DT0L")
       lookaheadDFA.states.map( p2 =>
         (p1,p2) -> pairToTrans((p2,p1)).map( a =>
           a -> states.map( q =>
@@ -114,8 +133,29 @@ class TransducerWithLA[Q,A,P](
           ).toMap
         ).toMap
       )
-    ).toMap
+    }.toMap
 
     new IndexedDT0L(indexedMorphs)
+  }
+
+  def calcGrowthRate(): (Option[Int], Witness[A]) = {
+    Debug.info("lookahead DFA info") {
+      ("number of states", lookaheadDFA.states.size)
+    }
+
+    val indexedDT0L = Debug.time("transducer with lookahead -> indexed DT0L") {
+      toIndexedDT0L()
+    }
+
+    val (growthRate, witness, last) = indexedDT0L.calcGrowthRate(
+      lookaheadDFA.states.map((initialState,_)),
+      lookaheadDFA
+    )
+
+    if (last.isDefined) {
+      witness.separators :+= lookaheadDFA.getPath(lookaheadDFA.initialState, last.get).get.reverse
+    }
+
+    (growthRate.map(_+1), witness)
   }
 }

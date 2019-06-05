@@ -2,7 +2,7 @@ package matching.transition
 
 import matching.tool.IO
 
-case class Witness[A](separators: Seq[Seq[A]], pumps: Seq[Seq[A]]) {
+case class Witness[A](var separators: Seq[Seq[A]], pumps: Seq[Seq[A]]) {
   override def toString(): String = {
     var ss = IndexedSeq[String]()
     if (pumps.nonEmpty) {

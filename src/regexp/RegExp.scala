@@ -174,7 +174,7 @@ object RegExp {
     var delta = Map[(RegExp[Char], Option[Option[Char]]), Tree[RegExp[Char]]]()
     implicit val deriver = new RegExpDeriver[Tree](option)
     while (stack.nonEmpty) {
-      Analysis.checkInterrupted("constructing transducer")
+      Analysis.checkInterrupted("regular expression -> transducer")
       val r = stack.pop
       sigma.foreach{ a =>
         val t = r.derive(a) >>= {
@@ -193,48 +193,24 @@ object RegExp {
     new Transducer(regExps, sigma, r, delta)
   }
 
-  def calcGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
-    def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
-      val charForNone = '.'
-      Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
-    }
-
-    val transducer = constructTransducer(r,option).rename()
-    val dt0l = transducer.toDT0L()
-    val (ambiguity, witness) = dt0l.calcGrowthRate(transducer.initialState)
-    (ambiguity.map(_+1), convertWitness(witness))
+  private def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
+    val charForNone = '.'
+    Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
   }
 
-  def calcBtrGrowthRate(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
-    def convertWitness(w: Witness[(Option[Char], Int)]): Witness[Char] = {
-      val charForNone = '.'
-      Witness(w.separators.map(_.map(_._1.getOrElse(charForNone))), w.pumps.map(_.map(_._1.getOrElse(charForNone))))
-    }
+  def calcTimeComplexity(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
+    val transducer = constructTransducer(r,option).rename()
+    val (growthRate, witness) = transducer.calcGrowthRate()
+    (growthRate, convertWitness(witness))
+  }
 
-    val transducer = Debug.time("consruct transducer") {
+  def calcBtrTimeComplexity(r: RegExp[Char], option: PCREOption = new PCREOption()): (Option[Int], Witness[Char]) = {
+    val transducer = Debug.time("regular expression -> transducer") {
       constructTransducer(r,option).rename()
     }
 
-    val transducerWithLA = Debug.time("consruct transducer with lookahead") {
-      transducer.toTransducerWithLA().rename()
-    }
-
-    Debug.info("lookahead DFA info") {
-      ("number of states", transducerWithLA.lookaheadDFA.states.size)
-    }
-
-    val indexedDT0L = Debug.time("consruct transducer with lookahead") {
-      transducerWithLA.toIndexedDT0L()
-    }
-
-    val dt0l = Debug.time("consruct transducer with lookahead") {
-      indexedDT0L.toDT0L()
-    }
-
-    val (ambiguity, witness) = Debug.time("calculate ambiguity") {
-      dt0l.calcGrowthRate(transducerWithLA.lookaheadDFA.states.map((transducerWithLA.initialState,_)))
-    }
-    (ambiguity.map(_+1), convertWitness(witness))
+    val (growthRate, witness) = transducer.calcBtrGrowthRate()
+    (growthRate, convertWitness(witness))
   }
 }
 

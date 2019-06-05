@@ -88,7 +88,7 @@ object Main {
         RegExpParser.parsePCRE(regExpStr)
       } else throw new Exception("invalid style")
       runWithLimit(settings.timeout) {
-        calcBtrGrowthRate(r,option)
+        calcBtrTimeComplexity(r,option)
       } match {
         case (Success(result),time) => s"${convertResult(result)}, time: ${time} ms"
         case (Failure(message),time) => s"skipped: ${message}, time: ${time} ms"
