@@ -24,13 +24,32 @@ class Transducer[Q,A](
     new Transducer(renamedStates, sigma, renamedInitialState, renamedDelta)
   }
 
+  def toNFA(): NFA[Option[Q],A] = {
+    val statesNFA = states.map(Option(_)) + None
+    var deltaNFA = Seq[(Option[Q],A,Option[Q])]()
+    delta.collect{
+      case ((q,Some(a)),t) =>
+        flat(t).map(q1 => deltaNFA +:= ((Some(q),a,Some(q1))))
+        if (hasSuccess(t)) deltaNFA +:= ((Some(q),a,None))
+    }
+    sigma.foreach(a => deltaNFA +:= ((None,a,None)))
+    val initialStates = Set(Some(initialState): Option[Q])
+    val finalStates = statesNFA.filter{
+      case Some(q) => hasSuccess(delta((q,None)))
+      case None => true
+    }
+
+    new NFA(statesNFA, sigma, deltaNFA, initialStates, finalStates)
+  }
+
   def calcGrowthRate(): (Option[Int], Witness[A]) = {
     def toDT0L(): DT0L[A,Q] = {
-      val morphs = sigma.map( a =>
+      val morphs = sigma.map{ a =>
+        Analysis.checkInterrupted("transducer -> DT0L")
         a -> states.map( q =>
           q -> flat(delta((q,Some(a))))
         ).toMap
-      ).toMap
+      }.toMap
 
       new DT0L(morphs)
     }
@@ -44,26 +63,8 @@ class Transducer[Q,A](
   }
 
   def calcGrowthRateBacktrack(method: BacktrackMethod): (Option[Int], Witness[A]) = {
-    def calcBtrGrowthRateLookAhead(): (Option[Int], Witness[A]) = {
+    def calcBtrGrowthRateLookahead(): (Option[Int], Witness[A]) = {
       def toTransducerWithLA(): TransducerWithLA[Q,A,Set[Option[Q]]] = {
-        def toNFA(): NFA[Option[Q],A] = {
-          val statesNFA = states.map(Option(_)) + None
-          var deltaNFA = Seq[(Option[Q],A,Option[Q])]()
-          delta.collect{
-            case ((q,Some(a)),t) =>
-              flat(t).map(q1 => deltaNFA +:= ((Some(q),a,Some(q1))))
-              if (hasSuccess(t)) deltaNFA +:= ((Some(q),a,None))
-          }
-          sigma.foreach(a => deltaNFA +:= ((None,a,None)))
-          val initialStates = Set(Some(initialState): Option[Q])
-          val finalStates = statesNFA.filter{
-            case Some(q) => hasSuccess(delta((q,None)))
-            case None => true
-          }
-
-          new NFA(statesNFA, sigma, deltaNFA, initialStates, finalStates)
-        }
-
         val lookaheadDFA = toNFA().reverse().toDFA()
 
         var deltaLA = Map[(Q,Option[(A,Set[Option[Q]])]), Tree[Q]]()
@@ -88,56 +89,87 @@ class Transducer[Q,A](
     }
 
     def calcBtrGrowthRateEnsureFail(): (Option[Int], Witness[A]) = {
-      def ensureFail(t: Tree[Q], qs: Option[Set[Q]]): Tree[(Q,Set[Q])] = {
-        def hasFailPath(qs: Set[Q]): Boolean = {
-          ???
-        }
+      def toEnsureFailTransducer(): Transducer[(Q,Set[Q]),A] = {
+        val nfa = toNFA()
+        var decided = Map[Set[Q], Option[Boolean]]()
 
-        t match {
-          case Leaf(q) => qs match {
-            case Some(qs) => if (hasFailPath(qs)) Leaf((q,qs)) else Fail
-            case None => Fail
-          }
-          case Success => Success
-          case Fail => Fail
-          case Or(l,r) => qs match {
-            case Some(_) =>
-              Or(ensureFail(l,qs), if (hasSuccess(l)) {
-                ensureFail(r,None)
-              } else {
-                ensureFail(r,qs.map(_ ++ flat(l)))
-              })
-            case None => Or(ensureFail(l,None), ensureFail(r,None))
-          }
-          case Lft(l) => Lft(ensureFail(l,qs))
-        }
-      }
-
-      val newInitial = (initialState, Set[Q]())
-      var newStates = Set(newInitial)
-      val stack = Stack(newInitial)
-      var newDelta = Map[((Q,Set[Q]),Option[A]), Tree[(Q,Set[Q])]]()
-      while (stack.nonEmpty) {
-        Analysis.checkInterrupted("constructing ensure fail transducer")
-        val p @ (q,qs) = stack.pop
-        (sigma.map(Option(_)) + None).foreach{ a =>
-          val t = ensureFail(delta((q,a)), Some(qs.flatMap(q => flat(delta((q,a))))))
-          newDelta += (p,a) -> t
-          flat(t).foreach( p =>
-            if (!newStates.contains(p)) {
-              newStates += p
-              stack.push(p)
+        def ensureFail(t: Tree[Q], qs: Option[Set[Q]]): Tree[(Q,Set[Q])] = {
+          def hasFailPath(qs: Set[Q]): Boolean = {
+            decided += qs -> None
+            val qsOption = qs.map(Option(_))
+            val result = if (qsOption.exists(q => nfa.finalStates(q))) {
+              sigma.exists{ a =>
+                val next = nfa.deltaHat(qsOption,a)
+                if (next.contains(None)) {
+                  false
+                } else {
+                  val next1 = next.map(_.get)
+                  decided.get(next1) match {
+                    case Some(Some(b)) => b
+                    case Some(None) => false
+                    case None => hasFailPath(next1)
+                  }
+                }
+              }
+            } else {
+              true
             }
-          )
+            decided += qs -> Some(result)
+            result
+          }
+
+          t match {
+            case Leaf(q) => qs match {
+              case Some(qs) => if (hasFailPath(qs)) Leaf((q,qs)) else Fail
+              case None => Fail
+            }
+            case Success => Success
+            case Fail => Fail
+            case Or(l,r) => qs match {
+              case Some(_) =>
+                Or(ensureFail(l,qs), if (hasSuccess(l)) {
+                  ensureFail(r,None)
+                } else {
+                  ensureFail(r,qs.map(_ ++ flat(l)))
+                })
+              case None => Or(ensureFail(l,None), ensureFail(r,None))
+            }
+            case Lft(l) => Lft(ensureFail(l,qs))
+          }
         }
+
+        val newInitial = (initialState, Set[Q]())
+        var newStates = Set(newInitial)
+        val stack = Stack(newInitial)
+        var newDelta = Map[((Q,Set[Q]),Option[A]), Tree[(Q,Set[Q])]]()
+        while (stack.nonEmpty) {
+          Analysis.checkInterrupted("constructing ensure fail transducer")
+          val p @ (q,qs) = stack.pop
+          (sigma.map(Option(_)) + None).foreach{ a =>
+            val t = ensureFail(delta((q,a)), Some(qs.flatMap(q => flat(delta((q,a))))))
+            newDelta += (p,a) -> t
+            flat(t).foreach( p =>
+              if (!newStates.contains(p)) {
+                newStates += p
+                stack.push(p)
+              }
+            )
+          }
+        }
+
+        new Transducer(newStates, sigma, newInitial, newDelta)
       }
 
-      val newTransducer = new Transducer(newStates, sigma, newInitial, newDelta)
-      newTransducer.calcGrowthRate()
+      val newTransducer = Debug.time("transducer -> ensure fail transducer") {
+        toEnsureFailTransducer()
+      }
+
+      val (growthRate, _) = newTransducer.calcGrowthRate()
+      (growthRate, Witness.empty)
     }
 
     method match {
-      case LookAhead => calcBtrGrowthRateLookAhead()
+      case Lookahead => calcBtrGrowthRateLookahead()
       case EnsureFail => calcBtrGrowthRateEnsureFail()
       case Nondeterminism => ???
     }

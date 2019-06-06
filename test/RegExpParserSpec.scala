@@ -175,10 +175,10 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse lookahead/lookbehind" in {
-    RegExpParser("""(?=a)""") should be (withStartEnd(LookAheadExp(ElemExp('a'), true)))
-    RegExpParser("""(?!a)""") should be (withStartEnd(LookAheadExp(ElemExp('a'), false)))
-    RegExpParser("""(?<=a)""") should be (withStartEnd(LookBehindExp(ElemExp('a'), true)))
-    RegExpParser("""(?<!a)""") should be (withStartEnd(LookBehindExp(ElemExp('a'), false)))
+    RegExpParser("""(?=a)""") should be (withStartEnd(LookaheadExp(ElemExp('a'), true)))
+    RegExpParser("""(?!a)""") should be (withStartEnd(LookaheadExp(ElemExp('a'), false)))
+    RegExpParser("""(?<=a)""") should be (withStartEnd(LookbehindExp(ElemExp('a'), true)))
+    RegExpParser("""(?<!a)""") should be (withStartEnd(LookbehindExp(ElemExp('a'), false)))
   }
 
   it should "parse if expression" in {

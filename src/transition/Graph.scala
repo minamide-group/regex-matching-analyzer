@@ -98,7 +98,12 @@ class LabeledGraph[V,A](
   val labeledEdges: Seq[(V,A,V)]
 ) extends Graph(nodes, labeledEdges.map{case (v1,_,v2) => (v1,v2)}) {
   def this(labeledEdges: Seq[(V,A,V)]) {
-    this(labeledEdges.flatMap{case (v1,_,v2) => Set(v1,v2)}.toSet, labeledEdges)
+    this(labeledEdges.flatMap{ case (v1,_,v2) =>
+      Analysis.checkInterrupted("construct labeled graph")
+      Set(v1,v2)
+    }.toSet,
+      labeledEdges
+    )
   }
 
   lazy val labeledAdj = labeledEdges.groupBy(_._1).mapValues(

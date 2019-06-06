@@ -18,6 +18,7 @@ run <input file> [options]
 |オプション|引数|デフォルト値||
 |:----|:----|:----|:----|
 |`--style`|`raw`,`PCRE`|`raw`|[正規表現の形式](#正規表現の形式)指定|
+|`--method`|`Lookahead`,`EnsureFail`,`Nondeterminism`,`Exhaustive`|`Lookahead`|[バックトラックを模倣するアルゴリズム](#バックトラックを模倣するアルゴリズム)の指定|
 |`--timeout`|整数|`10`|タイムアウト秒数の指定（0以下の値を指定するとタイムアウト無効）|
 |`--debug`|なし|非表示|デバッグ情報の表示|
 
@@ -47,7 +48,7 @@ e.g.) `/^a*|b/s`
 - `error`: エラー（主に正規表現のパースの失敗）
 
 また，同時に以下の内容も出力されます．
-- 判定結果の証拠となる文字列（`polynomial`,`exponential`と判定された場合のみ）
+- 判定結果の証拠となる文字列（`polynomial`,`exponential`と判定された場合のみ．現在はアルゴリズム`Lookahead`のみ対応．）
 - 判定に要した時間
 
 ### 出力ファイル
@@ -164,11 +165,14 @@ https://www.php.net/manual/ja/regexp.reference.escape.php
 - `U`: 量指定子の貪欲/非貪欲を反転する
 
 
-## Links
-この実装で参考にした論文
-- https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
-- https://www.sciencedirect.com/science/article/pii/030439759190381B
+## バックトラックを模倣するアルゴリズム
+- `Lookahead`:
+  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
+- `EnsureFail`:
+  + https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27
+  + https://github.com/NicolaasWeideman/RegexStaticAnalysis
+- `Nondeterminism`:
+  + https://www.jalc.de/issues/2018/issue_23_1-3/jalc-2018-019-038.php
+- `Exhaustive`: バックトラックの模倣を行わない
 
-別手法の論文と実装
-- https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27
-- https://github.com/NicolaasWeideman/RegexStaticAnalysis
+`Exhaustive`を指定すると全探索でマッチングした場合の計算量を判定するため，他のアルゴリズムを指定した場合とは異なる結果が出力される可能性があります．

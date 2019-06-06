@@ -29,8 +29,8 @@ object RegExpIR {
         case OptionExp(r,greedy) => OptionExp(f(r),greedy)
         case RepeatExp(r,min,max,greedy) => RepeatExp(f(r),min,max,greedy)
         case GroupExp(r,id,name) => GroupExp(f(r),id,name)
-        case LookAheadExp(r,positive) => LookAheadExp(f(r),positive)
-        case LookBehindExp(r,positive) => LookBehindExp(f(r),positive)
+        case LookaheadExp(r,positive) => LookaheadExp(f(r),positive)
+        case LookbehindExp(r,positive) => LookbehindExp(f(r),positive)
         case IfExp(cond,rt,rf) => IfExp(f(cond),f(rt),f(rf))
         case GroupExpIR(r,name) => GroupExpIR(f(r),name)
         case _ => r

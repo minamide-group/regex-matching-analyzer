@@ -10,6 +10,7 @@ class DT0L[A,Q](
   def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q]) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
       val labeledEdges = morphs.flatMap{ case (a,morph) =>
+        Analysis.checkInterrupted("preparing for calculate growth rate")
         morph.flatMap{ case (q,qs) =>
           qs.map((q,a,_))
         }
@@ -53,7 +54,6 @@ class DT0L[A,Q](
 
       def checkEDA(): Option[Pump] = {
         def checkEDA(sc: Set[Q]): Option[Pump] = {
-          Analysis.checkInterrupted("calculate growth rate")
           val labeledAdjSc = scPairLabeledAdj((sc,sc))
 
           def constructG2(sc: Set[Q]): LabeledGraph[(Q,Q),A] = {
@@ -61,7 +61,10 @@ class DT0L[A,Q](
               (a,es) <- labeledAdjSc.toSeq;
               (p1,q1) <- es;
               (p2,q2) <- es
-            ) yield ((p1,p2), a, (q1,q2))
+            ) yield {
+              Analysis.checkInterrupted("construct G2")
+              ((p1,p2), a, (q1,q2))
+            }
             new LabeledGraph(e2)
           }
 
@@ -94,15 +97,15 @@ class DT0L[A,Q](
             val passage = reachableMapScGraph(start) & reachableMapScGraphRev(end)
             val labeledAdjPassage = for (sc1 <- passage; sc2 <- passage) yield scPairLabeledAdj((sc1,sc2))
             val labeledAdjEnd = scPairLabeledAdj((end,end))
-            val e3 = (
-              (for (
-                a <- morphs.keys.toSeq;
-                (p1,q1) <- labeledAdjStart(a);
-                (p2,q2) <- labeledAdjPassage.flatMap(_(a));
-                (p3,q3) <- labeledAdjEnd(a)
-              ) yield ((p1,p2,p3), a, (q1,q2,q3)))
-            )
-
+            val e3 = for (
+              a <- morphs.keys.toSeq;
+              (p1,q1) <- labeledAdjStart(a);
+              (p2,q2) <- labeledAdjPassage.flatMap(_(a));
+              (p3,q3) <- labeledAdjEnd(a)
+            ) yield {
+              Analysis.checkInterrupted("construct G3")
+              ((p1,p2,p3), a, (q1,q2,q3))
+            }
             new LabeledGraph(e3)
           }
 
@@ -112,9 +115,11 @@ class DT0L[A,Q](
           } ++ (for (
             p <- start;
             q <- end
-          ) yield ((p,q,q), None, (p,p,q)))
+          ) yield {
+            Analysis.checkInterrupted("construct G3")
+            ((p,q,q), None, (p,p,q))
+          })
           val g3WithBack = new LabeledGraph(e3WithBack)
-
           g3WithBack.calcStrongComponents().toStream.map{ sc =>
             sc.collect{
               case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)

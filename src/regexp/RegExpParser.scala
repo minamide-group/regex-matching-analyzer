@@ -89,7 +89,7 @@ class RegExpParser() extends RegexParsers {
             def lookaround: Parser[RegExp[Char]] = "(?" ~> opt("<") ~ ("=" | "!") ~ exp <~ ")" ^^ {
               case behind ~ p ~ r =>
               val positive = p == "="
-              if (behind.isEmpty) LookAheadExp(r, positive) else LookBehindExp(r, positive)
+              if (behind.isEmpty) LookaheadExp(r, positive) else LookbehindExp(r, positive)
             }
             def ifCond: Parser[IfExp[Char]] = ("(?(" ~> exp <~ ")") ~ term ~ opt("|" ~> exp) <~ ")" ^^ {
               case cond ~ rt ~ rf => IfExp(cond, rt, rf.getOrElse(EpsExp()))

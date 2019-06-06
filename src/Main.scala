@@ -13,7 +13,7 @@ import scala.io.StdIn
 object Main {
   class Settings() {
     var style = "raw"
-    var method: Option[BacktrackMethod] = Some(LookAhead)
+    var method: Option[BacktrackMethod] = Some(Lookahead)
     var timeout: Option[Int] = Some(10)
 
     override def toString(): String = {
@@ -39,7 +39,7 @@ object Main {
             parseOptions(options, setting)
           case "--method" :: method :: options =>
             setting.method = method match {
-              case "LookAhead" => Some(LookAhead)
+              case "Lookahead" => Some(Lookahead)
               case "EnsureFail" => Some(EnsureFail)
               case "Nondeterminism" => Some(Nondeterminism)
               case "Exhaustive" => None
@@ -84,12 +84,20 @@ object Main {
 
   def test(regExpStr: String, settings: Settings): String = {
     def convertResult(result: (Option[Int], Witness[Char])): String = {
-      result._1 match {
+      val growthRate = result._1 match {
         case Some(0) => "constant"
         case Some(1) => "linear"
-        case Some(d) => s"polynomial, degree ${d}, witness: ${result._2}"
-        case None => s"exponential, witness: ${result._2}"
+        case Some(d) => s"polynomial, degree ${d}"
+        case None => s"exponential"
       }
+
+      val witness = if (result._2 == Witness.empty) {
+        ""
+      } else {
+        s", witness: ${result._2}"
+      }
+
+      s"${growthRate}${witness}"
     }
 
     try {
@@ -102,8 +110,8 @@ object Main {
         calcTimeComplexity(r,option,settings.method)
       } match {
         case (Success(result),time) => s"${convertResult(result)}, time: ${time} ms"
-        case (Failure(message),time) => s"skipped: ${message}, time: ${time} ms"
-        case (Timeout(message),time) => s"timeout: ${message}, time: ${time} ms"
+        case (Failure(message),_) => s"skipped: ${message}"
+        case (Timeout(message),_) => s"timeout: ${message}"
       }
     } catch {
       case e: RegExpParser.ParseException => s"error: ${e.message}"
