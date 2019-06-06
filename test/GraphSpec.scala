@@ -132,27 +132,26 @@ class GraphSpec extends FlatSpec with Matchers {
     g.labeledAdj(4)('b') should contain theSameElementsAs (Seq())
   }
 
-  "labeledAdjPair" should "be adjacency list with label of pair version" in {
-    val g = new LabeledGraph(
-      Set(1,2,3,4),
+  "reachablePartFrom" should "construct graph which only contains reachable nodes from given states" in {
+    val g1 = new LabeledGraph[Int,Char](
       Seq(
         (1,'a',2),
         (1,'a',3),
-        (1,'b',4),
-        (2,'a',1),
-        (2,'a',1),
-        (2,'b',1),
-        (3,'a',3)
-      )
-    )
+        (2,'b',3),
+        (2,'a',4),
+        (3,'b',6),
+        (4,'a',4),
+        (5,'b',7)
+      ))
 
-    g.labeledAdjPair((1,'a')) should contain theSameElementsAs (Seq(2,3))
-    g.labeledAdjPair((1,'b')) should contain theSameElementsAs (Seq(4))
-    g.labeledAdjPair((2,'a')) should contain theSameElementsAs (Seq(1,1))
-    g.labeledAdjPair((2,'b')) should contain theSameElementsAs (Seq(1))
-    g.labeledAdjPair((3,'a')) should contain theSameElementsAs (Seq(3))
-    g.labeledAdjPair((3,'b')) should contain theSameElementsAs (Seq())
-    g.labeledAdjPair((4,'a')) should contain theSameElementsAs (Seq())
-    g.labeledAdjPair((4,'b')) should contain theSameElementsAs (Seq())
+    val g2 = g1.reachablePartFrom(Set(1,2))
+    g2.labeledEdges should contain theSameElementsAs (Seq(
+      (1,'a',2),
+      (1,'a',3),
+      (2,'b',3),
+      (2,'a',4),
+      (3,'b',6),
+      (4,'a',4),
+    ))
   }
 }
