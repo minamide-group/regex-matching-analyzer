@@ -3,9 +3,20 @@ package matching.transition
 import matching.tool.{Analysis, Debug}
 
 class DT0L[A,Q](
+  states: Set[Q],
   morphs: Map[A, Map[Q,Seq[Q]]]
 ) {
   type Pump = (Q,Seq[A],Q)
+
+  def rename(): (DT0L[A,Int], Map[Q,Int]) = {
+    val renameMap = states.zipWithIndex.toMap
+    val renamedStates = states.map(renameMap)
+    val renamedMorphs = morphs.mapValues(
+      _.map{case (q,qs) => renameMap(q) -> qs.map(renameMap)}.toMap
+    )
+
+    (new DT0L(renamedStates, renamedMorphs), renameMap)
+  }
 
   def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q]) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
@@ -65,6 +76,7 @@ class DT0L[A,Q](
               Analysis.checkInterrupted("construct G2")
               ((p1,p2), a, (q1,q2))
             }
+
             new LabeledGraph(e2)
           }
 
@@ -97,6 +109,7 @@ class DT0L[A,Q](
             val passage = reachableMapScGraph(start) & reachableMapScGraphRev(end)
             val labeledAdjPassage = for (sc1 <- passage; sc2 <- passage) yield scPairLabeledAdj((sc1,sc2))
             val labeledAdjEnd = scPairLabeledAdj((end,end))
+
             val e3 = for (
               a <- morphs.keys.toSeq;
               (p1,q1) <- labeledAdjStart(a);
@@ -106,6 +119,7 @@ class DT0L[A,Q](
               Analysis.checkInterrupted("construct G3")
               ((p1,p2,p3), a, (q1,q2,q3))
             }
+
             new LabeledGraph(e3)
           }
 
@@ -133,7 +147,6 @@ class DT0L[A,Q](
 
         var result = Map[Set[Q], (Int,Seq[Pump])]()
         def calcDegree(sc: Set[Q]): (Int,Seq[Pump]) = {
-          Analysis.checkInterrupted("calculate growth rate")
           result.get(sc) match {
             case Some(res) => res
             case None =>
@@ -267,10 +280,14 @@ class DT0L[A,Q](
 }
 
 class IndexedDT0L[A,Q,P](
+  states: Set[Q],
+  indices: Set[P],
   indexedMorphs: Map[(P,P), Map[A, Map[Q,Seq[Q]]]]
 ) {
   def calcGrowthRate(initials: Set[(Q,P)], lookaheadDFA: DFA[P,A]): (Option[Int], Witness[A], Option[P]) = {
     def toDT0L(): DT0L[(A,P),(Q,P)] = {
+      val statesDT0L = for (state <- states; index <- indices) yield (state, index)
+
       val morphs = indexedMorphs.flatMap{ case ((p1,p2),morphs) =>
         morphs.map{ case (a,morph) =>
           (a,p2) -> morph.map{ case (b,bs) =>
@@ -279,7 +296,7 @@ class IndexedDT0L[A,Q,P](
         }.toMap
       }
 
-      new DT0L(morphs)
+      new DT0L(statesDT0L, morphs)
     }
 
     def convertWitness(w: Witness[(A,P)]): Witness[A] = {
@@ -290,10 +307,14 @@ class IndexedDT0L[A,Q,P](
       toDT0L()
     }
 
+    val (renamedDT0L, renameMap) = dt0l.rename()
+
     val (growthRate, witness, last) = Debug.time("calculate growth rate") {
-      dt0l.calcGrowthRate(initials)
+      renamedDT0L.calcGrowthRate(initials.map(renameMap))
     }
 
-    (growthRate, convertWitness(witness), last.map(_._2))
+    (growthRate, convertWitness(witness), last.map{ last =>
+      renameMap.find{case (k,v) => v == last}.get._1._2
+    })
   }
 }

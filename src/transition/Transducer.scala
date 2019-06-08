@@ -51,10 +51,12 @@ class Transducer[Q,A](
         ).toMap
       }.toMap
 
-      new DT0L(morphs)
+      new DT0L(states, morphs)
     }
 
-    val dt0l = toDT0L()
+    val dt0l = Debug.time("transducer -> DT0L") {
+      toDT0L()
+    }
     val (growthRate, witness, _) = dt0l.calcGrowthRate(initialState)
 
     witness.separators :+= Seq()
@@ -82,10 +84,10 @@ class Transducer[Q,A](
       }
 
       val transducerWithLA = Debug.time("transducer -> transducer with lookahead") {
-        toTransducerWithLA().rename()
+        toTransducerWithLA()
       }
 
-      transducerWithLA.calcGrowthRate()
+      transducerWithLA.rename().calcGrowthRate()
     }
 
     def calcBtrGrowthRateEnsureFail(): (Option[Int], Witness[A]) = {
@@ -164,7 +166,7 @@ class Transducer[Q,A](
         toEnsureFailTransducer()
       }
 
-      val (growthRate, _) = newTransducer.calcGrowthRate()
+      val (growthRate, _) = newTransducer.rename().calcGrowthRate()
       (growthRate, Witness.empty)
     }
 
@@ -226,7 +228,7 @@ class TransducerWithLA[Q,A,P](
         )
       }.toMap
 
-      new IndexedDT0L(indexedMorphs)
+      new IndexedDT0L(states, lookaheadDFA.states, indexedMorphs)
     }
 
     Debug.info("lookahead DFA info") {

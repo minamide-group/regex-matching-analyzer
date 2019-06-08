@@ -204,12 +204,12 @@ object RegExp {
     }
 
     val transducer = Debug.time("regular expression -> transducer") {
-      constructTransducer(r,option).rename()
+      constructTransducer(r,option)
     }
 
     val (growthRate, witness) = method match {
-      case Some(method) => transducer.calcGrowthRateBacktrack(method)
-      case None => transducer.calcGrowthRate()
+      case Some(method) => transducer.rename().calcGrowthRateBacktrack(method)
+      case None => transducer.rename().calcGrowthRate()
     }
     (growthRate, convertWitness(witness))
   }

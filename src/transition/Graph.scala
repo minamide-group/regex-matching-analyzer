@@ -8,12 +8,22 @@ class Graph[V](
   val edges: Seq[(V,V)]
 ) {
   def this(edges: Seq[(V,V)]) {
-    this(edges.flatMap{case (v1,v2) => Set(v1,v2)}.toSet, edges)
+    this(
+      edges.flatMap{ case (v1,v2) =>
+        Analysis.checkInterrupted("calculate graph")
+        Set(v1,v2)
+      }.toSet,
+      edges
+    )
   }
 
-  lazy val adj = edges.groupBy(_._1).mapValues(
-    _.map(_._2)
-  ).withDefaultValue(Seq())
+  lazy val adj = edges.groupBy{ edge =>
+    Analysis.checkInterrupted("calculate adjacency list")
+    edge._1
+  }.mapValues{ es =>
+    Analysis.checkInterrupted("calculate adjacency list")
+    es.map(_._2)
+  }.withDefaultValue(Seq())
 
   def reachableFrom(v: V): Set[V] = {
     var visited = Set[V]()
@@ -50,7 +60,13 @@ class Graph[V](
   }
 
   def reverse(): Graph[V] = {
-    new Graph(nodes, edges.map{case (v1,v2) => (v2,v1)})
+    new Graph(
+      nodes,
+      edges.map{ case (v1,v2) =>
+        Analysis.checkInterrupted("calculate reverse graph")
+        (v2,v1)
+      }
+    )
   }
 
   def calcStrongComponents(): Set[Set[V]] = {
@@ -96,7 +112,13 @@ class Graph[V](
 class LabeledGraph[V,A](
   nodes: Set[V],
   val labeledEdges: Seq[(V,A,V)]
-) extends Graph(nodes, labeledEdges.map{case (v1,_,v2) => (v1,v2)}) {
+) extends Graph(
+  nodes,
+  labeledEdges.map{ case (v1,_,v2) =>
+    Analysis.checkInterrupted("construct labeled graph")
+    (v1,v2)
+  }
+) {
   def this(labeledEdges: Seq[(V,A,V)]) {
     this(labeledEdges.flatMap{ case (v1,_,v2) =>
       Analysis.checkInterrupted("construct labeled graph")
@@ -106,11 +128,15 @@ class LabeledGraph[V,A](
     )
   }
 
-  lazy val labeledAdj = labeledEdges.groupBy(_._1).mapValues(
-    _.groupBy(_._2).mapValues(
+  lazy val labeledAdj = labeledEdges.groupBy{ labeledEdge =>
+    Analysis.checkInterrupted("calculate labeled adjacency list")
+    labeledEdge._1
+  }.mapValues{ es =>
+    Analysis.checkInterrupted("calculate labeled adjacency list")
+    es.groupBy(_._2).mapValues(
       _.map(_._3)
     ).withDefaultValue(Seq())
-  ).withDefaultValue(Map().withDefaultValue(Seq[V]()))
+  }.withDefaultValue(Map().withDefaultValue(Seq[V]()))
 
   def reachablePartFrom(vs: Set[V]): LabeledGraph[V,A] = {
     val reachableNodes = vs.flatMap(reachableFrom)

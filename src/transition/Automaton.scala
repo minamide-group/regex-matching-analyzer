@@ -57,7 +57,10 @@ class DFA[Q,A](
 ) extends NFA[Q,A](
   states,
   sigma,
-  deltaDet.map{case ((v1,a),v2) => (v1,a,v2)}.toSeq,
+  deltaDet.map{ case ((v1,a),v2) =>
+    Analysis.checkInterrupted("construct DFA")
+    (v1,a,v2)
+  }.toSeq,
   Set(initialState),
   finalStates
 )
