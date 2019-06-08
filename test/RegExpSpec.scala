@@ -2,7 +2,6 @@ package matching.regexp
 
 import org.scalatest._
 import RegExp._
-import matching.monad._
 
 class RegExpSpec extends FlatSpec with Matchers {
   def parseWithStartEnd(s: String): RegExp[Char] = {
