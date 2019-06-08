@@ -132,7 +132,7 @@ object RegExp {
 
   def constructTransducer(
     r: RegExp[Char], option: PCREOption = new PCREOption()
-  ): Transducer[RegExp[Char], Option[Char]] = {
+  ): DetTransducer[RegExp[Char], Option[Char]] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -190,7 +190,7 @@ object RegExp {
       delta += (r,None) -> t
     }
 
-    new Transducer(regExps, sigma, r, delta)
+    new DetTransducer(regExps, sigma, r, delta)
   }
 
   def calcTimeComplexity(
@@ -205,11 +205,11 @@ object RegExp {
 
     val transducer = Debug.time("regular expression -> transducer") {
       constructTransducer(r,option)
-    }
+    }.rename()
 
     val (growthRate, witness) = method match {
-      case Some(method) => transducer.rename().calcGrowthRateBacktrack(method)
-      case None => transducer.rename().calcGrowthRate()
+      case Some(method) => transducer.calcGrowthRateBacktrack(method)
+      case None => transducer.calcGrowthRate()
     }
     (growthRate, convertWitness(witness))
   }

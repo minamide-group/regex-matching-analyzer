@@ -12,7 +12,7 @@ class DT0L[A,Q](
     val renameMap = states.zipWithIndex.toMap
     val renamedStates = states.map(renameMap)
     val renamedMorphs = morphs.mapValues(
-      _.map{case (q,qs) => renameMap(q) -> qs.map(renameMap)}.toMap
+      _.map{case (q,qs) => renameMap(q) -> qs.map(renameMap)}
     )
 
     (new DT0L(renamedStates, renamedMorphs), renameMap)
@@ -292,8 +292,8 @@ class IndexedDT0L[A,Q,P](
         morphs.map{ case (a,morph) =>
           (a,p2) -> morph.map{ case (b,bs) =>
              (b,p1) -> bs.map((_,p2))
-          }.toMap
-        }.toMap
+          }
+        }
       }
 
       new DT0L(statesDT0L, morphs)
