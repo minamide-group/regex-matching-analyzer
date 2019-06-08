@@ -307,14 +307,20 @@ class IndexedDT0L[A,Q,P](
       toDT0L()
     }
 
-    val (renamedDT0L, renameMap) = dt0l.rename()
-
     val (growthRate, witness, last) = Debug.time("calculate growth rate") {
-      renamedDT0L.calcGrowthRate(initials.map(renameMap))
+      dt0l.calcGrowthRate(initials)
     }
 
-    (growthRate, convertWitness(witness), last.map{ last =>
-      renameMap.find{case (k,v) => v == last}.get._1._2
-    })
+    (growthRate, convertWitness(witness), last.map(_._2))
+
+    // val (renamedDT0L, renameMap) = dt0l.rename()
+    //
+    // val (growthRate, witness, last) = Debug.time("calculate growth rate") {
+    //   renamedDT0L.calcGrowthRate(initials.map(renameMap))
+    // }
+    //
+    // (growthRate, convertWitness(witness), last.map{ last =>
+    //   renameMap.find{case (k,v) => v == last}.get._1._2
+    // })
   }
 }
