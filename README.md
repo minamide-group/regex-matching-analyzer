@@ -175,4 +175,5 @@ https://www.php.net/manual/ja/regexp.reference.escape.php
   + https://www.jalc.de/issues/2018/issue_23_1-3/jalc-2018-019-038.php
 - `Exhaustive`: バックトラックの模倣を行わない
 
-`Exhaustive`を指定すると全探索でマッチングした場合の計算量を判定するため，他のアルゴリズムを指定した場合とは異なる結果が出力される可能性があります．
+- `Exhaustive`を指定すると全探索でマッチングした場合の計算量を判定するため，他のアルゴリズムを指定した場合とは異なる結果が出力される可能性があります．
+- `Nondeterminism`を指定した場合，定数時間でマッチングを完了できる場合でも`constant`ではなく`linear`と判定されます．
