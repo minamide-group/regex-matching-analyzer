@@ -1,6 +1,6 @@
 package matching.transition
 
-import scala.collection.mutable.Stack
+import scala.collection.mutable.{Stack, Queue}
 import matching.monad.Tree
 import matching.monad.Tree._
 import matching.monad._
@@ -127,27 +127,47 @@ class DetTransducer[Q,A](
   }
 
   def totalize(): DetTransducer[(Q,Set[Q]), A] = {
-    var decided = Map[Set[Q], Option[Boolean]]()
+    var decided = Map[Set[Q], Boolean]()
 
     def isDomainNonEmpty(qs: Set[Q]): Boolean = {
-      decided += qs -> None
-      val result = if (qs.forall(q => deltaDet.isDefinedAt((q,None)))) {
-        true
-      } else {
-        sigma.map(Some(_)).exists{ a =>
-          qs.forall(q => deltaDet.isDefinedAt((q,a))) && {
-            val next = deltaHat(qs,a)
-            decided.get(next) match {
-              case Some(Some(b)) => b
-              case Some(None) => false
-              case None => isDomainNonEmpty(next)
+      var visited = Set(qs)
+      val queue = Queue(qs)
+      var dependency = Seq[(Set[Q],Set[Q])]()
+
+      var hasFailPathNode: Option[Set[Q]] = None
+
+      while (hasFailPathNode.isEmpty && queue.nonEmpty) {
+        Analysis.checkInterrupted("constructing ensure fail transducer")
+        val qs = queue.dequeue
+        decided.get(qs) match {
+          case Some(true) => hasFailPathNode = Some(qs)
+          case Some(false) => // NOP
+          case None =>
+            if (qs.forall(q => deltaDet.isDefinedAt((q,None)))) {
+              hasFailPathNode = Some(qs)
+            } else {
+              sigma.map(Some(_)).collect{ case a
+                if (qs.forall(q => deltaDet.isDefinedAt((q,a)))) =>
+                  val next = deltaHat(qs,a)
+                  dependency +:= ((next,qs))
+                  if (!visited(next)) {
+                    visited += next
+                    queue.enqueue(next)
+                  }
+              }
             }
-          }
         }
       }
 
-      decided += qs -> Some(result)
-      result
+      val graph = new Graph(dependency)
+      hasFailPathNode match {
+        case Some(v) =>
+          graph.reachableFrom(v).foreach(decided += _ -> true)
+          true
+        case None =>
+          graph.nodes.foreach(decided += _ -> false)
+          false
+      }
     }
 
     def addSet(t: Tree[Q], qs: Set[Q]): Tree[(Q,Set[Q])] = {
@@ -237,28 +257,48 @@ class DetTransducer[Q,A](
 
     def calcBtrGrowthRateEnsureFail(): (Option[Int], Witness[A]) = {
       def toEnsureFailTransducer(): DetTransducer[(Q,Set[Q]),A] = {
-        var decided = Map[Set[Q], Option[Boolean]]()
+        var decided = Map[Set[Q], Boolean]()
 
         def ensureFail(t: Tree[Q], qs: Option[Set[Q]]): Tree[(Q,Set[Q])] = {
           def hasFailPath(qs: Set[Q]): Boolean = {
-            decided += qs -> None
-            val result = if (qs.forall(q => !hasSuccess(deltaDet((q,None))))) {
-              true
-            } else {
-              sigma.map(Some(_)).exists{ a =>
-                qs.forall(q => !hasSuccess(deltaDet((q,a)))) && {
-                  val next = deltaHat(qs,a)
-                  decided.get(next) match {
-                    case Some(Some(b)) => b
-                    case Some(None) => false
-                    case None => hasFailPath(next)
+            var visited = Set(qs)
+            val queue = Queue(qs)
+            var dependency = Seq[(Set[Q],Set[Q])]()
+
+            var hasFailPathNode: Option[Set[Q]] = None
+
+            while (hasFailPathNode.isEmpty && queue.nonEmpty) {
+              Analysis.checkInterrupted("constructing ensure fail transducer")
+              val qs = queue.dequeue
+              decided.get(qs) match {
+                case Some(true) => hasFailPathNode = Some(qs)
+                case Some(false) => // NOP
+                case None =>
+                  if (qs.forall(q => !hasSuccess(deltaDet((q,None))))) {
+                    hasFailPathNode = Some(qs)
+                  } else {
+                    sigma.map(Some(_)).collect{ case a
+                      if (qs.forall(q => !hasSuccess(deltaDet((q,a))))) =>
+                        val next = deltaHat(qs,a)
+                        dependency +:= ((next,qs))
+                        if (!visited(next)) {
+                          visited += next
+                          queue.enqueue(next)
+                        }
+                    }
                   }
-                }
               }
             }
 
-            decided += qs -> Some(result)
-            result
+            val graph = new Graph(dependency)
+            hasFailPathNode match {
+              case Some(v) =>
+                graph.reachableFrom(v).foreach(decided += _ -> true)
+                true
+              case None =>
+                graph.nodes.foreach(decided += _ -> false)
+                false
+            }
           }
 
           t match {
