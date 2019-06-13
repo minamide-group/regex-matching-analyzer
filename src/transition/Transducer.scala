@@ -137,7 +137,7 @@ class DetTransducer[Q,A](
       var hasFailPathNode: Option[Set[Q]] = None
 
       while (hasFailPathNode.isEmpty && queue.nonEmpty) {
-        Analysis.checkInterrupted("constructing ensure fail transducer")
+        Analysis.checkInterrupted("deterministic transducer -> deterministic total transducer")
         val qs = queue.dequeue
         decided.get(qs) match {
           case Some(true) => hasFailPathNode = Some(qs)

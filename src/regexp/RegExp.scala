@@ -213,6 +213,17 @@ object RegExp {
     }
     (growthRate, convertWitness(witness))
   }
+
+  def getTransducerSize(
+    r: RegExp[Char],
+    option: PCREOption = new PCREOption()
+  ): Int = {
+    val transducer = Debug.time("regular expression -> transducer") {
+      constructTransducer(r,option)
+    }.rename()
+
+    transducer.deltaDet.size
+  }
 }
 
 

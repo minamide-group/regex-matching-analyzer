@@ -2,6 +2,7 @@ package matching
 
 import regexp._
 import regexp.RegExp._
+import tool.Analysis
 import tool.Analysis._
 import transition._
 import collection.mutable.{Map => MTMap}
@@ -82,24 +83,7 @@ object Main {
     }
   }
 
-  def test(regExpStr: String, settings: Settings): String = {
-    def convertResult(result: (Option[Int], Witness[Char])): String = {
-      val growthRate = result._1 match {
-        case Some(0) => "constant"
-        case Some(1) => "linear"
-        case Some(d) => s"polynomial, degree ${d}"
-        case None => s"exponential"
-      }
-
-      val witness = if (result._2 == Witness.empty) {
-        ""
-      } else {
-        s", witness: ${result._2}"
-      }
-
-      s"${growthRate}${witness}"
-    }
-
+  def test(regExpStr: String, settings: Settings): TestResult = {
     try {
       val (r,option) = if (settings.style == "raw") {
         (RegExpParser(regExpStr), new PCREOption())
@@ -107,14 +91,22 @@ object Main {
         RegExpParser.parsePCRE(regExpStr)
       } else throw new Exception("invalid style")
       runWithLimit(settings.timeout) {
-        calcTimeComplexity(r,option,settings.method)
+        getTransducerSize(r,option)
       } match {
-        case (Success(result),time) => s"${convertResult(result)}, time: ${time} ms"
-        case (Failure(message),_) => s"skipped: ${message}"
-        case (Timeout(message),_) => s"timeout: ${message}"
+        case (Analysis.Success(ruleSize),_) =>
+          runWithLimit(settings.timeout) {
+            calcTimeComplexity(r,option,settings.method)
+          } match {
+            case (Analysis.Success((growthRate, witness)),time) =>
+              Success(growthRate, witness, ruleSize, time)
+            case (Analysis.Failure(message),_) => Skipped(message)
+            case (Analysis.Timeout(_),_) => Timeout
+          }
+        case (Analysis.Failure(message),_) => Skipped(message)
+        case (Analysis.Timeout(_),_) => Timeout
       }
     } catch {
-      case e: RegExpParser.ParseException => s"error: ${e.message}"
+      case e: RegExpParser.ParseException => Error(e.message)
     }
   }
 
@@ -144,25 +136,39 @@ object Main {
 
     val resultName = s"${dirName}/result.txt"
     val resultListName = s"${dirName}/list.txt"
+    val timeName = s"${dirName}/time.txt"
     val resultFile = IO.createFile(resultName)
     val resultListFile = IO.createFile(resultListName)
+    val timeFile = IO.createFile(timeName)
+
     def writeResult(s: String = "") {
       println(s)
       resultFile.writeln(s)
+    }
+
+    def writeTime(s: String) {
+      timeFile.writeln(s)
     }
 
     regExpStrs.zipWithIndex.foreach{ case (regExpStr,idx) =>
       println(s"${idx+1}/${total}")
       writeResult(regExpStr)
       resultListFile.writeln(regExpStr)
-      writeResult(test(regExpStr, settings))
+      test(regExpStr, settings) match {
+        case s: Success =>
+          writeResult(s.toString())
+          writeTime(s.getTime())
+        case result =>
+          writeResult(result.toString())
+      }
       writeResult()
     }
+
     resultFile.close()
     resultListFile.close()
+    timeFile.close()
 
     val finishTime = DateFormat.getDateTimeInstance().format(new Date())
-
 
     val resultStrs = List("constant", "linear", "polynomial", "exponential", "timeout", "skipped", "error")
     val detailDirNames = resultStrs.map(resultStr => resultStr -> s"${dirName}/${resultStr}").toMap
