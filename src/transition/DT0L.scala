@@ -21,8 +21,8 @@ class DT0L[A,Q](
   def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q]) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
       val labeledEdges = morphs.flatMap{ case (a,morph) =>
-        Analysis.checkInterrupted("preparing for calculate growth rate")
         morph.flatMap{ case (q,qs) =>
+          Analysis.checkInterrupted("preparing for calculate growth rate")
           qs.map((q,a,_))
         }
       }.toSeq

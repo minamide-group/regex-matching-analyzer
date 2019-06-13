@@ -27,6 +27,7 @@ object IO {
 
   def escape(a: Any): String = {
     a match {
+      case '\\' => "\\\\"
       case '\f' => "\\f"
       case '\n' => "\\n"
       case '\r' => "\\r"

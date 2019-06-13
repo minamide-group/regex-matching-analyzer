@@ -58,7 +58,10 @@ class NonDetTransducer[Q,A](
     } ++ (for (
       s @ (q1,i) <- statesDet;
       a @ Left((q2,j)) <- sigmaLeft
-    ) yield (s,Some(a)) -> Leaf(if (q1 == q2) (q2,j) else s))
+    ) yield {
+      Analysis.checkInterrupted("construct deterministic transducer")
+      (s,Some(a)) -> Leaf(if (q1 == q2) (q2,j) else s)
+    })
 
     new DetTransducer(statesDet, sigmaDet, (initialState, 1), deltaDet)
   }
