@@ -337,4 +337,87 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
     val r2 = parseWithStartEnd("a*?")
     r2.derive('a') should be (List(Some(StarExp(ElemExp('a'), false)), None))
   }
+
+  "deriveEOL" should "derive a" in {
+    val r = parseWithStartEnd("a")
+    r.deriveEOL should be (empty)
+  }
+
+  it should "derive ∅" in {
+    val r = parseWithStartEnd("∅")
+    r.deriveEOL should be (empty)
+  }
+
+  it should "derive ε" in {
+    val r = parseWithStartEnd("ε")
+    r.deriveEOL should not be (empty)
+  }
+
+  it should "derive ab" in {
+    val r = parseWithStartEnd("ab")
+    r.deriveEOL should be (empty)
+  }
+
+  it should "derive a|b" in {
+    val r = parseWithStartEnd("a|b")
+    r.deriveEOL should be (empty)
+  }
+
+  it should "derive a*" in {
+    val r = parseWithStartEnd("a*")
+    r.deriveEOL should not be (empty)
+  }
+
+  it should "derive +" in {
+    val r1 = parseWithStartEnd("a+")
+    r1.deriveEOL should be (empty)
+
+    val r2 = parseWithStartEnd("(a*)+")
+    r2.deriveEOL should not be (empty)
+  }
+
+  it should "derive a?" in {
+    val r = parseWithStartEnd("a?")
+    r.deriveEOL should not be (empty)
+  }
+
+  it should "derive ." in {
+    val r = parseWithStartEnd(".")
+    r.deriveEOL should be (empty)
+  }
+
+  it should "derive character class" in {
+    val r1 = parseWithStartEnd("""[a-z]""")
+    r1.deriveEOL should be (empty)
+
+    val r2 = parseWithStartEnd("""[^A-Z]""")
+    r2.deriveEOL should be (empty)
+  }
+
+  it should "derive meta character" in {
+    val r = parseWithStartEnd("""\d""")
+    r.deriveEOL should be (empty)
+  }
+
+  it should "derive repeat expression" in {
+    val r1 = parseWithStartEnd("(ab){3,5}")
+    r1.deriveEOL should be (empty)
+
+    val r2 = parseWithStartEnd("(ab){3,}")
+    r2.deriveEOL should be (empty)
+
+    val r3 = parseWithStartEnd("(ab){,5}")
+    r3.deriveEOL should not be (empty)
+
+    val r4 = parseWithStartEnd("(a*){3,5}")
+    r4.deriveEOL should not be (empty)
+  }
+
+  it should "derive complex expression" in {
+    val r1 = parseWithStartEnd("(a|b*)c+d*")
+    r1.deriveEOL should be (empty)
+
+    val r2 = parseWithStartEnd("(a|b*)c?")
+    r2.deriveEOL should not be (empty)
+  }
 }

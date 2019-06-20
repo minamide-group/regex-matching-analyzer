@@ -33,9 +33,16 @@ object RepeatExp {
           } else if (min > max) {
             throw RegExp.InvalidRegExpException(s"invalid repeat expression: ${min} is larger than ${max}")
           }
+        case (Some(min),None) =>
+          if (min < 0) {
+            throw RegExp.InvalidRegExpException(s"invalid repeat expression: min and max must be positive")
+          }
+        case (None,Some(max)) =>
+          if (max < 0) {
+            throw RegExp.InvalidRegExpException(s"invalid repeat expression: min and max must be positive")
+          }
         case (None,None) =>
           throw RegExp.InvalidRegExpException("invalid repeat expression: either min or max must be specified")
-        case _ =>
       }
     }
 
