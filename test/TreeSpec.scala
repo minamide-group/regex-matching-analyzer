@@ -18,9 +18,19 @@ class TreeSpec extends FlatSpec with Matchers {
     flat(t) should be (Seq(1,2,3))
   }
 
+  "hasSuccess" should "decide whether it contains Success" in {
+    val t1: Tree[Int] = Or(Leaf(1), Or(Or(Leaf(2), Fail), Leaf(3)))
+    hasSuccess(t1, Set(2)) should be (true)
+    hasSuccess(t1) should be (false)
+
+    val t2: Tree[Int] = Or(Leaf(1), Or(Or(Leaf(2), Success), Leaf(3)))
+    hasSuccess(t2) should be (true)
+  }
+
   "cut" should "remove redundant subtree" in {
     val t1: Tree[Int] = Or(Leaf(1), Or(Or(Leaf(2), Fail), Leaf(3)))
     cut(t1, Set(2,3)) should be (Or(Leaf(1), Lft(Lft(Leaf(2)))))
+    cut(t1) should be (t1)
 
     val t2: Tree[Int] = Or(Leaf(1), Or(Or(Leaf(2), Success), Leaf(3)))
     cut(t2) should be (Or(Leaf(1), Lft(Or(Leaf(2), Success))))

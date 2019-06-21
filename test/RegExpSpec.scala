@@ -30,6 +30,20 @@ class RegExpSpec extends FlatSpec with Matchers {
     )
   }
 
+  "RepeatExp.apply()" should "transform expression properly" in {
+    val r = ElemExp('a')
+    RepeatExp(r,Some(2),Some(5),true) should be (new RepeatExp(r,Some(2),Some(5),true))
+    RepeatExp(r,None,Some(5),true) should be (new RepeatExp(r,None,Some(5),true))
+    RepeatExp(r,Some(0),Some(5),true) should be (new RepeatExp(r,None,Some(5),true))
+    RepeatExp(r,Some(0),Some(0),true) should be (EpsExp())
+    RepeatExp(r,Some(0),None,true) should be (StarExp(r,true))
+
+    a [InvalidRegExpException] should be thrownBy {RepeatExp(r,Some(5),Some(2),true)}
+    a [InvalidRegExpException] should be thrownBy {RepeatExp(r,None,None,true)}
+    a [InvalidRegExpException] should be thrownBy {RepeatExp(r,Some(-1),None,true)}
+    a [InvalidRegExpException] should be thrownBy {RepeatExp(r,None,Some(-1),true)}
+  }
+
   "constructTransducer" should "construct transducer which simulates exhaustive search" in {
     val r0 = parseWithStartEnd("a*a*b|ba")
     val r1 = parseWithStartEnd("a*a*b")
@@ -41,36 +55,5 @@ class RegExpSpec extends FlatSpec with Matchers {
     transducer.sigma should be (Set(Some('a'),Some('b'),None))
     transducer.initialState should be (r0)
     transducer.delta should have size (20)
-    // transducer.delta should contain allOf (
-    //   (r0,Some(Some('a'))) -> Or(Leaf(r1),Leaf(r2)),
-    //   (r0,Some(Some('b'))) -> Or(Leaf(r4),Leaf(r3)),
-    //   (r0,Some(None)) -> Fail,
-    //   (r0,None) -> Fail
-    // )
-    // indexedMorphs.morphs should contain only (
-    //   Some('a') -> Map(
-    //     r0 -> Seq(r1,r2),
-    //     r1 -> Seq(r1,r2),
-    //     r2 -> Seq(r2),
-    //     r3 -> Seq(r4),
-    //     r4 -> Seq()
-    //   ),
-    //   Some('b') -> Map(
-    //     r0 -> Seq(r4,r3),
-    //     r1 -> Seq(r4),
-    //     r2 -> Seq(r4),
-    //     r3 -> Seq(),
-    //     r4 -> Seq()
-    //   ),
-    //   None -> Map(
-    //     r0 -> Seq(),
-    //     r1 -> Seq(),
-    //     r2 -> Seq(),
-    //     r3 -> Seq(),
-    //     r4 -> Seq()
-    //   )
-    // )
-    // indexedMorphs.initials should be (Set(r0))
-    // indexedMorphs.finals should be (Set(r4))
   }
 }
