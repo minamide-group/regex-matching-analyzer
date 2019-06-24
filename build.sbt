@@ -1,4 +1,4 @@
-name := "matching-complexity"
+name := "regex-matching-analyzer"
 scalaVersion := "2.12.8"
 
 scalaSource in Compile := baseDirectory.value / "src"
