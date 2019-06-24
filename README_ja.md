@@ -1,4 +1,4 @@
-Language: [README.md](English) [README_ja.md](日本語)
+Language: [English](README.md) | [日本語](README_ja.md)
 
 # regex-matching-analyzer
 与えられた正規表現に対してマッチングを行った場合に，マッチング対象文字列の長さに対して最悪時に要する時間計算量のオーダを判定します．

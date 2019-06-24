@@ -1,4 +1,4 @@
-Language: [README.md](English) [README_ja.md](日本語)
+Language: [English](README.md) | [日本語](README_ja.md)
 
 # regex-matching-analyzer
 Analyzer to determine time complexity of backtracking regular expression matching.
@@ -21,20 +21,20 @@ run <input file> [options]
 ### Options
 |Option|argument|default||
 |:----|:----|:----|:----|
-|`--style`|`raw`,`PCRE`|`raw`|Specifying a [style of regular expressions](#Style of Regular Rxpressions)|
-|`--method`|`Lookahead`,`SubsetPrune`,`Nondeterminism`,`Exhaustive`|`Lookahead`|Specifying an [algorithm to simulate backtracking](#Algorithm to Simulate Backtracking)|
+|`--style`|`raw`,`PCRE`|`raw`|Specifying a [style of regular expressions](#Style-of-Regular-Expressions)|
+|`--method`|`Lookahead`,`SubsetPrune`,`Nondeterminism`,`Exhaustive`|`Lookahead`|Specifying an [algorithm to simulate backtracking](#Algorithm-to-Simulate-Backtracking)|
 |`--timeout`|integer|`10`|Specifying time limit (second) of analysis (specify `<= 0` to disable timeout)|
-|`--debug`|no argument|disable|Enable debug mode|
+|`--debug`|(no argument)|disable|Enable debug mode|
 
 
 ## Inputs
-### Style of Regular Rxpressions
+### Style of Regular Expressions
 - `raw`  
 Write expression directly.  
 e.g.) `^a*|b`
-- `PCRE`
+- `PCRE`  
 Write expression in `/.../`.
-Some [modifiers](#Modifiers in PCRE Style) are available.  
+Some [modifiers](#Modifiers-in-PCRE-Style) are available.  
 e.g.) `/^a*|b/s`  
 We support to use other characters as delimiters.
 We also support bracket style delimiters such as `(...)`,`{...}`,`[...]`, and `<...>`.
@@ -73,8 +73,8 @@ All characters that do not appear in the following list will be a expression jus
 - `∅`: The empty set
 - `ε`: The empty string
 - `r1|r2`: `r1` or `r2`
-- `\unnnn`: A character with hex code `nnnn`
-- `\xnn`: A character with hex code `nn`
+- `\unnnn`: A character with hexadecimal code `nnnn`
+- `\xnn`: A character with hexadecimal code `nn`
 - `\nnn`: A character with octal code `nnn`
 - `.`: Any character except for a newline character
 - Repetitions
@@ -158,13 +158,13 @@ The following special character can be used only in a character classes.
 ### Backslashes Followed by Digits
 They will be parsed according to this specification basically.
 https://www.php.net/manual/en/regexp.reference.escape.php
-- If the head is `0`
+- If the head is `0`  
 Pattern A
-- If the head is not `0`
+- If the head is not `0`  
 Parse digits as decimal number.
-  + If it is less than or equal to 9, or less than the number of capturing groups (99 maximum)
+  + If it is less than or equal to 9, or less than the number of capturing groups (99 maximum)  
   Pattern B
-  + Otherwise
+  + Otherwise  
   Pattern A
 
 - Pattern A: Read up to 3 characters of digits which is less than or equal to 7, and then parse it as octal code.
