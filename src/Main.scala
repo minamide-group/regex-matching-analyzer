@@ -41,7 +41,7 @@ object Main {
           case "--method" :: method :: options =>
             setting.method = method match {
               case "Lookahead" => Some(Lookahead)
-              case "EnsureFail" => Some(EnsureFail)
+              case "SubsetPrune" => Some(SubsetPrune)
               case "Nondeterminism" => Some(Nondeterminism)
               case "Exhaustive" => None
               case _ => throw new Exception(s"invalid method option: ${method}")

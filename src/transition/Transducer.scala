@@ -258,11 +258,11 @@ class DetTransducer[Q,A](
       transducerWithLA.calcGrowthRate()
     }
 
-    def calcBtrGrowthRateEnsureFail(): (Option[Int], Witness[A]) = {
-      def toEnsureFailTransducer(): DetTransducer[(Q,Set[Q]),A] = {
+    def calcBtrGrowthRateSubsetPrune(): (Option[Int], Witness[A]) = {
+      def toSubsetPruneTransducer(): DetTransducer[(Q,Set[Q]),A] = {
         var decided = Map[Set[Q], Boolean]()
 
-        def ensureFail(t: Tree[Q], qs: Option[Set[Q]]): Tree[(Q,Set[Q])] = {
+        def prune(t: Tree[Q], qs: Option[Set[Q]]): Tree[(Q,Set[Q])] = {
           def hasFailPath(qs: Set[Q]): Boolean = {
             var visited = Set(qs)
             val queue = Queue(qs)
@@ -271,7 +271,7 @@ class DetTransducer[Q,A](
             var hasFailPathNode: Option[Set[Q]] = None
 
             while (hasFailPathNode.isEmpty && queue.nonEmpty) {
-              Analysis.checkInterrupted("constructing ensure fail transducer")
+              Analysis.checkInterrupted("constructing subset prune transducer")
               val qs = queue.dequeue
               decided.get(qs) match {
                 case Some(true) => hasFailPathNode = Some(qs)
@@ -313,14 +313,14 @@ class DetTransducer[Q,A](
             case Fail => Fail
             case Or(l,r) => qs match {
               case Some(_) =>
-                Or(ensureFail(l,qs), if (hasSuccess(l)) {
-                  ensureFail(r,None)
+                Or(prune(l,qs), if (hasSuccess(l)) {
+                  prune(r,None)
                 } else {
-                  ensureFail(r,qs.map(_ ++ flat(l)))
+                  prune(r,qs.map(_ ++ flat(l)))
                 })
-              case None => Or(ensureFail(l,None), ensureFail(r,None))
+              case None => Or(prune(l,None), prune(r,None))
             }
-            case Lft(l) => Lft(ensureFail(l,qs))
+            case Lft(l) => Lft(prune(l,qs))
           }
         }
 
@@ -329,10 +329,10 @@ class DetTransducer[Q,A](
         val stack = Stack(newInitial)
         var newDelta = Map[((Q,Set[Q]),Option[A]), Tree[(Q,Set[Q])]]()
         while (stack.nonEmpty) {
-          Analysis.checkInterrupted("constructing ensure fail transducer")
+          Analysis.checkInterrupted("constructing subset prune transducer")
           val p @ (q,qs) = stack.pop
           (sigma.map(Option(_)) + None).foreach{ a =>
-            val t = ensureFail(deltaDet((q,a)), Some(deltaHat(qs,a)))
+            val t = prune(deltaDet((q,a)), Some(deltaHat(qs,a)))
             newDelta += (p,a) -> t
             flat(t).foreach( p =>
               if (!newStates.contains(p)) {
@@ -346,8 +346,8 @@ class DetTransducer[Q,A](
         new DetTransducer(newStates, sigma, newInitial, newDelta)
       }
 
-      val newTransducer = Debug.time("transducer -> ensure fail transducer") {
-        toEnsureFailTransducer()
+      val newTransducer = Debug.time("transducer -> subset prune transducer") {
+        toSubsetPruneTransducer()
       }.rename()
 
       val (growthRate, _) = newTransducer.calcGrowthRate()
@@ -402,7 +402,7 @@ class DetTransducer[Q,A](
 
     method match {
       case Lookahead => calcBtrGrowthRateLookahead()
-      case EnsureFail => calcBtrGrowthRateEnsureFail()
+      case SubsetPrune => calcBtrGrowthRateSubsetPrune()
       case Nondeterminism => calcBtrGrowthRateNondeterminism()
     }
   }
