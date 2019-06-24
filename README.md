@@ -30,10 +30,10 @@ run <input file> [options]
 ## Inputs
 ### Style of Regular Expressions
 - `raw`  
-Write expression directly.  
+Write expressions directly.  
 e.g.) `^a*|b`
 - `PCRE`  
-Write expression in `/.../`.
+Write expressions in `/.../`.
 Some [modifiers](#Modifiers-in-PCRE-Style) are available.  
 e.g.) `/^a*|b/s`  
 We support to use other characters as delimiters.
@@ -180,6 +180,7 @@ The following modifiers are supported.
 
 ## Algorithm to Simulate Backtracking
 - `Lookahead`:
+  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/sugiyama2013.pdf
   + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
 - `SubsetPrune`:
   + https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27

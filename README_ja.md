@@ -169,6 +169,7 @@ https://www.php.net/manual/ja/regexp.reference.escape.php
 
 ## バックトラックを模倣するアルゴリズム
 - `Lookahead`:
+  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/sugiyama2013.pdf
   + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
 - `SubsetPrune`:
   + https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27
