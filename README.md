@@ -1,7 +1,7 @@
 Language: [English](README.md) | [日本語](README_ja.md)
 
 # regex-matching-analyzer
-Analyzer to determine time complexity of backtracking regular expression matching.
+An analyzer to determine time complexity of backtracking regular expression matching.
 For a given regular expression, it determines the order of worst case time complexity to the length of input strings.
 
 ## Usage
@@ -9,7 +9,7 @@ We recommend to use sbt.
 The commands below should be input to the sbt shell.
 
 There are two ways to run the code.
-- Input expressions from command line
+- Input expressions from a command line
 ```
 run [options]
 ```
@@ -19,21 +19,21 @@ run <input file> [options]
 ```
 
 ### Options
-|Option|argument|default||
+|Option|Argument|Default||
 |:----|:----|:----|:----|
 |`--style`|`raw`,`PCRE`|`raw`|Specifying a [style of regular expressions](#Style-of-Regular-Expressions)|
 |`--method`|`Lookahead`,`SubsetPrune`,`Nondeterminism`,`Exhaustive`|`Lookahead`|Specifying an [algorithm to simulate backtracking](#Algorithm-to-Simulate-Backtracking)|
 |`--timeout`|integer|`10`|Specifying time limit (second) of analysis (specify `<= 0` to disable timeout)|
-|`--debug`|(no argument)|disable|Enable debug mode|
+|`--debug`|(no argument)|disabled|Enable debug mode|
 
 
 ## Inputs
 ### Style of Regular Expressions
 - `raw`  
-Write expressions directly.  
+Expressions are written directly.  
 e.g.) `^a*|b`
 - `PCRE`  
-Write expressions in `/.../`.
+Expressions are enclosed by `/.../`.
 Some [modifiers](#Modifiers-in-PCRE-Style) are available.  
 e.g.) `/^a*|b/s`  
 We support to use other characters as delimiters.
@@ -47,14 +47,14 @@ Thus, expressions must be separated by line breaks in your input file.
 The possible results are follows:
 - `constant`
 - `linear`
-- `polynomial, degree = n`: Polynomial time of degree `n`. (`n >= 2`)
+- `polynomial, degree = n`
 - `exponential`
 - `timeout`
 - `skipped`: A given expression has unsupported features.
 - `error`: Error, mainly a parse error.
 
-The output also contains following information.
-- a witness of  (only if the result is `polynomial` or `exponential`. Currently, this feature is supported only when using algorithm `Lookahead`.)
+The output also contains following information:
+- a witness of polynomial or exponential order (Currently, this feature is supported only when using algorithm `Lookahead`.)
 - Execution time taken to analyze.
 
 ### Output Files
@@ -63,13 +63,12 @@ This contains the following files:
 - `summary.txt`: The summary of results
 - `list.txt`: A list of all analyzed expressions
 - `result.txt`: A list of results
-- `<result>/...`: A list of expressions and results
-whose result is `<result>`(In `polynomial/...`, files for each degree of polynomial will be generated.)
+- `<result>/...`: A list of expressions and results whose result is `<result>`(In `polynomial/...`, files for each degree of polynomial will be generated.)
 
 
 ## Regular Expression Parser
 This is a list of supported features.
-All characters that do not appear in the following list will be a expression just matches the character itself.
+All characters that do not appear in the following list will become a expression just matches the character itself.
 - `∅`: The empty set
 - `ε`: The empty string
 - `r1|r2`: `r1` or `r2`
@@ -77,7 +76,7 @@ All characters that do not appear in the following list will be a expression jus
 - `\xnn`: A character with hexadecimal code `nn`
 - `\nnn`: A character with octal code `nnn`
 - `.`: Any character except for a newline character
-- Repetitions
+- Repetition
   + `r*`: 0 or more times
   + `r+`: 1 or more times
   + `r?`: 0 or 1 times
@@ -124,8 +123,8 @@ but they are unsupported for analyzer and its result will be `skipped`.
   + `(?<!r)`: Negative lookbehind
 - `(?(r)r1)`,`(?(r)r1|r2)`: Conditional
 - Back references
-  + `\1`,`\2`, ...: reference with index
-  + `(?P=name)`,`\k<name>`,`\k'name'`,`\k{name}`: reference with name
+  + `\1`,`\2`, ...: Reference with index
+  + `(?P=name)`,`\k<name>`,`\k'name'`,`\k{name}`: Reference with name
 
 ### Escaping
 You can escape any characters except for alphanumeric by backslash `\` and then it will become a expression just matches the character itself.
@@ -135,13 +134,13 @@ The following characters must be escaped:
 + Inside of character classes  
 `]`,`\`
 
-### Repetitions
-Repetitions matches greedy by default.
-Thus, they try to match as much as possible.
-But If they are followed by `?`, then it becomes lazy and matches the minimum number of times possible.
+### Repetition
+A repetition expression matches greedy by default.
+Thus, it tries to match as much as possible.
+But If a repetition is followed by `?`, then it becomes lazy and matches the minimum number of times possible.
 
 ### Character classes
-In character classes, the following forms are supported.
+In character classes, the following forms are supported:
 - `char`: Single character
 - `char-char`: range
 - Special characters
@@ -149,7 +148,7 @@ In character classes, the following forms are supported.
 
 A hyphen `-` put at the head or tail of bracket, or immediately before or after a predefined character class represents just a hyphen as symbol.
 
-The following special character can be used only in a character classes.
+The following special character can be used only in character classes.
 - `\b`: backspace (`\u0008`)
 
 ### Anchors
@@ -167,15 +166,14 @@ Parse digits as decimal number.
   + Otherwise  
   Pattern A
 
-- Pattern A: Read up to 3 characters of digits which is less than or equal to 7, and then parse it as octal code.
-The rest of digits are parsed as just expressions that represent the numeral.
-- Pattern B: Parse as back references. If the specified index is larger then the number of capturing groups in the whole expressions, then an error occur.
+- Pattern A: Read up to 3 characters of digits which is less than or equal to 7, and then parse it as octal code. The rest of digits are parsed as just expressions that represent the numeral.
+- Pattern B: Parse it as back references. If the specified index is larger then the number of capturing groups in the whole expressions, then an error occurs.
 
 ### Modifiers in PCRE Style
-The following modifiers are supported.
+The following modifiers are supported:
 - `i`: Ignore the case of letters
 - `s`: `.` become to match newline characters
-- `U`: Reverse greediness of repetitions
+- `U`: Reverse greediness of repetition
 
 
 ## Algorithm to Simulate Backtracking
