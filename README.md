@@ -55,7 +55,7 @@ The possible results are follows:
 
 The output also contains following information:
 - a witness of polynomial or exponential order (Currently, this feature is supported only when using algorithm `Lookahead`.)
-- Execution time taken to analyze.
+- Execution time taken to analyze
 
 ### Output Files
 If the analysis is performed on expressions from an input file, the output files are generated in directory `output/<input file>_<timestamp>`.
@@ -67,7 +67,7 @@ This contains the following files:
 
 
 ## Regular Expression Parser
-This is a list of supported features.
+Here is a list of supported features.
 All characters that do not appear in the following list will become a expression just matches the character itself.
 - `∅`: The empty set
 - `ε`: The empty string
@@ -75,14 +75,14 @@ All characters that do not appear in the following list will become a expression
 - `\unnnn`: A character with hexadecimal code `nnnn`
 - `\xnn`: A character with hexadecimal code `nn`
 - `\nnn`: A character with octal code `nnn`
-- `.`: Any character except for a newline character
+- `.`: Any one character except for a newline character
 - Repetition
   + `r*`: 0 or more times
   + `r+`: 1 or more times
   + `r?`: 0 or 1 times
   + `r{n}`: `n` times
-  + `r{n,}`: `n` or more times
-  + `r{,m}`: `m` or less times
+  + `r{n,}`: More than or equal to `n` times
+  + `r{,m}`: Less than or equal to `m` times
   + `r{n,m}`: `n` to `m` times
 - Groups
   + `(r)`: Capturing group
@@ -135,9 +135,9 @@ The following characters must be escaped:
 `]`,`\`
 
 ### Repetition
-A repetition expression matches greedy by default.
+Repetition expression matches greedy by default.
 Thus, it tries to match as much as possible.
-But If a repetition is followed by `?`, then it becomes lazy and matches the minimum number of times possible.
+But if it is followed by `?`, then it becomes lazy and matches the minimum number of times possible.
 
 ### Character classes
 In character classes, the following forms are supported:
@@ -146,22 +146,22 @@ In character classes, the following forms are supported:
 - Special characters
 - Predefined character classes
 
-A hyphen `-` put at the head or tail of bracket, or immediately before or after a predefined character class represents just a hyphen as symbol.
+A hyphen `-` put at the head or tail of brackets, or immediately before or after predefined character classes represents just a hyphen as symbol.
 
-The following special character can be used only in character classes.
+The following special character can be used only in character classes:
 - `\b`: backspace (`\u0008`)
 
 ### Anchors
 `^` and `$` are supported only when they appear in the head and the tail of expressions, respectively.
 
 ### Backslashes Followed by Digits
-They will be parsed according to this specification basically.
+They will be parsed according to this specification basically.  
 https://www.php.net/manual/en/regexp.reference.escape.php
 - If the head is `0`  
 Pattern A
 - If the head is not `0`  
-Parse digits as decimal number.
-  + If it is less than or equal to 9, or less than the number of capturing groups (99 maximum)  
+Parse digits as a decimal number.
+  + If it is less than or equal to 9, or less than or equal to the number of capturing groups (99 maximum)  
   Pattern B
   + Otherwise  
   Pattern A
@@ -172,7 +172,7 @@ Parse digits as decimal number.
 ### Modifiers in PCRE Style
 The following modifiers are supported:
 - `i`: Ignore the case of letters
-- `s`: `.` become to match newline characters
+- `s`: `.` become to match with newline characters
 - `U`: Reverse greediness of repetition
 
 
@@ -187,6 +187,6 @@ The following modifiers are supported:
   + https://www.jalc.de/issues/2018/issue_23_1-3/jalc-2018-019-038.php
 - `Exhaustive`: Performs no backtracking
 
-- If you specify `Exhaustive`, the analyzer determines time complexity of exhaustive matching and its result might be different from that obtained by other algorithm.
+- If you specify `Exhaustive`, the analyzer determines time complexity of exhaustive matching and its result might be different from one obtained by other algorithms.
 
-- If you specify `Nondeterminism`, expressions which has constant matching time will be determined to be `linear` instead of `constant`.
+- If you specify `Nondeterminism`, expressions which have constant matching time will be determined to be `linear` instead of `constant`.
