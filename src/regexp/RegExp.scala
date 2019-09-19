@@ -58,6 +58,8 @@ object RepeatExp {
 }
 case class GroupExp[A](r: RegExp[A], id: Int, name: Option[String]) extends RegExp[A]
 case class BackReferenceExp[A](n: Int) extends RegExp[A]
+case class StartAnchorExp[A]() extends RegExp[A]
+case class EndAnchorExp[A]() extends RegExp[A]
 case class LookaheadExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
 case class LookbehindExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
 case class IfExp[A](cond: RegExp[A], rt: RegExp[A], rf: RegExp[A]) extends RegExp[A]
@@ -120,6 +122,8 @@ object RegExp {
         case Some(name) => s"(?<${name}>${r})"
         case None => s"(${r})"
       }
+      case StartAnchorExp() => "^"
+      case EndAnchorExp() => "$"
       case BackReferenceExp(n) => s"\\${n}"
       case LookaheadExp(r,positive) => s"(?${if (positive) "=" else "!"}${r})"
       case LookbehindExp(r,positive) => s"(?<${if (positive) "=" else "!"}${r})"
@@ -143,7 +147,7 @@ object RegExp {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
-        case EmptyExp() | EpsExp() | BackReferenceExp(_) => Set()
+        case EmptyExp() | EpsExp() | BackReferenceExp(_) | StartAnchorExp() | EndAnchorExp() => Set()
         case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
         case AltExp(r1,r2) => getElems(r1) | getElems(r2)
         case StarExp(r,greedy) => getElems(r)

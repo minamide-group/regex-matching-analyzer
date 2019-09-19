@@ -22,7 +22,7 @@ object Main {
         s"${"-"*3} settings ${"-"*27}",
         s"style: ${style}",
         s"method: ${if (method.isDefined) s"${method.get}" else "Exhaustive"}",
-        s"timeout: ${if (timeout.isDefined) s"${timeout.get}s" else "disable"}",
+        s"timeout: ${if (timeout.isDefined) s"${timeout.get}s" else "disabled"}",
         s"${"-"*40}"
       ).mkString("\n")
     }

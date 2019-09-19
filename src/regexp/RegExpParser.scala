@@ -15,7 +15,7 @@ class RegExpParser() extends RegexParsers {
   val spacialMetasInCharClass = s"[${specialMetaChars}b]".r
 
   def parseAll(s: String): RegExp[Char] = {
-    def expAnchor: Parser[RegExp[Char]] = {
+    def exp: Parser[RegExp[Char]] = {
       def convertSpecialMeta(c: Char): Char = {
         c match {
           case 'a' => '\u0007'
@@ -51,6 +51,8 @@ class RegExpParser() extends RegexParsers {
 
               captureGroup | unCaptureGroup | namedCaptureGroup
             }
+            def startAnchor: Parser[StartAnchorExp[Char]] = "^" ^^ {_ => StartAnchorExp()}
+            def endAnchor: Parser[EndAnchorExp[Char]] = "$" ^^ {_ => EndAnchorExp()}
             def charClass: Parser[CharClassExp] = {
               def charClassFactors: Parser[Seq[CharClassElem]] = {
                 def charClassElem: Parser[Seq[Char]] = {
@@ -110,7 +112,8 @@ class RegExpParser() extends RegexParsers {
             def esc: Parser[Char] = "\\" ~> "[^a-zA-Z]".r ^^ {_.head}
             def variable: Parser[String] = "[a-zA-Z][a-zA-Z0-9]*".r
 
-            meta | num | namedBackRef | elem | empty | eps | dot | group | charClass | lookaround | ifCond
+            meta | num | namedBackRef | elem | empty | eps | dot | group | charClass |
+            startAnchor | endAnchor | lookaround | ifCond
           }
           def quantifier: Parser[Either[(Option[Int],Option[Int]),String]] = {
             def symbol: Parser[Right[Nothing,String]] = "[*+?]".r ^^ {Right(_)}
@@ -147,19 +150,21 @@ class RegExpParser() extends RegexParsers {
         rep(quantifiedFactor) ^^ {_.foldLeft(EpsExp(): RegExp[Char])(optConcatExp(_,_))}
       }
 
-      opt("^") ~ rep1sep(term,"|") ~ opt("$") ^^ { case start ~ ts ~ end =>
-        optConcatExp(
-          optConcatExp(
-            if (start.isDefined) EpsExp() else StarExp(DotExp(),false),
-            ts.reduceLeft(AltExp(_,_))
-          ),
-          if (end.isDefined) EpsExp() else StarExp(DotExp(),true)
-        )
-      }
+      rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
     }
 
     try {
-      parseAll(expAnchor, s) match {
+      val hasStart = s.head == '^'
+      val hasEnd = s.last == '$'
+
+      var s1 = s
+      if (hasStart) s1 = s1.tail
+      if (hasEnd) s1 = s1.init
+
+      if (!hasStart) s1 = s".*?(?:${s1})"
+      if (!hasEnd) s1 = s"${s1}(?:.*)"
+
+      parseAll(exp, s1) match {
         case Success(r,_) => r.toRegExp
         case NoSuccess(msg,next) =>
           throw RegExpParser.ParseException(s"${msg} at ${next.pos.line}:${next.pos.column}")

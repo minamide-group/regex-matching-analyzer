@@ -174,6 +174,16 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     a [ParseException] should be thrownBy {RegExpParser("""(a)\2""")}
   }
 
+  it should "parse start/end anchor" in {
+    RegExpParser("^a") should be (ConcatExp(ElemExp('a'), StarExp(DotExp(),true)))
+    RegExpParser("a$") should be (ConcatExp(StarExp(DotExp(),false),ElemExp('a')))
+    RegExpParser("^a$") should be (ElemExp('a'))
+    RegExpParser("a^b") should be (
+      withStartEnd(ConcatExp(ConcatExp(ElemExp('a'), StartAnchorExp()), ElemExp('b'))))
+    RegExpParser("a$b") should be (
+      withStartEnd(ConcatExp(ConcatExp(ElemExp('a'), EndAnchorExp()), ElemExp('b'))))
+  }
+
   it should "parse lookahead/lookbehind" in {
     RegExpParser("""(?=a)""") should be (withStartEnd(LookaheadExp(ElemExp('a'), true)))
     RegExpParser("""(?!a)""") should be (withStartEnd(LookaheadExp(ElemExp('a'), false)))
@@ -191,15 +201,6 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("a+?") should be (withStartEnd(PlusExp(ElemExp('a'), false)))
     RegExpParser("a??") should be (withStartEnd(OptionExp(ElemExp('a'), false)))
     RegExpParser("a{3,5}?") should be (withStartEnd(RepeatExp(ElemExp('a'),Some(3),Some(5),false)))
-  }
-
-  it should "parse start/end anchor" in {
-    RegExpParser("^a") should be (ConcatExp(ElemExp('a'), StarExp(DotExp(),true)))
-    RegExpParser("a$") should be (ConcatExp(StarExp(DotExp(),false),ElemExp('a')))
-    RegExpParser("^a$") should be (ElemExp('a'))
-
-    a [ParseException] should be thrownBy {RegExpParser("a^b")}
-    a [ParseException] should be thrownBy {RegExpParser("a$b")}
   }
 
   it should "parse escape characters" in {

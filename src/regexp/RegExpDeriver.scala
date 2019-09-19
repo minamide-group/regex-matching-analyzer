@@ -106,7 +106,12 @@ class RegExpDeriver[M[_]](option: PCREOption = new PCREOption())(implicit m: Mon
           (m(None): M[Option[RegExp[A]]]) ++ rd
         }
       case GroupExp(r,_,_) => derive(r,a)
-      case _ => throw new Exception(s"derive unsupported expression: ${r}")
+      case StartAnchorExp() => throw new Exception(s"start anchor is unsupported.")
+      case EndAnchorExp() => throw new Exception(s"end anchor is unsupported.")
+      case BackReferenceExp(_) => throw new Exception(s"back reference is unsupported.")
+      case LookaheadExp(_,_) => throw new Exception(s"lookahead is unsupported.")
+      case LookbehindExp(_,_) => throw new Exception(s"lookbehind is unsupported.")
+      case IfExp(_,_,_) => throw new Exception(s"conditional expression is unsupported.")
     }
   }
 
