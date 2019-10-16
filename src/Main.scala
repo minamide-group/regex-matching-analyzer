@@ -5,15 +5,15 @@ import regexp.RegExp._
 import tool.Analysis
 import tool.Analysis._
 import transition._
-import collection.mutable.{Map => MTMap}
 import tool.{IO, File, Debug}
+import io.StdIn
+import collection.mutable.{Map => MTMap}
 import java.util.Date
 import java.text.DateFormat
-import scala.io.StdIn
 
 object Main {
   class Settings() {
-    var style = "raw"
+    var style: RegExpStyle = Raw
     var method: Option[BacktrackMethod] = Some(Lookahead)
     var timeout: Option[Int] = Some(10)
 
@@ -34,7 +34,8 @@ object Main {
         options match {
           case "--style" :: style :: options =>
             setting.style = style match {
-              case "raw" | "PCRE" => style
+              case "raw" => Raw
+              case "PCRE" => PCRE
               case _ => throw new Exception(s"invalid style option: ${style}")
             }
             parseOptions(options, setting)
@@ -51,7 +52,8 @@ object Main {
             val t = try {
               timeout.toInt
             } catch {
-              case e: NumberFormatException => throw new Exception(s"invalid timeout option: ${timeout}")
+              case e: NumberFormatException =>
+                throw new Exception(s"invalid timeout option: ${timeout}")
             }
             setting.timeout = if (t > 0) Some(t) else None
             parseOptions(options, setting)
@@ -173,8 +175,12 @@ object Main {
     val resultStrs = List("constant", "linear", "polynomial", "exponential", "timeout", "skipped", "error")
     val detailDirNames = resultStrs.map(resultStr => resultStr -> s"${dirName}/${resultStr}").toMap
     resultStrs.foreach(resultStr => IO.createDirectory(detailDirNames(resultStr)))
-    val detailFiles = resultStrs.map(resultStr => resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/result.txt")).toMap
-    val detailListFiles = resultStrs.map(resultStr => resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/list.txt")).toMap
+    val detailFiles = resultStrs.map(resultStr =>
+      resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/result.txt")
+    ).toMap
+    val detailListFiles = resultStrs.map(resultStr =>
+      resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/list.txt")
+    ).toMap
     val degreeFiles = MTMap[Int, File]()
     val degreeListFiles = MTMap[Int, File]()
     val summaryFile = IO.createFile(s"${dirName}/summary.txt")
@@ -196,8 +202,10 @@ object Main {
             val d = degree.toInt
             if (!degreeFiles.contains(d)) {
               IO.createDirectory(s"${detailDirNames("polynomial")}/degree_${d}")
-              degreeFiles += d -> IO.createFile(s"${detailDirNames("polynomial")}/degree_${d}/result.txt")
-              degreeListFiles += d -> IO.createFile(s"${detailDirNames("polynomial")}/degree_${d}/list.txt")
+              degreeFiles += d -> IO.createFile(
+                s"${detailDirNames("polynomial")}/degree_${d}/result.txt")
+              degreeListFiles += d -> IO.createFile(
+                s"${detailDirNames("polynomial")}/degree_${d}/list.txt")
             }
             degreeFiles(d).writeln(regExp)
             degreeFiles(d).writeln(result)
