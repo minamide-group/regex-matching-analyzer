@@ -87,11 +87,10 @@ object Main {
 
   def test(regExpStr: String, settings: Settings): TestResult = {
     try {
-      val (r,option) = if (settings.style == "raw") {
-        (RegExpParser(regExpStr), new PCREOption())
-      } else if (settings.style == "PCRE") {
-        RegExpParser.parsePCRE(regExpStr)
-      } else throw new Exception("invalid style")
+      val (r,option) = settings.style match {
+        case Raw => (RegExpParser(regExpStr), new PCREOption())
+        case PCRE => RegExpParser.parsePCRE(regExpStr)
+      }
       runWithLimit(settings.timeout) {
         getTransducerSize(r,option)
       } match {

@@ -9,9 +9,9 @@ import matching.tool.{Analysis, Debug, IO}
 
 trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
-  def derive[M[_]](a: A)(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,Some(a))
-  def derive[M[_]](a: Option[A])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,a)
-  def deriveEOL[M[_]](implicit deriver: RegExpDeriver[M]): M[Unit] = deriver.deriveEOL(this)
+  def derive[M[_]](a: A, u: List[Option[A]])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,u,Some(a))
+  def derive[M[_]](a: Option[A], u: List[Option[A]])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,u,a)
+  def deriveEOL[M[_]](u: List[Option[A]])(implicit deriver: RegExpDeriver[M]): M[Unit] = deriver.deriveEOL(this,u)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -146,7 +146,7 @@ object RegExp {
 
   def constructTransducer(
     r: RegExp[Char], option: PCREOption = new PCREOption()
-  ): DetTransducer[RegExp[Char], Option[Char]] = {
+  ): DetTransducer[(RegExp[Char], Boolean), Option[Char]] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -182,29 +182,30 @@ object RegExp {
       }
     }
 
-    val sigma = getElems(r).map(Option(_)) + None
-    var regExps = Set(r)
-    val stack = Stack(r)
-    var delta = Map[(RegExp[Char], Option[Option[Char]]), Tree[RegExp[Char]]]()
+    val sigma = getElems(r).map(Option(_)) + None // None: character which does not appear in given expression
+    var states = Set((r, true))
+    val stack = Stack((r, true))
+    var delta = Map[((RegExp[Char], Boolean), Option[Option[Char]]), Tree[(RegExp[Char], Boolean)]]()
     implicit val deriver = new RegExpDeriver[Tree](option)
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
-      val r = stack.pop
+      val s @ (r,b) = stack.pop
+      val u = if (b) Nil else List(None)
       sigma.foreach{ a =>
-        val t = r.derive(a) >>= {
-          case Some(r) => Leaf(r)
+        val t = r.derive(a,u) >>= {
+          case Some(r) => Leaf((r, false))
           case None => Fail
         }
-        delta += (r,Some(a)) -> t
-        val newExps = flat(t).filterNot(regExps.contains)
-        regExps |= newExps.toSet
+        delta += (s,Some(a)) -> t
+        val newExps = flat(t).filterNot(states.contains)
+        states |= newExps.toSet
         stack.pushAll(newExps)
       }
-      val t = r.deriveEOL >>= (_ => Success)
-      delta += (r,None) -> t
+      val t = r.deriveEOL(u) >>= (_ => Success)
+      delta += (s,None) -> t
     }
 
-    new DetTransducer(regExps, sigma, r, delta)
+    new DetTransducer(states, sigma, (r, true), delta)
   }
 
   def calcTimeComplexity(
@@ -232,9 +233,7 @@ object RegExp {
     r: RegExp[Char],
     option: PCREOption = new PCREOption()
   ): Int = {
-    val transducer = Debug.time("regular expression -> transducer") {
-      constructTransducer(r,option)
-    }.rename()
+    val transducer = constructTransducer(r,option).rename()
 
     transducer.deltaDet.size
   }
