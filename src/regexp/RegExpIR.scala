@@ -68,12 +68,12 @@ object RegExpIR {
               )
             } else {
               if (s.toInt <= captureGroups.min(99)) {
-                BackReferenceExp(s.toInt)
+                BackReferenceExp(s.toInt, None)
               } else throw RegExp.InvalidRegExpException(s"undefined group: ${s}")
             }
           case NamedBackReferenceExpIR(name) =>
             groupNameMap.get(name) match {
-              case Some(id) => BackReferenceExp(id)
+              case Some(id) => BackReferenceExp(id, Some(name))
               case None => throw RegExp.InvalidRegExpException(s"undefined group name: ${name}")
             }
           case _ => recursiveApply(r,convert)

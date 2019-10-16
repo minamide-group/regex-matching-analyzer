@@ -99,7 +99,12 @@ class RegExpParser() extends RegexParsers {
 
             def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
             def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
-            def namedBackRef: Parser[NamedBackReferenceExpIR[Char]] = ("(?P=" ~> variable <~ ")" | "\\k" ~> ("<" ~> variable <~ ">" | "'" ~> variable <~ "'" | "{" ~> variable <~ "}")) ^^ {NamedBackReferenceExpIR(_)}
+            def namedBackRef: Parser[NamedBackReferenceExpIR[Char]] = (
+              "(?P=" ~> variable <~ ")" |
+              "\\k" ~> ("<" ~> variable <~ ">" |
+                "'" ~> variable <~ "'" |
+                "{" ~> variable <~ "}")
+              ) ^^ {NamedBackReferenceExpIR(_)}
             def num: Parser[NumExpIR] = "\\" ~> """\d+""".r ^^ {NumExpIR(_)}
             def hex: Parser[Char] = "\\x" ~> "[0-9a-fA-F]{0,2}".r ^^ { code =>
               Integer.parseInt(s"0${code}", 16).toChar
@@ -154,17 +159,7 @@ class RegExpParser() extends RegexParsers {
     }
 
     try {
-      val hasStart = s.head == '^'
-      val hasEnd = s.last == '$'
-
-      var s1 = s
-      if (hasStart) s1 = s1.tail
-      if (hasEnd) s1 = s1.init
-
-      if (!hasStart) s1 = s".*?(?:${s1})"
-      if (!hasEnd) s1 = s"${s1}(?:.*)"
-
-      parseAll(exp, s1) match {
+      parseAll(exp, s) match {
         case Success(r,_) => r.toRegExp
         case NoSuccess(msg,next) =>
           throw RegExpParser.ParseException(s"${msg} at ${next.pos.line}:${next.pos.column}")
