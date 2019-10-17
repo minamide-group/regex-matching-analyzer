@@ -2,16 +2,19 @@ package matching.regexp
 
 import scala.collection.mutable.Stack
 import matching.monad._
-import matching.monad.Tree._
-import matching.monad.Monad._
+import matching.monad.DMonad._
+import matching.monad.DTree._
 import matching.transition._
 import matching.tool.{Analysis, Debug, IO}
 
 trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
-  def derive[M[_]](a: A, u: List[Option[A]])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,u,Some(a))
-  def derive[M[_]](a: Option[A], u: List[Option[A]])(implicit deriver: RegExpDeriver[M]): M[Option[RegExp[A]]] = deriver.derive(this,u,a)
-  def deriveEOL[M[_]](u: List[Option[A]])(implicit deriver: RegExpDeriver[M]): M[Unit] = deriver.deriveEOL(this,u)
+  def derive[M[_,_]](a: A, u: List[Option[A]])(implicit deriver: RegExpDeriver[M])
+    : M[Option[RegExp[A]], Option[RegExp[A]]] = deriver.derive(this,u,Some(a))
+  def derive[M[_,_]](a: Option[A], u: List[Option[A]])(implicit deriver: RegExpDeriver[M])
+    : M[Option[RegExp[A]], Option[RegExp[A]]] = deriver.derive(this,u,a)
+  def deriveEOL[M[_,_]](u: List[Option[A]])(implicit deriver: RegExpDeriver[M])
+    : M[Unit, Unit] = deriver.deriveEOL(this,u)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -199,24 +202,27 @@ object RegExp {
     val sigma = getElems(r0).map(Option(_)) + None // None: character which does not appear in given expression
     var states = Set((r0, true))
     val stack = Stack((r0, true))
-    var delta = Map[((RegExp[Char], Boolean), Option[Option[Char]]), Tree[(RegExp[Char], Boolean)]]()
-    implicit val deriver = new RegExpDeriver[Tree](option)
+    var delta = Map[
+      ((RegExp[Char], Boolean), Option[Option[Char]]),
+      DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)]
+    ]()
+    implicit val deriver = new RegExpDeriver[DTree](option)
 
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
       val s @ (r,b) = stack.pop
       val u = if (b) Nil else List(None)
       sigma.foreach{ a =>
-        val t = r.derive(a,u) >>= {
-          case Some(r) => Leaf((r, false))
-          case None => Success // simulates prefix match
+        val t: DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)] = r.derive(a,u) >>= {
+          case Some(r) => DLeaf((r, false))
+          case None => DSuccess() // simulates prefix match
         }
         delta += (s,Some(a)) -> t
-        val newExps = flat(t).filterNot(states.contains)
+        val newExps = DTreeMonad.leaves(t).filterNot(states.contains)
         states |= newExps.toSet
         stack.pushAll(newExps)
       }
-      val t = r.deriveEOL(u) >>= (_ => Success)
+      val t: DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)] = r.deriveEOL(u) >>= (_ => DSuccess())
       delta += (s,None) -> t
     }
 

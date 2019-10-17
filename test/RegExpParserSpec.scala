@@ -169,15 +169,15 @@ class RegExpParserSpec extends FlatSpec with Matchers {
   }
 
   it should "parse lookahead/lookbehind" in {
-    RegExpParser("""(?=a)""") should be (LookaheadExp(ElemExp('a'), true))
-    RegExpParser("""(?!a)""") should be (LookaheadExp(ElemExp('a'), false))
-    RegExpParser("""(?<=a)""") should be (LookbehindExp(ElemExp('a'), true))
-    RegExpParser("""(?<!a)""") should be (LookbehindExp(ElemExp('a'), false))
+    RegExpParser("(?=a)") should be (LookaheadExp(ElemExp('a'), true))
+    RegExpParser("(?!a)") should be (LookaheadExp(ElemExp('a'), false))
+    RegExpParser("(?<=a)") should be (LookbehindExp(ElemExp('a'), true))
+    RegExpParser("(?<!a)") should be (LookbehindExp(ElemExp('a'), false))
   }
 
   it should "parse if expression" in {
-    RegExpParser("""(?(a)b)""") should be (IfExp(ElemExp('a'), ElemExp('b'), EpsExp()))
-    RegExpParser("""(?(a)b|c)""") should be (IfExp(ElemExp('a'), ElemExp('b'), ElemExp('c')))
+    RegExpParser("(?(a)b)") should be (IfExp(ElemExp('a'), ElemExp('b'), EpsExp()))
+    RegExpParser("(?(a)b|c)") should be (IfExp(ElemExp('a'), ElemExp('b'), ElemExp('c')))
   }
 
   it should "parse lazy operations" in {

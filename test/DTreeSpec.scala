@@ -29,7 +29,7 @@ class DTreeSpec extends FlatSpec with Matchers {
       DAssert(DOr(DFail(), DSuccess()), DOr(DLeaf(2), DSuccess())),
       DAssertNot(DSuccess(), DLeaf(3)))
     )
-    leaves(t) should be (Set(1,2,3))
+    leaves(t) should be (Seq(1,2,3))
   }
 
   "eval" should "evaluate the given tree" in {

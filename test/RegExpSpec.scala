@@ -41,7 +41,7 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   "constructTransducer" should "construct transducer which simulates exhaustive search" in {
-    val r0 = RegExpParser("a*a*b|ba")
+    val r0 = RegExpParser("^(a*a*b|ba)")
     val r1 = RegExpParser("a*a*b")
     val r2 = RegExpParser("a*b")
     val r3 = RegExpParser("a")

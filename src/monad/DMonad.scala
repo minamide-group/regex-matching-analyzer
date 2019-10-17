@@ -13,9 +13,9 @@ trait DMonad[M[_,_]] {
   def eval[A](m: M[A,A])(assignment: A => Boolean): Boolean
   def evalr[A](m: M[Nothing,A])(v: A => Boolean): Boolean
 
-  def leaves[A](m: M[A,A]): Set[A]
+  def leaves[A](m: M[A,A]): Seq[A]
 
-  final def apply[B](b: B) = unit(b)
+  final def apply[A,B](b: B) = unit[A,B](b)
 }
 
 object DMonad {

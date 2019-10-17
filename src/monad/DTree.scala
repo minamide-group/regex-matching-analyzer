@@ -62,21 +62,30 @@ object DTree {
         case DSuccess() => true
         case DFail() => false
         case DOr(l,r) => evalr(l)(v) || evalr(r)(v)
-        case DAssert(l,r) => eval(l)(_ => true) && evalr(r)(v)
-        case DAssertNot(l,r) => !eval(l)(_ => true) && evalr(r)(v)
+        case DAssert(l,r) => eval(l)(identity) && evalr(r)(v)
+        case DAssertNot(l,r) => !eval(l)(identity) && evalr(r)(v)
         case DLft(_) => throw new Exception("eval operetor is undefined for DLft.")
       }
     }
 
     def leaves[A](m: DTree[A,A]) = {
       m match {
-        case DLeaf(a) => Set(a)
-        case DSuccess() | DFail() => Set()
-        case DOr(l,r) => leaves(l) | leaves(r)
-        case DAssert(l,r) => leaves(l) | leaves(r)
-        case DAssertNot(l,r) => leaves(l) | leaves(r)
-        case DLft(_) => throw new Exception("toSet operetor is undefined for DLft.")
+        case DLeaf(a) => Seq(a)
+        case DSuccess() | DFail() => Seq()
+        case DOr(l,r) => leaves(l) ++ leaves(r)
+        case DAssert(l,r) => leaves(l) ++ leaves(r)
+        case DAssertNot(l,r) => leaves(l) ++ leaves(r)
+        case DLft(l) => leaves(l)
       }
+    }
+  }
+
+  def prune[Q](t: DTree[Q,Q], qs: Set[Q] = Set[Q]()): DTree[Q,Q] = {
+    t match {
+      case DOr(l,r) => if (DTreeMonad.eval(l)(qs)) DLft(prune(l,qs)) else DOr(l,prune(r,qs))
+      case DAssert(l,r) => if (!DTreeMonad.eval(l)(qs)) DLft(prune(l,qs)) else DAssert(l,prune(r,qs))
+      case DAssertNot(l,r) => if (DTreeMonad.eval(l)(qs)) DLft(prune(l,qs)) else DAssertNot(l,prune(r,qs))
+      case _ => t
     }
   }
 }
