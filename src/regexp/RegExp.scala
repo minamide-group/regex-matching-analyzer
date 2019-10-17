@@ -182,11 +182,26 @@ object RegExp {
       }
     }
 
-    val sigma = getElems(r).map(Option(_)) + None // None: character which does not appear in given expression
-    var states = Set((r, true))
-    val stack = Stack((r, true))
+    def isStartAnchorHead[A](r: RegExp[A]): Boolean = {
+      r match {
+        case StartAnchorExp() => true
+        case ConcatExp(r1,_) => isStartAnchorHead(r1)
+        case AltExp(r1,r2) => isStartAnchorHead(r1) && isStartAnchorHead(r2)
+        case PlusExp(r,_) => isStartAnchorHead(r)
+        case RepeatExp(r,min,_,_) if min.isDefined => isStartAnchorHead(r)
+        case GroupExp(r,_,_) => isStartAnchorHead(r)
+        case _ => false
+      }
+    }
+
+    val r0 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r) // simulates suffix match
+
+    val sigma = getElems(r0).map(Option(_)) + None // None: character which does not appear in given expression
+    var states = Set((r0, true))
+    val stack = Stack((r0, true))
     var delta = Map[((RegExp[Char], Boolean), Option[Option[Char]]), Tree[(RegExp[Char], Boolean)]]()
     implicit val deriver = new RegExpDeriver[Tree](option)
+
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
       val s @ (r,b) = stack.pop
@@ -194,7 +209,7 @@ object RegExp {
       sigma.foreach{ a =>
         val t = r.derive(a,u) >>= {
           case Some(r) => Leaf((r, false))
-          case None => Fail
+          case None => Success // simulates prefix match
         }
         delta += (s,Some(a)) -> t
         val newExps = flat(t).filterNot(states.contains)
@@ -205,7 +220,7 @@ object RegExp {
       delta += (s,None) -> t
     }
 
-    new DetTransducer(states, sigma, (r, true), delta)
+    new DetTransducer(states, sigma, (r0, true), delta)
   }
 
   def calcTimeComplexity(

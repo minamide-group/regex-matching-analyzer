@@ -102,9 +102,9 @@ class RegExpParser() extends RegexParsers {
             def namedBackRef: Parser[NamedBackReferenceExpIR[Char]] = (
               "(?P=" ~> variable <~ ")" |
               "\\k" ~> ("<" ~> variable <~ ">" |
-                "'" ~> variable <~ "'" |
-                "{" ~> variable <~ "}")
-              ) ^^ {NamedBackReferenceExpIR(_)}
+              "'" ~> variable <~ "'" |
+              "{" ~> variable <~ "}")
+            ) ^^ {NamedBackReferenceExpIR(_)}
             def num: Parser[NumExpIR] = "\\" ~> """\d+""".r ^^ {NumExpIR(_)}
             def hex: Parser[Char] = "\\x" ~> "[0-9a-fA-F]{0,2}".r ^^ { code =>
               Integer.parseInt(s"0${code}", 16).toChar
