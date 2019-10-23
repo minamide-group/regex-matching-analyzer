@@ -305,7 +305,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
 
 
   "derive with ignore case option" should "derive character" in {
-    deriver = new RegExpDeriver[DTree](new PCREOption("i"))
+    deriver = new RegExpDeriver[DTree](new PCREOptions("i"))
 
     val r1 = RegExpParser("a")
     leaves(r1.derive('a', Nil)) should be (List(Some(EpsExp())))
@@ -321,7 +321,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   it should "derive character class" in {
-    deriver = new RegExpDeriver[DTree](new PCREOption("i"))
+    deriver = new RegExpDeriver[DTree](new PCREOptions("i"))
 
     val r1 = RegExpParser("[ac-e]")
     leaves(r1.derive('a', Nil)) should be (List(Some(EpsExp())))
@@ -341,7 +341,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   "derive with dot all option" should "derive dot" in {
-    deriver = new RegExpDeriver[DTree](new PCREOption("s"))
+    deriver = new RegExpDeriver[DTree](new PCREOptions("s"))
 
     val r = RegExpParser(".")
     leaves(r.derive('a', Nil)) should be (List(Some(EpsExp())))
@@ -349,7 +349,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   "derive with ungreedy option" should "derive repeat expression" in {
-    deriver = new RegExpDeriver[DTree](new PCREOption("U"))
+    deriver = new RegExpDeriver[DTree](new PCREOptions("U"))
 
     val r1 = RegExpParser("a*")
     leaves(r1.derive('a', Nil)) should be (List(None, Some(StarExp(ElemExp('a'), true))))

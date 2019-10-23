@@ -87,22 +87,15 @@ object Main {
 
   def test(regExpStr: String, settings: Settings): TestResult = {
     try {
-      val (r,option) = settings.style match {
-        case Raw => (RegExpParser(regExpStr), new PCREOption())
+      val (r,options) = settings.style match {
+        case Raw => (RegExpParser(regExpStr), new PCREOptions())
         case PCRE => RegExpParser.parsePCRE(regExpStr)
       }
       runWithLimit(settings.timeout) {
-        getTransducerSize(r,option)
+        calcTimeComplexity(r,options,settings.method)
       } match {
-        case (Analysis.Success(ruleSize),_) =>
-          runWithLimit(settings.timeout) {
-            calcTimeComplexity(r,option,settings.method)
-          } match {
-            case (Analysis.Success((growthRate, witness)),time) =>
-              Success(growthRate, witness, ruleSize, time)
-            case (Analysis.Failure(message),_) => Skipped(message)
-            case (Analysis.Timeout(_),_) => Timeout
-          }
+        case (Analysis.Success((growthRate, witness, approximated, ruleSize)),time) =>
+          Success(growthRate, witness, approximated, ruleSize, time)
         case (Analysis.Failure(message),_) => Skipped(message)
         case (Analysis.Timeout(_),_) => Timeout
       }
@@ -135,85 +128,111 @@ object Main {
     val dirName = s"output/${inputFile.replaceAll("""\W""","_")}_${startTime.replaceAll("""\W""","-")}"
     IO.createDirectory(dirName)
 
-    val resultName = s"${dirName}/result.txt"
-    val resultListName = s"${dirName}/list.txt"
-    val timeName = s"${dirName}/time.txt"
-    val resultFile = IO.createFile(resultName)
-    val resultListFile = IO.createFile(resultListName)
-    val timeFile = IO.createFile(timeName)
+    val resultFile = IO.createFile(s"${dirName}/result.txt")
+    val resultListFile = IO.createFile(s"${dirName}/list.txt")
+    val summaryFile = IO.createFile(s"${dirName}/summary.txt")
+    val timeFile = IO.createFile(s"${dirName}/time.txt")
 
-    def writeResult(s: String = "") {
-      println(s)
-      resultFile.writeln(s)
+    val detailDirNames = List(
+      "constant",
+      "linear",
+      "polynomial",
+      "exponential"
+    ).flatMap(resultStr => List(
+      (resultStr, Some(false)) -> s"${dirName}/${resultStr}",
+      (resultStr, Some(true)) -> s"${dirName}/approximated/${resultStr}"
+    )).toMap ++ List(
+      "timeout",
+      "skipped",
+      "error"
+    ).flatMap(resultStr =>
+      List(
+      (resultStr, None) -> s"${dirName}/${resultStr}",
+    )).toMap
+    IO.createDirectory(s"${dirName}/approximated")
+    detailDirNames.values.foreach(IO.createDirectory)
+    val detailFiles = detailDirNames.map{ case (key, name) =>
+      key -> IO.createFile(s"${name}/result.txt")
+    }.toMap
+    val detailListFiles = detailDirNames.map{ case (key, name) =>
+      key -> IO.createFile(s"${name}/list.txt")
+    }.toMap
+    val degreeFiles = MTMap[(Int, Boolean), File]()
+    val degreeListFiles = MTMap[(Int, Boolean), File]()
+
+    val summaryCount = MTMap[(String, Option[Boolean]), Int]().withDefaultValue(0)
+    val degreeCount = MTMap[(Int, Boolean), Int]().withDefaultValue(0)
+
+    def printProgress(idx: Int) {
+      println(s"${idx+1}/${total}")
     }
 
-    def writeTime(s: String) {
-      timeFile.writeln(s)
+    def writeResult(regExpStr: String, result: TestResult) {
+      val resultStr = result match {
+        case Success(d,_,_,_,_) => d match {
+          case Some(0) => "constant"
+          case Some(1) => "linear"
+          case Some(d) => "polynomial"
+          case None => "exponential"
+        }
+        case Skipped(_) => "skipped"
+        case Error(_) => "error"
+        case Timeout => "timeout"
+      }
+
+      val approximated = result match {
+        case Success(_,_,b,_,_) => Some(b)
+        case _ => None
+      }
+
+      println(result.toString)
+      println()
+
+      resultFile.writeln(regExpStr)
+      resultFile.writeln(result.toString)
+      resultFile.writeln()
+      resultListFile.writeln(regExpStr)
+
+      detailFiles((resultStr,approximated)).writeln(regExpStr)
+      detailFiles((resultStr,approximated)).writeln(result.toString)
+      detailFiles((resultStr,approximated)).writeln()
+      detailListFiles((resultStr,approximated)).writeln(regExpStr)
+
+      result match {
+        case s: Success =>
+          timeFile.writeln(s.getTime())
+        case _ => // NOP
+      }
+
+      summaryCount((resultStr,approximated)) += 1
+
+      result match {
+        case Success(Some(d),_,b,_,_) if d >= 2 =>
+          if (!degreeFiles.contains((d,b))) {
+            IO.createDirectory(s"${detailDirNames(("polynomial",Some(b)))}/degree_${d}")
+            degreeFiles += (d,b) -> IO.createFile(
+              s"${detailDirNames(("polynomial",Some(b)))}/degree_${d}/result.txt")
+            degreeListFiles += (d,b) -> IO.createFile(
+              s"${detailDirNames(("polynomial",Some(b)))}/degree_${d}/list.txt")
+          }
+
+          degreeFiles((d,b)).writeln(regExpStr)
+          degreeFiles((d,b)).writeln(result.toString)
+          degreeFiles((d,b)).writeln()
+          degreeListFiles((d,b)).writeln(regExpStr)
+
+          degreeCount((d,b)) += 1
+        case _ => // NOP
+      }
     }
 
     regExpStrs.zipWithIndex.foreach{ case (regExpStr,idx) =>
-      println(s"${idx+1}/${total}")
-      writeResult(regExpStr)
-      resultListFile.writeln(regExpStr)
-      test(regExpStr, settings) match {
-        case s: Success =>
-          writeResult(s.toString())
-          writeTime(s.getTime())
-        case result =>
-          writeResult(result.toString())
-      }
-      writeResult()
+      printProgress(idx)
+      println(regExpStr)
+      writeResult(regExpStr, test(regExpStr, settings))
     }
-
-    resultFile.close()
-    resultListFile.close()
-    timeFile.close()
 
     val finishTime = DateFormat.getDateTimeInstance().format(new Date())
-
-    val resultStrs = List("constant", "linear", "polynomial", "exponential", "timeout", "skipped", "error")
-    val detailDirNames = resultStrs.map(resultStr => resultStr -> s"${dirName}/${resultStr}").toMap
-    resultStrs.foreach(resultStr => IO.createDirectory(detailDirNames(resultStr)))
-    val detailFiles = resultStrs.map(resultStr =>
-      resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/result.txt")
-    ).toMap
-    val detailListFiles = resultStrs.map(resultStr =>
-      resultStr -> IO.createFile(s"${detailDirNames(resultStr)}/list.txt")
-    ).toMap
-    val degreeFiles = MTMap[Int, File]()
-    val degreeListFiles = MTMap[Int, File]()
-    val summaryFile = IO.createFile(s"${dirName}/summary.txt")
-    val summaryCount = MTMap[String, Int]().withDefaultValue(0)
-    val degreeCount = MTMap[Int, Int]().withDefaultValue(0)
-
-    val results = IO.loadFile(resultName).getLines.filter(_.nonEmpty).sliding(2,2)
-    results.foreach{ case List(regExp, result) =>
-      val r = result.takeWhile(_.isLetter)
-      detailFiles(r).writeln(regExp)
-      detailFiles(r).writeln(result)
-      detailFiles(r).writeln()
-      detailListFiles(r).writeln(regExp)
-      summaryCount(r) += 1
-      if (r == "polynomial") {
-        val polynomialResult = """polynomial, degree (\d*).*""".r
-        result match {
-          case polynomialResult(degree) =>
-            val d = degree.toInt
-            if (!degreeFiles.contains(d)) {
-              IO.createDirectory(s"${detailDirNames("polynomial")}/degree_${d}")
-              degreeFiles += d -> IO.createFile(
-                s"${detailDirNames("polynomial")}/degree_${d}/result.txt")
-              degreeListFiles += d -> IO.createFile(
-                s"${detailDirNames("polynomial")}/degree_${d}/list.txt")
-            }
-            degreeFiles(d).writeln(regExp)
-            degreeFiles(d).writeln(result)
-            degreeFiles(d).writeln()
-            degreeListFiles(d).writeln(regExp)
-            degreeCount(d) += 1
-        }
-      }
-    }
 
     summaryFile.writeln(s"input file : ${inputFile}")
     summaryFile.writeln(s"started at : ${startTime}")
@@ -224,23 +243,44 @@ object Main {
     summaryFile.writeln()
 
     summaryFile.writeln(s"${"-"*3} result ${"-"*29}")
-    summaryFile.writeln(f"${"total"}%-11s: ${total}")
+    summaryFile.writeln(f"${"total"}%-12s: ${total}")
+
     summaryFile.writeln()
-    resultStrs.take(3).foreach{ resultStr =>
-      summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount(resultStr)}")
+    List("constant", "linear", "polynomial").foreach{ resultStr =>
+      summaryFile.writeln(f"${resultStr}%-12s: ${summaryCount((resultStr, Some(false)))}")
     }
-    degreeCount.toSeq.sortBy(_._1).foreach{ case (degree,count) =>
-      summaryFile.writeln(f"degree ${degree}: ${count}", 10)
+    degreeCount.toSeq.collect{
+      case (d,count) if !d._2 => (d._1, count)
+    }.sortBy(_._1).foreach{ case (degree,count) =>
+      summaryFile.writeln(s"degree ${degree}: ${count}", 10)
     }
-    resultStrs.drop(3).foreach{ resultStr =>
-      summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount(resultStr)}")
+    summaryFile.writeln(s"exponential : ${summaryCount(("exponential", Some(false)))}")
+
+    summaryFile.writeln()
+    summaryFile.writeln(s"approximated: ${summaryCount.filterKeys(_._2 == Some(true)).values.sum}")
+    List("constant", "linear", "polynomial").foreach{ resultStr =>
+      summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount((resultStr, Some(true)))}", 1)
+    }
+    degreeCount.toSeq.collect{
+      case (d,count) if d._2 => (d._1, count)
+    }.sortBy(_._1).foreach{ case (degree,count) =>
+      summaryFile.writeln(s"degree ${degree}: ${count}", 10)
+    }
+    summaryFile.writeln(s"exponential: ${summaryCount(("exponential", Some(true)))}", 1)
+
+    summaryFile.writeln()
+    List("timeout", "skipped", "error").foreach{ resultStr =>
+      summaryFile.writeln(f"${resultStr}%-12s: ${summaryCount((resultStr, None))}")
     }
     summaryFile.writeln(s"${"-"*40}")
 
+    resultFile.close()
+    resultListFile.close()
+    timeFile.close()
+    summaryFile.close()
     detailFiles.values.foreach(_.close())
     detailListFiles.values.foreach(_.close())
     degreeFiles.values.foreach(_.close())
     degreeListFiles.values.foreach(_.close())
-    summaryFile.close()
   }
 }

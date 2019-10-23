@@ -1,16 +1,15 @@
 package matching
 
-import transition.Witness
-
 sealed trait TestResult
 case class Success(
   growthRate: Option[Int],
   witness: Witness[Char],
+  approximated: Boolean,
   ruleSize: Int,
   time: Long
 ) extends TestResult {
   override def toString(): String = {
-    var str = ""
+    var str = if (approximated) "at most " else ""
     str += (growthRate match {
       case Some(0) => "constant"
       case Some(1) => "linear"

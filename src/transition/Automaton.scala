@@ -1,6 +1,6 @@
 package matching.transition
 
-import scala.collection.mutable.Stack
+import collection.mutable.Stack
 import matching.tool.Analysis
 
 class NFA[Q,A](

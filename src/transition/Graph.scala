@@ -1,6 +1,6 @@
 package matching.transition
 
-import scala.collection.mutable.{Queue, Stack}
+import collection.mutable.{Queue, Stack}
 import matching.tool.Analysis
 
 class Graph[V](

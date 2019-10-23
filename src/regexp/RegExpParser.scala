@@ -1,6 +1,6 @@
 package matching.regexp
 
-import scala.util.parsing.combinator._
+import util.parsing.combinator._
 import RegExp._
 import RegExpIR._
 
@@ -39,7 +39,7 @@ class RegExpParser() extends RegexParsers {
             }
             def empty: Parser[EmptyExp[Char]] = "∅" ^^ {_ => EmptyExp()}
             def eps: Parser[EpsExp[Char]] = "ε" ^^ {_ => EpsExp()}
-            def dot: Parser[DotExp] = "." ^^ {_ => DotExp()}
+            def dot: Parser[DotExp[Char]] = "." ^^ {_ => DotExp()}
             def group: Parser[RegExp[Char]] = {
               def captureGroup: Parser[RegExp[Char]] = "(" ~> exp <~ ")" ^^ {GroupExpIR(_,None)}
               def unCaptureGroup: Parser[RegExp[Char]] = "(?:" ~> exp <~ ")"
@@ -178,7 +178,7 @@ object RegExpParser {
     new RegExpParser().parseAll(s)
   }
 
-  def parsePCRE(s: String): (RegExp[Char], PCREOption) = {
+  def parsePCRE(s: String): (RegExp[Char], PCREOptions) = {
     val endDelimiter = s.head match {
       case '(' => ')'
       case '{' => '}'
@@ -194,7 +194,7 @@ object RegExpParser {
       val body = s.slice(1,endBodyIndex)
       val options = s.drop(endBodyIndex+1)
       val option = try {
-        new PCREOption(options)
+        new PCREOptions(options)
       } catch {
         case e: InvalidRegExpException =>
           throw RegExpParser.ParseException(s"${e.message}")

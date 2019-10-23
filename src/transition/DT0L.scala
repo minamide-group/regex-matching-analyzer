@@ -1,5 +1,6 @@
 package matching.transition
 
+import matching.Witness
 import matching.tool.{Analysis, Debug}
 
 class DT0L[A,Q](

@@ -1,7 +1,7 @@
 package matching.transition
 
-import scala.collection.mutable.Stack
-// import scala.collection.mutable.{Stack, Queue}
+import collection.mutable.Stack
+import matching.Witness
 import matching.monad._
 import matching.monad.DMonad._
 import matching.monad.DTree._

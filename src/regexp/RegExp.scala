@@ -1,6 +1,7 @@
 package matching.regexp
 
-import scala.collection.mutable.Stack
+import collection.mutable.Stack
+import matching.Witness
 import matching.monad._
 import matching.monad.DMonad._
 import matching.monad.DTree._
@@ -66,7 +67,7 @@ case class EndAnchorExp[A]() extends RegExp[A]
 case class LookaheadExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
 case class LookbehindExp[A](r: RegExp[A], positive: Boolean) extends RegExp[A]
 case class IfExp[A](cond: RegExp[A], rt: RegExp[A], rf: RegExp[A]) extends RegExp[A]
-case class DotExp() extends RegExp[Char]
+case class DotExp[A]() extends RegExp[A]
 case class CharClassExp(es: Seq[CharClassElem], positive: Boolean) extends RegExp[Char]
 case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
   val negetiveChar = Set('D', 'H', 'S', 'V', 'W')
@@ -89,7 +90,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 object RegExp {
   case class InvalidRegExpException(message: String) extends Exception(message: String)
 
-  class PCREOption(s: String = "") {
+  class PCREOptions(s: String = "") {
     var ignoreCase = false
     var dotAll = false
     var ungreedy = false
@@ -107,17 +108,17 @@ object RegExp {
       case ElemExp(a) => IO.escape(a)
       case EmptyExp() => "∅"
       case EpsExp() => "ε"
-      case ConcatExp(r1,r2) => s"(${r1}${r2})"
-      case AltExp(r1,r2) => s"(${r1}|${r2})"
-      case StarExp(r,greedy) => s"(${r})*${if (greedy) "" else "?"}"
-      case PlusExp(r,greedy) => s"(${r})+${if (greedy) "" else "?"}"
-      case OptionExp(r,greedy) => s"(${r})?${if (greedy) "" else "?"}"
+      case ConcatExp(r1,r2) => s"(?:${r1}${r2})"
+      case AltExp(r1,r2) => s"(?:${r1}|${r2})"
+      case StarExp(r,greedy) => s"(?:${r})*${if (greedy) "" else "?"}"
+      case PlusExp(r,greedy) => s"(?:${r})+${if (greedy) "" else "?"}"
+      case OptionExp(r,greedy) => s"(?:${r})?${if (greedy) "" else "?"}"
       case DotExp() => "."
       case RepeatExp(r,min,max,greedy) =>
         if (min == max) {
-          s"${r}{${min.get}}${if (greedy) "" else "?"}"
+          s"(?:${r}){${min.get}}${if (greedy) "" else "?"}"
         } else {
-          s"${r}{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
+          s"(?:${r}){${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
         }
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
@@ -147,45 +148,26 @@ object RegExp {
     }
   }
 
-  def constructTransducer(
-    r: RegExp[Char], option: PCREOption = new PCREOption()
-  ): DetTransducer[(RegExp[Char], Boolean), Option[Char]] = {
-    def getElems(r: RegExp[Char]): Set[Char] = {
+  def modifyRegExp[A](r: RegExp[A]): (RegExp[A], Boolean) = {
+    var approximated = false
+
+    def recursiveApply(r: RegExp[A], f: RegExp[A] => RegExp[A]): RegExp[A] = {
       r match {
-        case ElemExp(a) => if (option.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
-        case EmptyExp() | EpsExp() | BackReferenceExp(_,_) | StartAnchorExp() | EndAnchorExp() => Set()
-        case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
-        case AltExp(r1,r2) => getElems(r1) | getElems(r2)
-        case StarExp(r,greedy) => getElems(r)
-        case PlusExp(r,greedy) => getElems(r)
-        case OptionExp(r,greedy) => getElems(r)
-        case DotExp() => if (option.dotAll) Set() else Set('\n')
-        case RepeatExp(r,min,max,greedy) => getElems(r)
-        case GroupExp(r,_,_) => getElems(r)
-        case LookaheadExp(r,_) => getElems(r)
-        case LookbehindExp(r,_) => getElems(r)
-        case IfExp(cond,rt,rf) => getElems(cond) | getElems(rt) | getElems(rf)
-        case r @ CharClassExp(es,positive) =>
-          val s = es.flatMap(_.charSet).toSet
-          if (option.ignoreCase) {
-            s.map{
-              case a if a.isLetter => a.toLower
-              case a => a
-            }
-          } else s
-        case r @ MetaCharExp(c) =>
-          val s = r.charSet
-          if (option.ignoreCase) {
-            s.map{
-              case a if a.isLetter => a.toLower
-              case a => a
-            }
-          } else s
-        case _ => throw new Exception(s"getElems unsupported expression: ${r}")
+        case ConcatExp(r1,r2) => ConcatExp(f(r1),f(r2))
+        case AltExp(r1,r2) => AltExp(f(r1),f(r2))
+        case StarExp(r,greedy) => StarExp(f(r),greedy)
+        case PlusExp(r,greedy) => PlusExp(f(r),greedy)
+        case OptionExp(r,greedy) => OptionExp(f(r),greedy)
+        case RepeatExp(r,min,max,greedy) => RepeatExp(f(r),min,max,greedy)
+        case GroupExp(r,id,name) => GroupExp(f(r),id,name)
+        case LookaheadExp(r,positive) => LookaheadExp(f(r),positive)
+        case LookbehindExp(r,positive) => LookbehindExp(f(r),positive)
+        case IfExp(cond,rt,rf) => IfExp(f(cond),f(rt),f(rf))
+        case _ => r
       }
     }
 
-    def isStartAnchorHead[A](r: RegExp[A]): Boolean = {
+    def isStartAnchorHead(r: RegExp[A]): Boolean = {
       r match {
         case StartAnchorExp() => true
         case ConcatExp(r1,_) => isStartAnchorHead(r1)
@@ -197,16 +179,140 @@ object RegExp {
       }
     }
 
-    val r0 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r) // simulates suffix match
+    def getGroupMap(r: RegExp[A]): Map[Int, RegExp[A]] = {
+      r match {
+        case GroupExp(r,n,_) => Map(n -> r)
+        case ConcatExp(r1, r2) => getGroupMap(r1) ++ getGroupMap(r2)
+        case AltExp(r1, r2) => getGroupMap(r1) ++ getGroupMap(r2)
+        case StarExp(r,_) => getGroupMap(r)
+        case PlusExp(r,_) => getGroupMap(r)
+        case OptionExp(r,_) => getGroupMap(r)
+        case RepeatExp(r,_,_,_) => getGroupMap(r)
+        case LookaheadExp(r,positive) if positive => getGroupMap(r)
+        case LookbehindExp(r,positive) if positive => getGroupMap(r)
+        case IfExp(cond,rt,rf) => getGroupMap(cond) ++ getGroupMap(rt) ++ getGroupMap(rf)
+        case _ => Map()
+      }
+    }
 
-    val sigma = getElems(r0).map(Option(_)) + None // None: character which does not appear in given expression
-    var states = Set((r0, true))
-    val stack = Stack((r0, true))
+    def replaceBackReference(r: RegExp[A], groupMap: Map[Int, RegExp[A]]): RegExp[A] = {
+      def replaceBackReference(r: RegExp[A]): RegExp[A] = {
+        r match {
+          case BackReferenceExp(n,_) =>
+            approximated = true
+            groupMap(n)
+          case _ => recursiveApply(r,replaceBackReference)
+        }
+      }
+
+      replaceBackReference(r)
+    }
+
+    def getLookbehindMaxLength(r: RegExp[A]): Option[Int] = {
+      def getMaxLength(r: RegExp[A]): Option[Int] = {
+        r match {
+          case ElemExp(_) | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => Some(1)
+          case ConcatExp(r1, r2) =>
+            for (n1 <- getMaxLength(r1); n2 <- getMaxLength(r2)) yield n1 + n2
+          case AltExp(r1, r2) =>
+            for (n1 <- getMaxLength(r1); n2 <- getMaxLength(r2)) yield n1.max(n2)
+          case StarExp(_,_) | PlusExp(_,_) => None
+          case OptionExp(r,_) => getMaxLength(r)
+          case RepeatExp(r,_,max,_) =>
+            if (max.isDefined) getMaxLength(r).map(_*max.get) else None
+          case GroupExp(r,_,_) => getMaxLength(r)
+          case StartAnchorExp() => None
+          case _ => Some(0)
+        }
+      }
+
+      r match {
+        case LookbehindExp(r,_) => getMaxLength(r)
+        case ConcatExp(r1, r2) =>
+          for (n1 <- getLookbehindMaxLength(r1); n2 <- getLookbehindMaxLength(r2)) yield n1.max(n2)
+        case AltExp(r1, r2) =>
+          for (n1 <- getLookbehindMaxLength(r1); n2 <- getLookbehindMaxLength(r2)) yield n1.max(n2)
+        case StarExp(r,_) => getLookbehindMaxLength(r)
+        case PlusExp(r,_) => getLookbehindMaxLength(r)
+        case OptionExp(r,_) => getLookbehindMaxLength(r)
+        case RepeatExp(r,_,_,_) => getLookbehindMaxLength(r)
+        case GroupExp(r,_,_) => getLookbehindMaxLength(r)
+        case _ => Some(0)
+      }
+    }
+
+    def replaceLookbehind(r: RegExp[A]): RegExp[A] = {
+      r match {
+        case LookbehindExp(_,_) =>
+          approximated = true
+          EpsExp()
+          case _ => recursiveApply(r,replaceLookbehind)
+      }
+    }
+
+    // simulates suffix match
+    val r1 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r)
+
+    // replace back reference
+    val groupMap = getGroupMap(r1).withDefaultValue(EmptyExp())
+    val r2 = replaceBackReference(r1,groupMap)
+
+    // replace lookbehind
+    val r3 = getLookbehindMaxLength(r2) match {
+      case Some(_) => replaceLookbehind(r2)
+      case None => throw RegExp.InvalidRegExpException(
+        s"lookbehind with unbounded matching length is unsupported.")
+    }
+
+    (r3, approximated)
+  }
+
+  def constructTransducer(
+    r: RegExp[Char], options: PCREOptions = new PCREOptions()
+  ): DetTransducer[(RegExp[Char], Boolean), Option[Char]] = {
+    def getElems(r: RegExp[Char]): Set[Char] = {
+      r match {
+        case ElemExp(a) => if (options.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
+        case EmptyExp() | EpsExp() | BackReferenceExp(_,_) | StartAnchorExp() | EndAnchorExp() => Set()
+        case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
+        case AltExp(r1,r2) => getElems(r1) | getElems(r2)
+        case StarExp(r,_) => getElems(r)
+        case PlusExp(r,_) => getElems(r)
+        case OptionExp(r,_) => getElems(r)
+        case DotExp() => if (options.dotAll) Set() else Set('\n')
+        case RepeatExp(r,_,_,_) => getElems(r)
+        case GroupExp(r,_,_) => getElems(r)
+        case LookaheadExp(r,_) => getElems(r)
+        case LookbehindExp(r,_) => getElems(r)
+        case IfExp(cond,rt,rf) => getElems(cond) | getElems(rt) | getElems(rf)
+        case r @ CharClassExp(es,positive) =>
+          val s = es.flatMap(_.charSet).toSet
+          if (options.ignoreCase) {
+            s.map{
+              case a if a.isLetter => a.toLower
+              case a => a
+            }
+          } else s
+        case r @ MetaCharExp(c) =>
+          val s = r.charSet
+          if (options.ignoreCase) {
+            s.map{
+              case a if a.isLetter => a.toLower
+              case a => a
+            }
+          } else s
+        case _ => throw new Exception(s"getElems unsupported expression: ${r}")
+      }
+    }
+
+    val sigma = getElems(r).map(Option(_)) + None // None: character which does not appear in the given expression
+    var states = Set((r, true))
+    val stack = Stack((r, true))
     var delta = Map[
       ((RegExp[Char], Boolean), Option[Option[Char]]),
       DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)]
     ]()
-    implicit val deriver = new RegExpDeriver[DTree](option)
+    implicit val deriver = new RegExpDeriver[DTree](options)
 
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
@@ -226,37 +332,31 @@ object RegExp {
       delta += (s,None) -> t
     }
 
-    new DetTransducer(states, sigma, (r0, true), delta)
+    new DetTransducer(states, sigma, (r, true), delta)
   }
 
   def calcTimeComplexity(
     r: RegExp[Char],
-    option: PCREOption = new PCREOption(),
+    options: PCREOptions = new PCREOptions(),
     method: Option[BacktrackMethod]
-  ): (Option[Int], Witness[Char]) = {
+  ): (Option[Int], Witness[Char], Boolean, Int) // (degree, witness, approximated?, size of transducer)
+  = {
     def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
       val charForNone = '.'
       Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
     }
 
+    val (rm, approximated) = modifyRegExp(r)
+
     val transducer = Debug.time("regular expression -> transducer") {
-      constructTransducer(r,option)
+      constructTransducer(rm,options)
     }.rename()
 
     val (growthRate, witness) = method match {
       case Some(method) => transducer.calcGrowthRateBacktrack(method)
       case None => transducer.calcGrowthRate()
     }
-    (growthRate, convertWitness(witness))
-  }
-
-  def getTransducerSize(
-    r: RegExp[Char],
-    option: PCREOption = new PCREOption()
-  ): Int = {
-    val transducer = constructTransducer(r,option).rename()
-
-    transducer.deltaDet.size
+    (growthRate, convertWitness(witness), approximated, transducer.deltaDet.size)
   }
 }
 

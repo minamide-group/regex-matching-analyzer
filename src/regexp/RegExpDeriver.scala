@@ -4,7 +4,7 @@ import matching.monad._
 import matching.monad.DMonad._
 import RegExp._
 
-class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: DMonad[M]) {
+class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M]) {
   def derive[A](r: RegExp[A], u: List[Option[A]], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
     def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
       def accept(a: Option[A]): Boolean = {
@@ -12,21 +12,21 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
           r match {
             case SingleCharExp(c) => a match {
               case Some(a) =>
-                if (option.ignoreCase && a.isLetter) {
+                if (options.ignoreCase && a.isLetter) {
                   a.toLower == c || a.toUpper == c
                 } else a == c
               case None => false
             }
             case RangeExp(start, end) => a match {
               case Some(a) =>
-                if (option.ignoreCase && a.isLetter) {
+                if (options.ignoreCase && a.isLetter) {
                   r.charSet.contains(a.toLower) || r.charSet.contains(a.toUpper)
                 } else r.charSet.contains(a)
               case None => false
             }
             case r @ MetaCharExp(_) => a match {
               case Some(a) =>
-                if (option.ignoreCase && a.isLetter) {
+                if (options.ignoreCase && a.isLetter) {
                   (r.charSet.contains(a.toLower) || r.charSet.contains(a.toUpper)) ^ r.negative
                 } else r.charSet.contains(a) ^ r.negative
               case None => r.negative
@@ -37,7 +37,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
         r match {
           case ElemExp(b) => a match {
             case Some(a: Char) =>
-              if (option.ignoreCase && a.isLetter) {
+              if (options.ignoreCase && a.isLetter) {
                 a.toLower == b || a.toUpper == b
               } else {
                 a == b
@@ -46,7 +46,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
             case None => false
           }
           case DotExp() => a match {
-            case Some(a) => option.dotAll || a != '\n'
+            case Some(a) => options.dotAll || a != '\n'
             case None => true
           }
           case CharClassExp(es,positive) => es.exists(acceptCharClass(_,a)) ^ !positive
@@ -74,7 +74,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
           case Some(r2) => m(Some(optConcatExp(r2,r)))
           case None => m(None)
         }
-        if (greedy ^ option.ungreedy) {
+        if (greedy ^ options.ungreedy) {
           rd ++ m(None)
         } else {
           (m(None): M[Option[RegExp[A]], Option[RegExp[A]]]) ++ rd
@@ -87,7 +87,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
         }
       case OptionExp(r,greedy) =>
         val dr = derive(r,u,a)
-        if (greedy ^ option.ungreedy) {
+        if (greedy ^ options.ungreedy) {
           dr ++ m(None)
         } else {
           (m(None): M[Option[RegExp[A]], Option[RegExp[A]]]) ++ dr
@@ -100,7 +100,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
         }
         if (min.isDefined) {
           rd
-        } else if (greedy ^ option.ungreedy) {
+        } else if (greedy ^ options.ungreedy) {
           rd ++ m(None)
         } else {
           (m(None): M[Option[RegExp[A]], Option[RegExp[A]]]) ++ rd
@@ -125,7 +125,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
       case AltExp(r1,r2) => deriveEOL(r1,u) ++ deriveEOL(r2,u)
       case StarExp(r,greedy) =>
         val rd = deriveEOL(r,u)
-        if (greedy ^ option.ungreedy) {
+        if (greedy ^ options.ungreedy) {
           rd ++ m(())
         } else {
           m(()) ++ rd
@@ -135,7 +135,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
         deriveEOL(r,u) `>>=r` (_ => deriveEOL(rStar,u))
       case OptionExp(r,greedy) =>
         val dr = deriveEOL(r,u)
-        if (greedy ^ option.ungreedy) {
+        if (greedy ^ options.ungreedy) {
           dr ++ m(())
         } else {
           m(()) ++ dr
@@ -145,7 +145,7 @@ class RegExpDeriver[M[_,_]](option: PCREOption = new PCREOption())(implicit m: D
         val rd = deriveEOL(r,u) `>>=r` (_ => deriveEOL(rDec,u))
         if (min.isDefined) {
           rd
-        } else if (greedy ^ option.ungreedy) {
+        } else if (greedy ^ options.ungreedy) {
           rd ++ m(())
         } else {
           m(()) ++ rd

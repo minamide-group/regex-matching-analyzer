@@ -1,7 +1,7 @@
 package matching.tool
 
-import scala.concurrent._
-import scala.concurrent.duration._
+import concurrent._
+import concurrent.duration._
 import ExecutionContext.Implicits.global
 
 object Analysis {
@@ -28,8 +28,9 @@ object Analysis {
           case e: InterruptedNotification =>
             Debug.debug(s"interrupted: ${e.message}")
             Timeout(e.message)
-          case e: Exception =>
-            Failure(e.getMessage())
+          case e: Throwable =>
+            val message = e.getMessage()
+            Failure(if (message != null) message else "unknown error.")
         }
         val finish = System.currentTimeMillis()
         result = (a, finish - start)
@@ -50,7 +51,7 @@ object Analysis {
         thread.join()
         result match {
           case (Timeout(_),_) => result
-          case (_,time) => (Timeout("unknown."), time)
+          case (_,time) => (Timeout("unknown timeout."), time)
         }
     }
   }
