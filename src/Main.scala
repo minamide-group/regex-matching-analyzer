@@ -123,7 +123,8 @@ object Main {
     val regExpStrs = IO.loadFile(inputFile).getLines.toSeq
     val total = regExpStrs.length
 
-    val startTime = DateFormat.getDateTimeInstance().format(new Date())
+    val dateFormat = DateFormat.getDateTimeInstance()
+    val startTime = dateFormat.format(new Date())
 
     val dirName = s"output/${inputFile.replaceAll("""\W""","_")}_${startTime.replaceAll("""\W""","-")}"
     IO.createDirectory(dirName)
@@ -162,10 +163,6 @@ object Main {
 
     val summaryCount = MTMap[(String, Option[Boolean]), Int]().withDefaultValue(0)
     val degreeCount = MTMap[(Int, Boolean), Int]().withDefaultValue(0)
-
-    def printProgress(idx: Int) {
-      println(s"${idx+1}/${total}")
-    }
 
     def writeResult(regExpStr: String, result: TestResult) {
       val resultStr = result match {
@@ -226,13 +223,27 @@ object Main {
       }
     }
 
+    val started = new Date().getTime()
+
+    def printProgress(idx: Int) {
+      var expected: Date = null
+      if (idx > 0) {
+        val now = new Date().getTime()
+        val average = (now - started) / idx
+        expected = new Date(now + average * (total - idx))
+      }
+      println(s"${idx+1}/${total}, estimated to finish at: ${
+        if (expected != null) dateFormat.format(expected) else "--------"
+      }")
+    }
+
     regExpStrs.zipWithIndex.foreach{ case (regExpStr,idx) =>
       printProgress(idx)
       println(regExpStr)
       writeResult(regExpStr, test(regExpStr, settings))
     }
 
-    val finishTime = DateFormat.getDateTimeInstance().format(new Date())
+    val finishTime = dateFormat.format(new Date())
 
     summaryFile.writeln(s"input file : ${inputFile}")
     summaryFile.writeln(s"started at : ${startTime}")
@@ -256,19 +267,22 @@ object Main {
     }
     summaryFile.writeln(s"exponential : ${summaryCount(("exponential", Some(false)))}")
 
-    summaryFile.writeln()
-    summaryFile.writeln(s"approximated: ${summaryCount.filterKeys(_._2 == Some(true)).values.sum}")
-    List("constant", "linear", "polynomial").foreach{ resultStr =>
-      summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount((resultStr, Some(true)))}", 1)
+    val approximatedCount = summaryCount.filterKeys(_._2 == Some(true)).values.sum
+    if (approximatedCount > 0) {
+      summaryFile.writeln()
+      summaryFile.writeln(s"approximated: ${approximatedCount}")
+      List("constant", "linear", "polynomial").foreach{ resultStr =>
+        summaryFile.writeln(f"${resultStr}%-11s: ${summaryCount((resultStr, Some(true)))}", 1)
+      }
+      degreeCount.toSeq.collect{
+        case (d,count) if d._2 => (d._1, count)
+      }.sortBy(_._1).foreach{ case (degree,count) =>
+        summaryFile.writeln(s"degree ${degree}: ${count}", 10)
+      }
+      summaryFile.writeln(s"exponential: ${summaryCount(("exponential", Some(true)))}", 1)
+      summaryFile.writeln()
     }
-    degreeCount.toSeq.collect{
-      case (d,count) if d._2 => (d._1, count)
-    }.sortBy(_._1).foreach{ case (degree,count) =>
-      summaryFile.writeln(s"degree ${degree}: ${count}", 10)
-    }
-    summaryFile.writeln(s"exponential: ${summaryCount(("exponential", Some(true)))}", 1)
 
-    summaryFile.writeln()
     List("timeout", "skipped", "error").foreach{ resultStr =>
       summaryFile.writeln(f"${resultStr}%-12s: ${summaryCount((resultStr, None))}")
     }
