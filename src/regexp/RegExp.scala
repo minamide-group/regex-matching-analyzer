@@ -108,18 +108,51 @@ object RegExp {
       case ElemExp(a) => IO.escape(a)
       case EmptyExp() => "∅"
       case EpsExp() => "ε"
-      case ConcatExp(r1,r2) => s"(?:${r1}${r2})"
-      case AltExp(r1,r2) => s"(?:${r1}|${r2})"
-      case StarExp(r,greedy) => s"(?:${r})*${if (greedy) "" else "?"}"
-      case PlusExp(r,greedy) => s"(?:${r})+${if (greedy) "" else "?"}"
-      case OptionExp(r,greedy) => s"(?:${r})?${if (greedy) "" else "?"}"
+      case ConcatExp(r1,r2) =>
+        val reg1 = r1 match {
+          case AltExp(_,_) => s"(?:${r1})"
+          case _ => r1.toString
+        }
+        val reg2 = r2 match {
+          case ConcatExp(_,_) | AltExp(_,_) => s"(?:${r2})"
+          case _ => r2.toString
+        }
+        s"${reg1}${reg2}"
+      case AltExp(r1,r2) => r2 match {
+        case AltExp(_,_) => s"${r1}|(?:${r2})"
+        case _ => s"${r1}|${r2}"
+      }
+      case StarExp(r,greedy) => r match {
+        case ConcatExp(_,_) | AltExp(_,_) |
+          StarExp(_,_) | PlusExp(_,_) | OptionExp(_,_) | RepeatExp(_,_,_,_) =>
+          s"(?:${r})*${if (greedy) "" else "?"}"
+        case _ => s"${r}*${if (greedy) "" else "?"}"
+      }
+      case PlusExp(r,greedy) => r match {
+        case ConcatExp(_,_) | AltExp(_,_) |
+          StarExp(_,_) | PlusExp(_,_) | OptionExp(_,_) | RepeatExp(_,_,_,_) =>
+          s"(?:${r})+${if (greedy) "" else "?"}"
+        case _ => s"${r}+${if (greedy) "" else "?"}"
+      }
+      case OptionExp(r,greedy) => r match {
+        case ConcatExp(_,_) | AltExp(_,_) |
+          StarExp(_,_) | PlusExp(_,_) | OptionExp(_,_) | RepeatExp(_,_,_,_)
+          => s"(?:${r})?${if (greedy) "" else "?"}"
+        case _ => s"${r}?${if (greedy) "" else "?"}"
+      }
       case DotExp() => "."
       case RepeatExp(r,min,max,greedy) =>
-        if (min == max) {
-          s"(?:${r}){${min.get}}${if (greedy) "" else "?"}"
-        } else {
-          s"(?:${r}){${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
+        val reg = r match {
+          case ConcatExp(_,_) | AltExp(_,_) |
+            StarExp(_,_) | PlusExp(_,_) | OptionExp(_,_) | RepeatExp(_,_,_,_) => s"(?:${r})"
+          case _ => r.toString
         }
+        val rep = if (min == max) {
+          s"{${min.get}}${if (greedy) "" else "?"}"
+        } else {
+          s"{${min.getOrElse("")},${max.getOrElse("")}}${if (greedy) "" else "?"}"
+        }
+        s"${reg}${rep}"
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
       case GroupExp(r,_,name) => name match {
