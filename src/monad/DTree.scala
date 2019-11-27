@@ -2,6 +2,7 @@ package matching.monad
 
 import DMonad._
 
+
 sealed trait DTree[A,B]
 case class DLeaf[A,B](b: B) extends DTree[A,B]
 case class DSuccess[A,B]() extends DTree[A,B]
@@ -12,7 +13,7 @@ case class DAssertNot[A,B](l: DTree[A,A], r: DTree[A,B]) extends DTree[A,B]
 case class DLft[A,B](l: DTree[A,B]) extends DTree[A,B]
 
 object DTree {
-  implicit object DTreeMonad extends DMonad[DTree] {
+  implicit object DTreeMonad extends DMonad[DTree] with Evaluable[DTree] {
     def unit[A,B](b: B) = DLeaf(b)
     def bindl[A,B,C](m: DTree[A,B], f: A => DTree[C,C]) = {
       m match {

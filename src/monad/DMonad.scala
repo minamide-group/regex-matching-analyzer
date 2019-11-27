@@ -10,11 +10,6 @@ trait DMonad[M[_,_]] {
   def assert[A,B](m1: M[A,A], m2: M[A,B]): M[A,B]
   def assertNot[A,B](m1: M[A,A], m2: M[A,B]): M[A,B]
 
-  def eval[A](m: M[A,A])(assignment: A => Boolean): Boolean
-  def evalr[A](m: M[Nothing,A])(v: A => Boolean): Boolean
-
-  def leaves[A](m: M[A,A]): Seq[A]
-
   final def apply[A,B](b: B) = unit[A,B](b)
 }
 
