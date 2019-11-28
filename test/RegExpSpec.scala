@@ -52,4 +52,60 @@ class RegExpSpec extends FlatSpec with Matchers {
     transducer.initialState should be ((r0,true))
     transducer.delta should have size (20)
   }
+
+  "modifyRegExp" should "convert/approximate the given expression to an analyzable one" in {
+    modifyRegExp(RegExpParser("ab|cd*"))._1 should be (RegExpParser(".*?(?:ab|cd*)"))
+    modifyRegExp(RegExpParser("^ab*"))._1 should be (RegExpParser("^ab*"))
+    modifyRegExp(RegExpParser("^a(?<=b)"))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        ElemExp('a'),
+        FailEpsExp()
+      ).reduceLeft(ConcatExp(_,_)))
+    modifyRegExp(RegExpParser("^a(?<!ab|c)"))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        ElemExp('a'),
+        FailEpsExp()
+      ).reduceLeft(ConcatExp(_,_)))
+    modifyRegExp(RegExpParser("""^(a)\1"""))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        GroupExp(ElemExp('a'),1,None),
+        ConcatExp(ElemExp('a'), FailEpsExp())
+      ).reduceLeft(ConcatExp(_,_)))
+    modifyRegExp(RegExpParser("""^(a)\1(?<hoge>b*)(?P=hoge)"""))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        GroupExp(ElemExp('a'),1,None),
+        ConcatExp(ElemExp('a'), FailEpsExp()),
+        GroupExp(StarExp(ElemExp('b'),true),2,Some("hoge")),
+        ConcatExp(StarExp(ElemExp('b'),true), FailEpsExp()),
+      ).reduceLeft(ConcatExp(_,_)))
+    modifyRegExp(RegExpParser("""^((?<=a))\1"""))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        GroupExp(FailEpsExp(),1,None),
+        ConcatExp(FailEpsExp(), FailEpsExp())
+      ).reduceLeft(ConcatExp(_,_)))
+    modifyRegExp(RegExpParser("""^(a)(b\1)\2"""))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        GroupExp(ElemExp('a'),1,None),
+        GroupExp(ConcatExp(ElemExp('b'), ConcatExp(ElemExp('a'), FailEpsExp())),2,None),
+        ConcatExp(ConcatExp(ElemExp('b'), ConcatExp(ElemExp('a'), FailEpsExp())), FailEpsExp())
+      ).reduceLeft(ConcatExp(_,_)))
+  }
+
+  it should "throw exception if the given expression has unsupported features" in {
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?(a)b|c)"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?=(?<=a))"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?!(?<!a))"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?<=a*)"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?<!a+)"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a)(?=\1)"""))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a|\1)"""))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a\2)(\1|b\1)"""))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a\2)(\3|b)|(\1c*)"""))}
+  }
 }

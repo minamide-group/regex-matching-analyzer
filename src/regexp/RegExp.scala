@@ -86,6 +86,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
   val negative = negetiveChar(c)
 }
 
+case class FailEpsExp[A]() extends RegExp[A]
 
 object RegExp {
   case class InvalidRegExpException(message: String) extends Exception(message: String)
@@ -168,6 +169,7 @@ object RegExp {
       case LookaheadExp(r,positive) => s"(?${if (positive) "=" else "!"}${r})"
       case LookbehindExp(r,positive) => s"(?<${if (positive) "=" else "!"}${r})"
       case IfExp(cond,rt,rf) => s"(?(${cond})${rt}|${rf})"
+      case FailEpsExp() => "\u25C7"
     }
   }
 
@@ -181,7 +183,7 @@ object RegExp {
     }
   }
 
-  def modifyRegExp[A](r: RegExp[A]): (RegExp[A], Boolean) = {
+  def modifyRegExp[A](r: RegExp[A]): (RegExp[A], Boolean, Int) = {
     var approximated = false
 
     def recursiveApply(r: RegExp[A], f: RegExp[A] => RegExp[A]): RegExp[A] = {
@@ -195,8 +197,33 @@ object RegExp {
         case GroupExp(r,id,name) => GroupExp(f(r),id,name)
         case LookaheadExp(r,positive) => LookaheadExp(f(r),positive)
         case LookbehindExp(r,positive) => LookbehindExp(f(r),positive)
-        case IfExp(cond,rt,rf) => IfExp(f(cond),f(rt),f(rf))
         case _ => r
+      }
+    }
+
+    def checkSupported(r: RegExp[A], inLookAhaed: Boolean = false): Unit = {
+      r match {
+        case ConcatExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
+        case AltExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
+        case StarExp(r,_) => checkSupported(r, inLookAhaed)
+        case PlusExp(r,_) => checkSupported(r, inLookAhaed)
+        case OptionExp(r,_) => checkSupported(r, inLookAhaed)
+        case RepeatExp(r,_,_,_) => checkSupported(r, inLookAhaed)
+        case GroupExp(r,_,_) => checkSupported(r, inLookAhaed)
+        case BackReferenceExp(_,_) => if (inLookAhaed) {
+          throw RegExp.InvalidRegExpException(
+            s"back reference in lookahead is unsupported.")
+          }
+        case LookaheadExp(r,_) => checkSupported(r, true)
+        case LookbehindExp(r,_) => if (inLookAhaed) {
+            throw RegExp.InvalidRegExpException(
+              s"lookbehind in lookahead is unsupported.")
+          } else {
+            checkSupported(r, inLookAhaed)
+          }
+        case IfExp(_,_,_) => throw RegExp.InvalidRegExpException(
+            s"conditional expression is unsupported.")
+        case _ => // noop
       }
     }
 
@@ -210,35 +237,6 @@ object RegExp {
         case GroupExp(r,_,_) => isStartAnchorHead(r)
         case _ => false
       }
-    }
-
-    def getGroupMap(r: RegExp[A]): Map[Int, RegExp[A]] = {
-      r match {
-        case GroupExp(r,n,_) => Map(n -> r)
-        case ConcatExp(r1, r2) => getGroupMap(r1) ++ getGroupMap(r2)
-        case AltExp(r1, r2) => getGroupMap(r1) ++ getGroupMap(r2)
-        case StarExp(r,_) => getGroupMap(r)
-        case PlusExp(r,_) => getGroupMap(r)
-        case OptionExp(r,_) => getGroupMap(r)
-        case RepeatExp(r,_,_,_) => getGroupMap(r)
-        case LookaheadExp(r,positive) if positive => getGroupMap(r)
-        case LookbehindExp(r,positive) if positive => getGroupMap(r)
-        case IfExp(cond,rt,rf) => getGroupMap(cond) ++ getGroupMap(rt) ++ getGroupMap(rf)
-        case _ => Map()
-      }
-    }
-
-    def replaceBackReference(r: RegExp[A], groupMap: Map[Int, RegExp[A]]): RegExp[A] = {
-      def replaceBackReference(r: RegExp[A]): RegExp[A] = {
-        r match {
-          case BackReferenceExp(n,_) =>
-            approximated = true
-            groupMap(n)
-          case _ => recursiveApply(r,replaceBackReference)
-        }
-      }
-
-      replaceBackReference(r)
     }
 
     def getLookbehindMaxLength(r: RegExp[A]): Option[Int] = {
@@ -274,6 +272,35 @@ object RegExp {
       }
     }
 
+    def getGroupMap(r: RegExp[A]): Map[Int, RegExp[A]] = {
+      r match {
+        case GroupExp(r,n,_) => Map(n -> r) ++ getGroupMap(r)
+        case ConcatExp(r1, r2) => getGroupMap(r1) ++ getGroupMap(r2)
+        case AltExp(r1, r2) => getGroupMap(r1) ++ getGroupMap(r2)
+        case StarExp(r,_) => getGroupMap(r)
+        case PlusExp(r,_) => getGroupMap(r)
+        case OptionExp(r,_) => getGroupMap(r)
+        case RepeatExp(r,_,_,_) => getGroupMap(r)
+        case LookaheadExp(r,positive) if positive => getGroupMap(r)
+        case LookbehindExp(r,positive) if positive => getGroupMap(r)
+        case _ => Map()
+      }
+    }
+
+    def collectBackReferences(r: RegExp[A]): Set[Int] = {
+      r match {
+        case ConcatExp(r1,r2) => collectBackReferences(r1) | collectBackReferences(r2)
+        case AltExp(r1,r2) => collectBackReferences(r1) | collectBackReferences(r2)
+        case StarExp(r,_) => collectBackReferences(r)
+        case PlusExp(r,_) => collectBackReferences(r)
+        case OptionExp(r,_) => collectBackReferences(r)
+        case RepeatExp(r,_,_,_) => collectBackReferences(r)
+        case GroupExp(r,_,_) => collectBackReferences(r)
+        case BackReferenceExp(n,_) => Set(n)
+        case _ => Set()
+      }
+    }
+
     def replaceLookbehind(r: RegExp[A]): RegExp[A] = {
       r match {
         case LookbehindExp(_,_) =>
@@ -283,21 +310,59 @@ object RegExp {
       }
     }
 
-    // simulates suffix match
-    val r1 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r)
+    def replace(r: RegExp[A], groupMap: Map[Int, RegExp[A]]): RegExp[A] = {
+      def replace(r: RegExp[A]): RegExp[A] = {
+        def removeAssert(r: RegExp[A]): RegExp[A] = {
+          r match {
+            case LookaheadExp(_,_) | LookbehindExp(_,_) | StartAnchorExp() | EndAnchorExp() => FailEpsExp()
+            case GroupExp(r,_,_) => r
+            case _ => recursiveApply(r,removeAssert)
+          }
+        }
 
-    // replace back reference
-    val groupMap = getGroupMap(r1).withDefaultValue(EmptyExp())
-    val r2 = replaceBackReference(r1,groupMap)
+        r match {
+          case LookbehindExp(_,_) =>
+            approximated = true
+            FailEpsExp()
+          case BackReferenceExp(n,_) =>
+            approximated = true
+            ConcatExp(replace(removeAssert(groupMap(n))), FailEpsExp())
+          case _ => recursiveApply(r,replace)
+        }
+      }
 
-    // replace lookbehind
-    val r3 = getLookbehindMaxLength(r2) match {
-      case Some(_) => replaceLookbehind(r2)
+      replace(r)
+    }
+
+    checkSupported(r)
+    val maxLength = getLookbehindMaxLength(r) match {
+      case Some(n) => n
       case None => throw RegExp.InvalidRegExpException(
         s"lookbehind with unbounded matching length is unsupported.")
     }
 
-    (r3, approximated)
+    // simulates suffix match
+    val r1 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r)
+
+    // check dependencies of back references
+    val groupMap = getGroupMap(r1).withDefaultValue(EmptyExp())
+    var dependencyMap = groupMap.mapValues(collectBackReferences)
+
+    while (dependencyMap.nonEmpty) {
+      val newDependencyMap = dependencyMap.filter(_._2.nonEmpty)
+      if (dependencyMap.keySet == newDependencyMap.keySet) {
+        throw RegExp.InvalidRegExpException(
+          s"back reference with cycle is unsupported.")
+      } else {
+        val newKeys = newDependencyMap.keySet
+        dependencyMap = newDependencyMap.mapValues(_.filter(newKeys))
+      }
+    }
+
+    // approximate lookbehind/back reference
+    val r2 = replace(r1, groupMap)
+
+    (r2, approximated, maxLength)
   }
 
   def constructTransducer(
@@ -306,7 +371,6 @@ object RegExp {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (options.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
-        case EmptyExp() | EpsExp() | BackReferenceExp(_,_) | StartAnchorExp() | EndAnchorExp() => Set()
         case ConcatExp(r1,r2) => getElems(r1) | getElems(r2)
         case AltExp(r1,r2) => getElems(r1) | getElems(r2)
         case StarExp(r,_) => getElems(r)
@@ -317,7 +381,6 @@ object RegExp {
         case GroupExp(r,_,_) => getElems(r)
         case LookaheadExp(r,_) => getElems(r)
         case LookbehindExp(r,_) => getElems(r)
-        case IfExp(cond,rt,rf) => getElems(cond) | getElems(rt) | getElems(rf)
         case r @ CharClassExp(es,positive) =>
           val s = es.flatMap(_.charSet).toSet
           if (options.ignoreCase) {
@@ -334,7 +397,7 @@ object RegExp {
               case a => a
             }
           } else s
-        case _ => throw new Exception(s"getElems unsupported expression: ${r}")
+        case _ => Set()
       }
     }
 
@@ -379,7 +442,7 @@ object RegExp {
       Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
     }
 
-    val (rm, approximated) = modifyRegExp(r)
+    val (rm, approximated, maxLength) = modifyRegExp(r)
 
     val transducer = Debug.time("regular expression -> transducer") {
       constructTransducer(rm,options)
