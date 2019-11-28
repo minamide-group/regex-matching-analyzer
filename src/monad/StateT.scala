@@ -4,12 +4,12 @@ import DMonad._
 import DTree._
 
 trait StateOperatable[M[_,_], S] {
-  def update(f: S => S): M[Nothing,S]
+  def update[A](f: S => S): M[A,S]
 }
 
 object StateT {
   type StateT[S,M[_,_],A,B] = S => M[(A,S),(B,S)]
-  type StateTStringDTree[A,B] = StateT[String, DTree, A, B]
+  trait StateTStringDTree[A,B] extends StateT[String, DTree, A, B]
 
   implicit object StateTDTreeMonad extends DMonad[StateTStringDTree] with StateOperatable[StateTStringDTree, String] {
     def unit[A,B](b: B) = s => DTreeMonad((b,s))
@@ -26,6 +26,6 @@ object StateT {
     def assertNot[A,B](m1: StateTStringDTree[A,A], m2: StateTStringDTree[A,B])
       = s => DTreeMonad.assertNot(m1(s), m2(s))
 
-    def update(f: String => String) = s => DTreeMonad((s, f(s)))
+    def update[A](f: String => String) = s => DTreeMonad((s, f(s)))
   }
 }
