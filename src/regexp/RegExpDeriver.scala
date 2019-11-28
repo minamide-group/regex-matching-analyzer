@@ -1,13 +1,15 @@
 package matching.regexp
 
 import matching.monad._
-import matching.monad.DMonad._
+import DMonad._
+import StateT._
 import RegExp._
 
-class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, String]) {
+
+class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, OptString]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
-    def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
-      def accept(a: Option[A]): Boolean = {
+    def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]], Option[RegExp[Char]]] = {
+      def accept(a: Option[Char]): Boolean = {
         def acceptCharClass(r: CharClassElem, a: Option[Char]): Boolean = {
           r match {
             case SingleCharExp(c) => a match {
@@ -42,7 +44,6 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
               } else {
                 a == b
               }
-            case Some(a) => a == b
             case None => false
           }
           case DotExp() => a match {
@@ -55,7 +56,7 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         }
       }
 
-      if (accept(a)) m.update(u => u + a) `>>=r` (_ => m(Some(EpsExp()))) else m.fail
+      if (accept(a)) m.update(u => u :+ a) `>>=r` (_ => m(Some(EpsExp()))) else m.fail
     }
 
     r match {

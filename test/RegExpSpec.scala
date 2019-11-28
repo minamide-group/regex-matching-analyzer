@@ -41,15 +41,18 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   "constructTransducer" should "construct transducer which simulates exhaustive search" in {
+    val eps = Vector()
+    val anyChar = Vector(None)
+
     val r0 = RegExpParser("^(?:a*a*b|ba)")
     val r1 = RegExpParser("a*a*b")
     val r2 = RegExpParser("a*b")
     val r3 = RegExpParser("a")
     val r4 = RegExpParser("ε")
-    val transducer = constructTransducer(r0)
-    transducer.states should be (Set((r0,true), (r1,false), (r2,false), (r3,false), (r4,false)))
+    val transducer = constructTransducer(r0, 0)
+    transducer.states should be (Set((r0,eps), (r1,anyChar), (r2,anyChar), (r3,anyChar), (r4,anyChar)))
     transducer.sigma should be (Set(Some('a'),Some('b'),None))
-    transducer.initialState should be ((r0,true))
+    transducer.initialState should be ((r0,eps))
     transducer.delta should have size (20)
   }
 

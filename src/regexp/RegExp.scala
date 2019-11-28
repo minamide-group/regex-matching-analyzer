@@ -368,8 +368,8 @@ object RegExp {
   }
 
   def constructTransducer(
-    r: RegExp[Char], options: PCREOptions = new PCREOptions()
-  ): DetTransducer[(RegExp[Char], String), Option[Char]] = {
+    r: RegExp[Char], maxLength: Int, options: PCREOptions = new PCREOptions()
+  ): DetTransducer[(RegExp[Char], OptString), Option[Char]] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (options.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -403,13 +403,21 @@ object RegExp {
       }
     }
 
+    def cutState(s: OptString): OptString = {
+      if (maxLength == 0) { // only start anchor
+        if (s.isEmpty) Vector() else Vector(None)
+      } else {
+        s.takeRight(maxLength)
+      }
+    }
+
     val sigma = getElems(r).map(Option(_)) + None // None: character which does not appear in the given expression
-    val initialState: (RegExp[Char], String) = (r, "")
+    val initialState: (RegExp[Char], OptString) = (r, Vector())
     var states = Set(initialState)
     val stack = Stack(initialState)
     var delta = Map[
-      ((RegExp[Char], String), Option[Option[Char]]),
-      DTree[(RegExp[Char], String), (RegExp[Char], String)]
+      ((RegExp[Char], OptString), Option[Option[Char]]),
+      DTree[(RegExp[Char], OptString), (RegExp[Char], OptString)]
     ]()
     implicit val deriver = new RegExpDeriver[StateTStringDTree](options)
 
@@ -420,7 +428,9 @@ object RegExp {
         val t = (r.derive(a) >>= {
           case Some(r) => StateTDTreeMonad[RegExp[Char], RegExp[Char]](r)
           case None => StateTDTreeMonad.success[RegExp[Char], RegExp[Char]] // simulates prefix match
-        })(u)
+        })(u) >>= {
+          case (r,s) => DTreeMonad[(RegExp[Char], OptString), (RegExp[Char], OptString)]((r, cutState(s)))
+        }
         delta += (s,Some(a)) -> t
         val newExps = DTreeMonad.leaves(t).filterNot(states.contains)
         states |= newExps.toSet
@@ -447,7 +457,7 @@ object RegExp {
     val (rm, approximated, maxLength) = modifyRegExp(r)
 
     val transducer = Debug.time("regular expression -> transducer") {
-      constructTransducer(rm,options)
+      constructTransducer(rm, maxLength, options)
     }.rename()
 
     val (growthRate, witness) = method match {

@@ -4,459 +4,468 @@ import org.scalatest._
 import RegExp._
 import matching.monad._
 import DTree.DTreeMonad._
+import StateT._
 
 class RegExpDeriverSpec extends FlatSpec with Matchers {
-  implicit var deriver = new RegExpDeriver[DTree]()
+  implicit var deriver = new RegExpDeriver[StateTStringDTree]()
+
+  val eps = Vector()
+  val anyChar = Vector(None)
+  def char(a: Char) = Vector(Some(a))
+  def applyLeaves[A](m: StateTStringDTree[A,A])
+    = leaves(m.apply(eps))
 
   "derive" should "derive a" in {
     val r = RegExpParser("a")
-    leaves(r.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r.derive('b', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r.derive('b')) should be (Nil)
   }
 
   it should "derive ∅" in {
     val r = RegExpParser("∅")
-    leaves(r.derive('a', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (Nil)
   }
 
   it should "derive ε" in {
     val r = RegExpParser("ε")
-    leaves(r.derive('a', Nil)) should be (List(None))
+    applyLeaves(r.derive('a')) should be (List((None, eps)))
   }
 
   it should "derive ab" in {
     val r = RegExpParser("ab")
-    leaves(r.derive('a', Nil)) should be (List(Some(ElemExp('b'))))
-    leaves(r.derive('b', Nil)) should be (Nil)
-    leaves(r.derive('c', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (List((Some(ElemExp('b')), char('a'))))
+    applyLeaves(r.derive('b')) should be (Nil)
+    applyLeaves(r.derive('c')) should be (Nil)
   }
 
   it should "derive a|b" in {
     val r = RegExpParser("a|b")
-    leaves(r.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r.derive('b', Nil)) should be (List(Some(EpsExp())))
-    leaves(r.derive('c', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r.derive('b')) should be (List((Some(EpsExp()), char('b'))))
+    applyLeaves(r.derive('c')) should be (Nil)
   }
 
   it should "derive a*" in {
     val r = RegExpParser("a*")
-    leaves(r.derive('a', Nil)) should be (List(Some(StarExp(ElemExp('a'), true)), None))
-    leaves(r.derive('b', Nil)) should be (List(None))
+    applyLeaves(r.derive('a')) should be (List((Some(StarExp(ElemExp('a'), true)), char('a')), (None, eps)))
+    applyLeaves(r.derive('b')) should be (List((None, eps)))
   }
 
   it should "derive a+" in {
     val r = RegExpParser("a+")
-    leaves(r.derive('a', Nil)) should be (List(Some(StarExp(ElemExp('a'), true))))
-    leaves(r.derive('b', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (List((Some(StarExp(ElemExp('a'), true)), char('a'))))
+    applyLeaves(r.derive('b')) should be (Nil)
   }
 
   it should "derive a?" in {
     val r = RegExpParser("a?")
-    leaves(r.derive('a', Nil)) should be (List(Some(EpsExp()), None))
-    leaves(r.derive('b', Nil)) should be (List(None))
+    applyLeaves(r.derive('a')) should be (List((Some(EpsExp()), char('a')), (None, eps)))
+    applyLeaves(r.derive('b')) should be (List((None, eps)))
   }
 
   it should "derive ." in {
     val r = RegExpParser(".")
-    leaves(r.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r.derive('\n', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r.derive('\n')) should be (Nil)
   }
 
   it should "derive character class" in {
     val r1 = RegExpParser("""[ah-k\d]""")
-    leaves(r1.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('i', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('0', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('c', Nil)) should be (Nil)
-    leaves(r1.derive('A', Nil)) should be (Nil)
-    leaves(r1.derive('H', Nil)) should be (Nil)
-    leaves(r1.derive('Z', Nil)) should be (Nil)
+    applyLeaves(r1.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r1.derive('i')) should be (List((Some(EpsExp()), char('i'))))
+    applyLeaves(r1.derive('0')) should be (List((Some(EpsExp()), char('0'))))
+    applyLeaves(r1.derive('c')) should be (Nil)
+    applyLeaves(r1.derive('A')) should be (Nil)
+    applyLeaves(r1.derive('H')) should be (Nil)
+    applyLeaves(r1.derive('Z')) should be (Nil)
 
     val r2 = RegExpParser("""[^ah-k\d]""")
-    leaves(r2.derive('a', Nil)) should be (Nil)
-    leaves(r2.derive('i', Nil)) should be (Nil)
-    leaves(r2.derive('0', Nil)) should be (Nil)
-    leaves(r2.derive('c', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('H', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('Z', Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r2.derive('a')) should be (Nil)
+    applyLeaves(r2.derive('i')) should be (Nil)
+    applyLeaves(r2.derive('0')) should be (Nil)
+    applyLeaves(r2.derive('c')) should be (List((Some(EpsExp()), char('c'))))
+    applyLeaves(r2.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(r2.derive('H')) should be (List((Some(EpsExp()), char('H'))))
+    applyLeaves(r2.derive('Z')) should be (List((Some(EpsExp()), char('Z'))))
 
     val r3 = RegExpParser("""[\W\D]""")
-    leaves(r3.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r3.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(r3.derive('!', Nil)) should be (List(Some(EpsExp())))
-    leaves(r3.derive('0', Nil)) should be (Nil)
+    applyLeaves(r3.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r3.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(r3.derive('!')) should be (List((Some(EpsExp()), char('!'))))
+    applyLeaves(r3.derive('0')) should be (Nil)
 
     val r4 = RegExpParser("""[^0\D]""")
-    leaves(r4.derive('1', Nil)) should be (List(Some(EpsExp())))
-    leaves(r4.derive('0', Nil)) should be (Nil)
-    leaves(r4.derive('a', Nil)) should be (Nil)
-    leaves(r4.derive('A', Nil)) should be (Nil)
-    leaves(r4.derive('!', Nil)) should be (Nil)
+    applyLeaves(r4.derive('1')) should be (List((Some(EpsExp()), char('1'))))
+    applyLeaves(r4.derive('0')) should be (Nil)
+    applyLeaves(r4.derive('a')) should be (Nil)
+    applyLeaves(r4.derive('A')) should be (Nil)
+    applyLeaves(r4.derive('!')) should be (Nil)
   }
 
   it should "derive meta character" in {
     val rd = RegExpParser("""\d""")
-    leaves(rd.derive('0', Nil)) should be (List(Some(EpsExp())))
-    leaves(rd.derive('9', Nil)) should be (List(Some(EpsExp())))
-    leaves(rd.derive('a', Nil)) should be (Nil)
-    leaves(rd.derive('A', Nil)) should be (Nil)
+    applyLeaves(rd.derive('0')) should be (List((Some(EpsExp()), char('0'))))
+    applyLeaves(rd.derive('9')) should be (List((Some(EpsExp()), char('9'))))
+    applyLeaves(rd.derive('a')) should be (Nil)
+    applyLeaves(rd.derive('A')) should be (Nil)
 
     val rD = RegExpParser("""\D""")
-    leaves(rD.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(rD.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(rD.derive('0', Nil)) should be (Nil)
-    leaves(rD.derive('9', Nil)) should be (Nil)
+    applyLeaves(rD.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(rD.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(rD.derive('0')) should be (Nil)
+    applyLeaves(rD.derive('9')) should be (Nil)
 
     val rh = RegExpParser("""\h""")
-    leaves(rh.derive('\u0009', Nil)) should be (List(Some(EpsExp())))
-    leaves(rh.derive('a', Nil)) should be (Nil)
+    applyLeaves(rh.derive('\u0009')) should be (List((Some(EpsExp()), char('\u0009'))))
+    applyLeaves(rh.derive('a')) should be (Nil)
 
     val rH = RegExpParser("""\H""")
-    leaves(rH.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(rH.derive('\u0009', Nil)) should be (Nil)
+    applyLeaves(rH.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(rH.derive('\u0009')) should be (Nil)
 
     val rR = RegExpParser("""\R""")
-    leaves(rR.derive('\r', Nil)) should be (List(Some(EpsExp())))
-    leaves(rR.derive('\n', Nil)) should be (List(Some(EpsExp())))
-    leaves(rR.derive('a', Nil)) should be (Nil)
+    applyLeaves(rR.derive('\r')) should be (List((Some(EpsExp()), char('\r'))))
+    applyLeaves(rR.derive('\n')) should be (List((Some(EpsExp()), char('\n'))))
+    applyLeaves(rR.derive('a')) should be (Nil)
 
     val rs = RegExpParser("""\s""")
-    leaves(rs.derive(' ', Nil)) should be (List(Some(EpsExp())))
-    leaves(rs.derive('\t', Nil)) should be (List(Some(EpsExp())))
-    leaves(rs.derive('\n', Nil)) should be (List(Some(EpsExp())))
-    leaves(rs.derive('\r', Nil)) should be (List(Some(EpsExp())))
-    leaves(rs.derive('\f', Nil)) should be (List(Some(EpsExp())))
-    leaves(rs.derive('a', Nil)) should be (Nil)
+    applyLeaves(rs.derive(' ')) should be (List((Some(EpsExp()), char(' '))))
+    applyLeaves(rs.derive('\t')) should be (List((Some(EpsExp()), char('\t'))))
+    applyLeaves(rs.derive('\n')) should be (List((Some(EpsExp()), char('\n'))))
+    applyLeaves(rs.derive('\r')) should be (List((Some(EpsExp()), char('\r'))))
+    applyLeaves(rs.derive('\f')) should be (List((Some(EpsExp()), char('\f'))))
+    applyLeaves(rs.derive('a')) should be (Nil)
 
     val rS = RegExpParser("""\S""")
-    leaves(rS.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(rS.derive(' ', Nil)) should be (Nil)
-    leaves(rS.derive('\t', Nil)) should be (Nil)
-    leaves(rS.derive('\n', Nil)) should be (Nil)
-    leaves(rS.derive('\r', Nil)) should be (Nil)
-    leaves(rS.derive('\f', Nil)) should be (Nil)
+    applyLeaves(rS.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(rS.derive(' ')) should be (Nil)
+    applyLeaves(rS.derive('\t')) should be (Nil)
+    applyLeaves(rS.derive('\n')) should be (Nil)
+    applyLeaves(rS.derive('\r')) should be (Nil)
+    applyLeaves(rS.derive('\f')) should be (Nil)
 
     val rv = RegExpParser("""\v""")
-    leaves(rv.derive('\u000B', Nil)) should be (List(Some(EpsExp())))
-    leaves(rv.derive('a', Nil)) should be (Nil)
+    applyLeaves(rv.derive('\u000B')) should be (List((Some(EpsExp()), char('\u000B'))))
+    applyLeaves(rv.derive('a')) should be (Nil)
 
     val rV = RegExpParser("""\V""")
-    leaves(rV.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(rV.derive('\u000B', Nil)) should be (Nil)
+    applyLeaves(rV.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(rV.derive('\u000B')) should be (Nil)
 
     val rw = RegExpParser("""\w""")
-    leaves(rw.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('z', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('Z', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('0', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('9', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('_', Nil)) should be (List(Some(EpsExp())))
-    leaves(rw.derive('!', Nil)) should be (Nil)
+    applyLeaves(rw.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(rw.derive('z')) should be (List((Some(EpsExp()), char('z'))))
+    applyLeaves(rw.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(rw.derive('Z')) should be (List((Some(EpsExp()), char('Z'))))
+    applyLeaves(rw.derive('0')) should be (List((Some(EpsExp()), char('0'))))
+    applyLeaves(rw.derive('9')) should be (List((Some(EpsExp()), char('9'))))
+    applyLeaves(rw.derive('_')) should be (List((Some(EpsExp()), char('_'))))
+    applyLeaves(rw.derive('!')) should be (Nil)
 
     val rW = RegExpParser("""\W""")
-    leaves(rW.derive('!', Nil)) should be (List(Some(EpsExp())))
-    leaves(rW.derive('0', Nil)) should be (Nil)
-    leaves(rW.derive('9', Nil)) should be (Nil)
-    leaves(rW.derive('a', Nil)) should be (Nil)
-    leaves(rW.derive('z', Nil)) should be (Nil)
-    leaves(rW.derive('A', Nil)) should be (Nil)
-    leaves(rW.derive('Z', Nil)) should be (Nil)
-    leaves(rW.derive('_', Nil)) should be (Nil)
+    applyLeaves(rW.derive('!')) should be (List((Some(EpsExp()), char('!'))))
+    applyLeaves(rW.derive('0')) should be (Nil)
+    applyLeaves(rW.derive('9')) should be (Nil)
+    applyLeaves(rW.derive('a')) should be (Nil)
+    applyLeaves(rW.derive('z')) should be (Nil)
+    applyLeaves(rW.derive('A')) should be (Nil)
+    applyLeaves(rW.derive('Z')) should be (Nil)
+    applyLeaves(rW.derive('_')) should be (Nil)
   }
 
   it should "derive repeat expression" in {
-    val r1 = RegExpParser("(ab){3,5}")
-    leaves(r1.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab){2,4}"))))
-    leaves(r1.derive('b', Nil)) should be (Nil)
+    val r1 = RegExpParser("(?:ab){3,5}")
+    applyLeaves(r1.derive('a')) should be (List((Some(RegExpParser("b(?:ab){2,4}")), char('a'))))
+    applyLeaves(r1.derive('b')) should be (Nil)
 
-    val r2 = RegExpParser("(ab){3}")
-    leaves(r2.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab){2,2}"))))
-    leaves(r2.derive('b', Nil)) should be (Nil)
+    val r2 = RegExpParser("(?:ab){3}")
+    applyLeaves(r2.derive('a')) should be (List((Some(RegExpParser("b(?:ab){2,2}")), char('a'))))
+    applyLeaves(r2.derive('b')) should be (Nil)
 
-    val r3 = RegExpParser("(ab){3,}")
-    leaves(r3.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab){2,}"))))
-    leaves(r3.derive('b', Nil)) should be (Nil)
+    val r3 = RegExpParser("(?:ab){3,}")
+    applyLeaves(r3.derive('a')) should be (List((Some(RegExpParser("b(?:ab){2,}")), char('a'))))
+    applyLeaves(r3.derive('b')) should be (Nil)
 
-    val r4 = RegExpParser("(ab){,5}")
-    leaves(r4.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab){,4}")), None))
-    leaves(r4.derive('b', Nil)) should be (List(None))
+    val r4 = RegExpParser("(?:ab){,5}")
+    applyLeaves(r4.derive('a')) should be (List((Some(RegExpParser("b(?:ab){,4}")), char('a')), (None, eps)))
+    applyLeaves(r4.derive('b')) should be (List((None, eps)))
 
-    val r5 = RegExpParser("(ab){1,5}")
-    leaves(r5.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab){,4}"))))
-    leaves(r5.derive('b', Nil)) should be (Nil)
+    val r5 = RegExpParser("(?:ab){1,5}")
+    applyLeaves(r5.derive('a')) should be (List((Some(RegExpParser("b(?:ab){,4}")), char('a'))))
+    applyLeaves(r5.derive('b')) should be (Nil)
 
 
-    val r6 = RegExpParser("(ab){1,}")
-    leaves(r6.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab)*"))))
-    leaves(r6.derive('b', Nil)) should be (Nil)
+    val r6 = RegExpParser("(?:ab){1,}")
+    applyLeaves(r6.derive('a')) should be (List((Some(RegExpParser("b(?:ab)*")), char('a'))))
+    applyLeaves(r6.derive('b')) should be (Nil)
 
-    val r7 = RegExpParser("(ab){,1}")
-    leaves(r7.derive('a', Nil)) should be (List(Some(RegExpParser("b")), None))
-    leaves(r7.derive('b', Nil)) should be (List(None))
+    val r7 = RegExpParser("(?:ab){,1}")
+    applyLeaves(r7.derive('a')) should be (List((Some(RegExpParser("b")), char('a')), (None, eps)))
+    applyLeaves(r7.derive('b')) should be (List((None, eps)))
 
-    val r8 = RegExpParser("(ab){1}")
-    leaves(r8.derive('a', Nil)) should be (List(Some(RegExpParser("b"))))
-    leaves(r8.derive('b', Nil)) should be (Nil)
+    val r8 = RegExpParser("(?:ab){1}")
+    applyLeaves(r8.derive('a')) should be (List((Some(RegExpParser("b")), char('a'))))
+    applyLeaves(r8.derive('b')) should be (Nil)
   }
 
   it should "derive ^" in {
     val r = RegExpParser("^")
-    leaves(r.derive('a', Nil)) should be (List(None))
-    leaves(r.derive('a', List(None))) should be (Nil)
+    applyLeaves(r.derive('a')) should be (List((None, eps)))
+    leaves(r.derive('a').apply(Vector(None))) should be (Nil)
   }
 
   it should "derive $" in {
     val r = RegExpParser("$")
-    leaves(r.derive('a', Nil)) should be (Nil)
+    applyLeaves(r.derive('a')) should be (Nil)
   }
 
   it should "derive lookahead" in {
     val r1 = RegExpParser("(?=ab)")
-    r1.derive('a', Nil) should be (DAssert[Option[RegExp[Char]],Option[RegExp[Char]]](
-      DLeaf(Some(ElemExp('b'))), DLeaf(None)))
+    r1.derive('a').apply(eps) should be (DAssert[(Option[RegExp[Char]], OptString),(Option[RegExp[Char]], OptString)](
+      DLeaf((Some(ElemExp('b')), char('a'))), DLeaf((None, eps))))
 
     val r2 = RegExpParser("(?!ab)")
-    r2.derive('a', Nil) should be (DAssertNot[Option[RegExp[Char]],Option[RegExp[Char]]](
-      DLeaf(Some(ElemExp('b'))), DLeaf(None)))
+    r2.derive('a').apply(eps) should be (DAssertNot[(Option[RegExp[Char]], OptString),(Option[RegExp[Char]], OptString)](
+      DLeaf((Some(ElemExp('b')), char('a'))), DLeaf((None, eps))))
   }
 
   it should "derive lazy operations" in {
     val r1 = RegExpParser("a*?")
-    leaves(r1.derive('a', Nil)) should be (List(None, Some(StarExp(ElemExp('a'), false))))
-    leaves(r1.derive('b', Nil)) should be (List(None))
+    applyLeaves(r1.derive('a')) should be (List((None, eps), (Some(StarExp(ElemExp('a'), false)), char('a'))))
+    applyLeaves(r1.derive('b')) should be (List((None, eps)))
 
     val r2 = RegExpParser("a+?")
-    leaves(r2.derive('a', Nil)) should be (List(Some(StarExp(ElemExp('a'), false))))
-    leaves(r2.derive('b', Nil)) should be (Nil)
+    applyLeaves(r2.derive('a')) should be (List((Some(StarExp(ElemExp('a'), false)), char('a'))))
+    applyLeaves(r2.derive('b')) should be (Nil)
 
     val r3 = RegExpParser("a??")
-    leaves(r3.derive('a', Nil)) should be (List(None, Some(EpsExp())))
-    leaves(r3.derive('b', Nil)) should be (List(None))
+    applyLeaves(r3.derive('a')) should be (List((None, eps), (Some(EpsExp()), char('a'))))
+    applyLeaves(r3.derive('b')) should be (List((None, eps)))
 
-    val r4 = RegExpParser("(ab){3,5}?")
-    leaves(r4.derive('a', Nil)) should be (List(Some(RegExpParser("b(ab){2,4}?"))))
-    leaves(r4.derive('b', Nil)) should be (Nil)
+    val r4 = RegExpParser("(?:ab){3,5}?")
+    applyLeaves(r4.derive('a')) should be (List((Some(RegExpParser("b(?:ab){2,4}?")), char('a'))))
+    applyLeaves(r4.derive('b')) should be (Nil)
 
-    val r5 = RegExpParser("(ab){,5}?")
-    leaves(r5.derive('a', Nil)) should be (List(None, Some(RegExpParser("b(ab){,4}?"))))
-    leaves(r5.derive('b', Nil)) should be (List(None))
+    val r5 = RegExpParser("(?:ab){,5}?")
+    applyLeaves(r5.derive('a')) should be (List((None, eps), (Some(RegExpParser("b(?:ab){,4}?")), char('a'))))
+    applyLeaves(r5.derive('b')) should be (List((None, eps)))
 
-    val r6 = RegExpParser("(ab){,1}?")
-    leaves(r6.derive('a', Nil)) should be (List(None, Some(RegExpParser("b"))))
-    leaves(r6.derive('b', Nil)) should be (List(None))
+    val r6 = RegExpParser("(?:ab){,1}?")
+    applyLeaves(r6.derive('a')) should be (List((None, eps), (Some(RegExpParser("b")), char('a'))))
+    applyLeaves(r6.derive('b')) should be (List((None, eps)))
   }
 
   it should "derive complex expression" in {
-    val r1 = RegExpParser("a*(bc|d)")
-    leaves(r1.derive('a', Nil)) should be (List(Some(RegExpParser("a*(bc|d)"))))
-    leaves(r1.derive('b', Nil)) should be (List(Some(RegExpParser("c"))))
-    leaves(r1.derive('c', Nil)) should be (Nil)
-    leaves(r1.derive('d', Nil)) should be (List(Some(RegExpParser("ε"))))
-    leaves(r1.derive('e', Nil)) should be (Nil)
+    val r1 = RegExpParser("a*(?:bc|d)")
+    applyLeaves(r1.derive('a')) should be (List((Some(RegExpParser("a*(?:bc|d)")), char('a'))))
+    applyLeaves(r1.derive('b')) should be (List((Some(RegExpParser("c")), char('b'))))
+    applyLeaves(r1.derive('c')) should be (Nil)
+    applyLeaves(r1.derive('d')) should be (List((Some(RegExpParser("ε")), char('d'))))
+    applyLeaves(r1.derive('e')) should be (Nil)
 
-    val r2 = RegExpParser("(a*)*")
-    leaves(r2.derive('a', Nil)) should be (List(Some(RegExpParser("a*(a*)*")), None, None))
-    leaves(r2.derive('b', Nil)) should be (List(None, None))
+    val r2 = RegExpParser("(?:a*)*")
+    applyLeaves(r2.derive('a')) should be (List((Some(RegExpParser("a*(?:a*)*")), char('a')), (None, eps), (None, eps)))
+    applyLeaves(r2.derive('b')) should be (List((None, eps), (None, eps)))
   }
 
 
   "derive with character not appear in given expression" should "derive a" in {
     val r = RegExpParser("a")
-    leaves(r.derive(None, Nil)) should be (Nil)
+    applyLeaves(r.derive(None)) should be (Nil)
   }
 
   it should "derive ." in {
     val r = RegExpParser(".")
-    leaves(r.derive(None, Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r.derive(None)) should be (List((Some(EpsExp()), anyChar)))
   }
 
   it should "derive character class" in {
     val r1 = RegExpParser("[a-z]")
-    leaves(r1.derive(None, Nil)) should be (Nil)
+    applyLeaves(r1.derive(None)) should be (Nil)
 
     val r2 = RegExpParser("[^a-z]")
-    leaves(r2.derive(None, Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r2.derive(None)) should be (List((Some(EpsExp()), anyChar)))
 
     val r3 = RegExpParser("""[\w]""")
-    leaves(r3.derive(None, Nil)) should be (Nil)
+    applyLeaves(r3.derive(None)) should be (Nil)
 
     val r4 = RegExpParser("""[\W]""")
-    leaves(r4.derive(None, Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r4.derive(None)) should be (List((Some(EpsExp()), anyChar)))
 
     val r6 = RegExpParser("""[0-9\w]""")
-    leaves(r6.derive(None, Nil)) should be (Nil)
+    applyLeaves(r6.derive(None)) should be (Nil)
 
     val r7 = RegExpParser("""[0-9\W]""")
-    leaves(r7.derive(None, Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r7.derive(None)) should be (List((Some(EpsExp()), anyChar)))
 
     val r8 = RegExpParser("""[^0-9\W]""")
-    leaves(r8.derive(None, Nil)) should be (Nil)
+    applyLeaves(r8.derive(None)) should be (Nil)
   }
 
   it should "derive meta character" in {
     val r1 = RegExpParser("""\w""")
-    leaves(r1.derive(None, Nil)) should be (Nil)
+    applyLeaves(r1.derive(None)) should be (Nil)
 
     val r2 = RegExpParser("""\W""")
-    leaves(r2.derive(None, Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r2.derive(None)) should be (List((Some(EpsExp()), anyChar)))
   }
 
 
   "derive with ignore case option" should "derive character" in {
-    deriver = new RegExpDeriver[DTree](new PCREOptions("i"))
+    deriver = new RegExpDeriver[StateTStringDTree](new PCREOptions("i"))
 
     val r1 = RegExpParser("a")
-    leaves(r1.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('b', Nil)) should be (Nil)
-    leaves(r1.derive('B', Nil)) should be (Nil)
+    applyLeaves(r1.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r1.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(r1.derive('b')) should be (Nil)
+    applyLeaves(r1.derive('B')) should be (Nil)
 
     val r2 = RegExpParser("A")
-    leaves(r2.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('b', Nil)) should be (Nil)
-    leaves(r2.derive('B', Nil)) should be (Nil)
+    applyLeaves(r2.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r2.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(r2.derive('b')) should be (Nil)
+    applyLeaves(r2.derive('B')) should be (Nil)
   }
 
   it should "derive character class" in {
-    deriver = new RegExpDeriver[DTree](new PCREOptions("i"))
+    deriver = new RegExpDeriver[StateTStringDTree](new PCREOptions("i"))
 
     val r1 = RegExpParser("[ac-e]")
-    leaves(r1.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('A', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('d', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('D', Nil)) should be (List(Some(EpsExp())))
-    leaves(r1.derive('b', Nil)) should be (Nil)
-    leaves(r1.derive('B', Nil)) should be (Nil)
+    applyLeaves(r1.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r1.derive('A')) should be (List((Some(EpsExp()), char('A'))))
+    applyLeaves(r1.derive('d')) should be (List((Some(EpsExp()), char('d'))))
+    applyLeaves(r1.derive('D')) should be (List((Some(EpsExp()), char('D'))))
+    applyLeaves(r1.derive('b')) should be (Nil)
+    applyLeaves(r1.derive('B')) should be (Nil)
 
     val r2 = RegExpParser("""[^abB]""")
-    leaves(r2.derive('c', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('C', Nil)) should be (List(Some(EpsExp())))
-    leaves(r2.derive('b', Nil)) should be (Nil)
-    leaves(r2.derive('B', Nil)) should be (Nil)
-    leaves(r2.derive('a', Nil)) should be (Nil)
-    leaves(r2.derive('A', Nil)) should be (Nil)
+    applyLeaves(r2.derive('c')) should be (List((Some(EpsExp()), char('c'))))
+    applyLeaves(r2.derive('C')) should be (List((Some(EpsExp()), char('C'))))
+    applyLeaves(r2.derive('b')) should be (Nil)
+    applyLeaves(r2.derive('B')) should be (Nil)
+    applyLeaves(r2.derive('a')) should be (Nil)
+    applyLeaves(r2.derive('A')) should be (Nil)
   }
 
   "derive with dot all option" should "derive dot" in {
-    deriver = new RegExpDeriver[DTree](new PCREOptions("s"))
+    deriver = new RegExpDeriver[StateTStringDTree](new PCREOptions("s"))
 
     val r = RegExpParser(".")
-    leaves(r.derive('a', Nil)) should be (List(Some(EpsExp())))
-    leaves(r.derive('\n', Nil)) should be (List(Some(EpsExp())))
+    applyLeaves(r.derive('a')) should be (List((Some(EpsExp()), char('a'))))
+    applyLeaves(r.derive('\n')) should be (List((Some(EpsExp()), char('\n'))))
   }
 
   "derive with ungreedy option" should "derive repeat expression" in {
-    deriver = new RegExpDeriver[DTree](new PCREOptions("U"))
+    deriver = new RegExpDeriver[StateTStringDTree](new PCREOptions("U"))
 
     val r1 = RegExpParser("a*")
-    leaves(r1.derive('a', Nil)) should be (List(None, Some(StarExp(ElemExp('a'), true))))
+    applyLeaves(r1.derive('a')) should be (List((None, eps), (Some(StarExp(ElemExp('a'), true)), char('a'))))
 
     val r2 = RegExpParser("a*?")
-    leaves(r2.derive('a', Nil)) should be (List(Some(StarExp(ElemExp('a'), false)), None))
+    applyLeaves(r2.derive('a')) should be (List((Some(StarExp(ElemExp('a'), false)), char('a')), (None, eps)))
   }
 
   "deriveEOL" should "derive a" in {
     val r = RegExpParser("a")
-    leaves(r.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r.deriveEOL()) should be (empty)
   }
 
   it should "derive ∅" in {
     val r = RegExpParser("∅")
-    leaves(r.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r.deriveEOL()) should be (empty)
   }
 
   it should "derive ε" in {
     val r = RegExpParser("ε")
-    leaves(r.deriveEOL(Nil)) should not be (empty)
+    applyLeaves(r.deriveEOL()) should not be (empty)
   }
 
   it should "derive ab" in {
     val r = RegExpParser("ab")
-    leaves(r.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r.deriveEOL()) should be (empty)
   }
 
   it should "derive a|b" in {
     val r = RegExpParser("a|b")
-    leaves(r.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r.deriveEOL()) should be (empty)
   }
 
   it should "derive a*" in {
     val r = RegExpParser("a*")
-    leaves(r.deriveEOL(Nil)) should not be (empty)
+    applyLeaves(r.deriveEOL()) should not be (empty)
   }
 
   it should "derive +" in {
     val r1 = RegExpParser("a+")
-    leaves(r1.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r1.deriveEOL()) should be (empty)
 
-    val r2 = RegExpParser("(a*)+")
-    leaves(r2.deriveEOL(Nil)) should not be (empty)
+    val r2 = RegExpParser("(?:a*)+")
+    applyLeaves(r2.deriveEOL()) should not be (empty)
   }
 
   it should "derive a?" in {
     val r = RegExpParser("a?")
-    leaves(r.deriveEOL(Nil)) should not be (empty)
+    applyLeaves(r.deriveEOL()) should not be (empty)
   }
 
   it should "derive ." in {
     val r = RegExpParser(".")
-    leaves(r.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r.deriveEOL()) should be (empty)
   }
 
   it should "derive character class" in {
     val r1 = RegExpParser("""[a-z]""")
-    leaves(r1.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r1.deriveEOL()) should be (empty)
 
     val r2 = RegExpParser("""[^A-Z]""")
-    leaves(r2.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r2.deriveEOL()) should be (empty)
   }
 
   it should "derive meta character" in {
     val r = RegExpParser("""\d""")
-    leaves(r.deriveEOL(Nil)) should be (empty)
+    applyLeaves(r.deriveEOL()) should be (empty)
   }
 
   it should "derive repeat expression" in {
-    val r1 = RegExpParser("(ab){3,5}")
-    leaves(r1.deriveEOL(Nil)) should be (empty)
+    val r1 = RegExpParser("(?:ab){3,5}")
+    applyLeaves(r1.deriveEOL()) should be (empty)
 
-    val r2 = RegExpParser("(ab){3,}")
-    leaves(r2.deriveEOL(Nil)) should be (empty)
+    val r2 = RegExpParser("(?:ab){3,}")
+    applyLeaves(r2.deriveEOL()) should be (empty)
 
-    val r3 = RegExpParser("(ab){,5}")
-    leaves(r3.deriveEOL(Nil)) should not be (empty)
+    val r3 = RegExpParser("(?:ab){,5}")
+    applyLeaves(r3.deriveEOL()) should not be (empty)
 
-    val r4 = RegExpParser("(a*){3,5}")
-    leaves(r4.deriveEOL(Nil)) should not be (empty)
+    val r4 = RegExpParser("(?:a*){3,5}")
+    applyLeaves(r4.deriveEOL()) should not be (empty)
   }
 
   it should "derive ^" in {
     val r = RegExpParser("^")
-    leaves(r.deriveEOL(Nil)) should not be (empty)
-    leaves(r.deriveEOL(List(None))) should be (empty)
+    applyLeaves(r.deriveEOL()) should not be (empty)
+    leaves(r.deriveEOL().apply(anyChar)) should be (empty)
   }
 
   it should "derive $" in {
     val r = RegExpParser("$")
-    leaves(r.deriveEOL(Nil)) should not be (empty)
+    applyLeaves(r.deriveEOL()) should not be (empty)
   }
 
   it should "derive lookahead" in {
     val r1 = RegExpParser("(?=ab)")
-    r1.deriveEOL(Nil) should be (DAssert[Unit, Unit](DFail(), DLeaf(())))
+    r1.deriveEOL().apply(eps) should be (
+      DAssert[(Unit, OptString), (Unit, OptString)](DFail(), DLeaf(((), eps))))
 
     val r2 = RegExpParser("(?!ab)")
-    r2.deriveEOL(Nil) should be (DAssertNot[Unit, Unit](DFail(), DLeaf(())))
+    r2.deriveEOL().apply(eps) should be (
+      DAssertNot[(Unit, OptString), (Unit, OptString)](DFail(), DLeaf(((), eps))))
   }
 
   it should "derive complex expression" in {
-    val r1 = RegExpParser("(a|b*)c+d*")
-    leaves(r1.deriveEOL(Nil)) should be (empty)
+    val r1 = RegExpParser("(?:a|b*)c+d*")
+    applyLeaves(r1.deriveEOL()) should be (empty)
 
-    val r2 = RegExpParser("(a|b*)c?")
-    leaves(r2.deriveEOL(Nil)) should not be (empty)
+    val r2 = RegExpParser("(?:a|b*)c?")
+    applyLeaves(r2.deriveEOL()) should not be (empty)
   }
 }
