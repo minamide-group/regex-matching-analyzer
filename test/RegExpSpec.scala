@@ -41,7 +41,7 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   "constructTransducer" should "construct transducer which simulates exhaustive search" in {
-    val r0 = RegExpParser("^(a*a*b|ba)")
+    val r0 = RegExpParser("^(?:a*a*b|ba)")
     val r1 = RegExpParser("a*a*b")
     val r2 = RegExpParser("a*b")
     val r3 = RegExpParser("a")
@@ -71,28 +71,28 @@ class RegExpSpec extends FlatSpec with Matchers {
     modifyRegExp(RegExpParser("""^(a)\1"""))._1 should be (
       List[RegExp[Char]](
         StartAnchorExp(),
-        GroupExp(ElemExp('a'),1,None),
+        ElemExp('a'),
         ConcatExp(ElemExp('a'), FailEpsExp())
       ).reduceLeft(ConcatExp(_,_)))
     modifyRegExp(RegExpParser("""^(a)\1(?<hoge>b*)(?P=hoge)"""))._1 should be (
       List[RegExp[Char]](
         StartAnchorExp(),
-        GroupExp(ElemExp('a'),1,None),
+        ElemExp('a'),
         ConcatExp(ElemExp('a'), FailEpsExp()),
-        GroupExp(StarExp(ElemExp('b'),true),2,Some("hoge")),
+        StarExp(ElemExp('b'),true),
         ConcatExp(StarExp(ElemExp('b'),true), FailEpsExp()),
       ).reduceLeft(ConcatExp(_,_)))
     modifyRegExp(RegExpParser("""^((?<=a))\1"""))._1 should be (
       List[RegExp[Char]](
         StartAnchorExp(),
-        GroupExp(FailEpsExp(),1,None),
+        FailEpsExp(),
         ConcatExp(FailEpsExp(), FailEpsExp())
       ).reduceLeft(ConcatExp(_,_)))
     modifyRegExp(RegExpParser("""^(a)(b\1)\2"""))._1 should be (
       List[RegExp[Char]](
         StartAnchorExp(),
-        GroupExp(ElemExp('a'),1,None),
-        GroupExp(ConcatExp(ElemExp('b'), ConcatExp(ElemExp('a'), FailEpsExp())),2,None),
+        ElemExp('a'),
+        ConcatExp(ElemExp('b'), ConcatExp(ElemExp('a'), FailEpsExp())),
         ConcatExp(ConcatExp(ElemExp('b'), ConcatExp(ElemExp('a'), FailEpsExp())), FailEpsExp())
       ).reduceLeft(ConcatExp(_,_)))
   }

@@ -5,17 +5,18 @@ import matching.Witness
 import matching.monad._
 import matching.monad.DMonad._
 import matching.monad.DTree._
+import matching.monad.StateT._
 import matching.transition._
 import matching.tool.{Analysis, Debug, IO}
 
 trait RegExp[A] {
   override def toString(): String = RegExp.toString(this)
-  def derive[M[_,_]](a: A, u: List[Option[A]])(implicit deriver: RegExpDeriver[M])
-    : M[Option[RegExp[A]], Option[RegExp[A]]] = deriver.derive(this,u,Some(a))
-  def derive[M[_,_]](a: Option[A], u: List[Option[A]])(implicit deriver: RegExpDeriver[M])
-    : M[Option[RegExp[A]], Option[RegExp[A]]] = deriver.derive(this,u,a)
-  def deriveEOL[M[_,_]](u: List[Option[A]])(implicit deriver: RegExpDeriver[M])
-    : M[Unit, Unit] = deriver.deriveEOL(this,u)
+  def derive[M[_,_]](a: A)(implicit deriver: RegExpDeriver[M])
+    : M[Option[RegExp[A]], Option[RegExp[A]]] = deriver.derive(this,Some(a))
+  def derive[M[_,_]](a: Option[A])(implicit deriver: RegExpDeriver[M])
+    : M[Option[RegExp[A]], Option[RegExp[A]]] = deriver.derive(this,a)
+  def deriveEOL[M[_,_]]()(implicit deriver: RegExpDeriver[M])
+    : M[Unit, Unit] = deriver.deriveEOL(this)
 }
 
 case class ElemExp[A](a: A) extends RegExp[A]
@@ -321,6 +322,7 @@ object RegExp {
         }
 
         r match {
+          case GroupExp(r,_,_) => replace(r)
           case LookbehindExp(_,_) =>
             approximated = true
             FailEpsExp()
@@ -367,7 +369,7 @@ object RegExp {
 
   def constructTransducer(
     r: RegExp[Char], options: PCREOptions = new PCREOptions()
-  ): DetTransducer[(RegExp[Char], Boolean), Option[Char]] = {
+  ): DetTransducer[(RegExp[Char], String), Option[Char]] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (options.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -402,33 +404,33 @@ object RegExp {
     }
 
     val sigma = getElems(r).map(Option(_)) + None // None: character which does not appear in the given expression
-    var states = Set((r, true))
-    val stack = Stack((r, true))
+    val initialState: (RegExp[Char], String) = (r, "")
+    var states = Set(initialState)
+    val stack = Stack(initialState)
     var delta = Map[
-      ((RegExp[Char], Boolean), Option[Option[Char]]),
-      DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)]
+      ((RegExp[Char], String), Option[Option[Char]]),
+      DTree[(RegExp[Char], String), (RegExp[Char], String)]
     ]()
-    implicit val deriver = new RegExpDeriver[DTree](options)
+    implicit val deriver = new RegExpDeriver[StateTStringDTree](options)
 
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
-      val s @ (r,b) = stack.pop
-      val u = if (b) Nil else List(None)
+      val s @ (r,u) = stack.pop
       sigma.foreach{ a =>
-        val t: DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)] = r.derive(a,u) >>= {
-          case Some(r) => DLeaf((r, false))
-          case None => DSuccess() // simulates prefix match
-        }
+        val t = (r.derive(a) >>= {
+          case Some(r) => StateTDTreeMonad[RegExp[Char], RegExp[Char]](r)
+          case None => StateTDTreeMonad.success[RegExp[Char], RegExp[Char]] // simulates prefix match
+        })(u)
         delta += (s,Some(a)) -> t
         val newExps = DTreeMonad.leaves(t).filterNot(states.contains)
         states |= newExps.toSet
         stack.pushAll(newExps)
       }
-      val t: DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)] = r.deriveEOL(u) >>= (_ => DSuccess())
+      val t = (r.deriveEOL >>= (_ => StateTDTreeMonad.success[RegExp[Char], RegExp[Char]]))(u)
       delta += (s,None) -> t
     }
 
-    new DetTransducer(states, sigma, (r, true), delta)
+    new DetTransducer(states, sigma, initialState, delta)
   }
 
   def calcTimeComplexity(

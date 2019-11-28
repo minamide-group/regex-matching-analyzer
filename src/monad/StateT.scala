@@ -19,6 +19,7 @@ object StateT {
       = s => m(s) `>>=r` {case (b,s) => f(b)(s)}
     def success[A,B] = _ => DTreeMonad.success
     def fail[A,B] = _ => DTreeMonad.fail
+    def fail[A,B](m: StateTStringDTree[A,B]) = s => DTreeMonad.fail(m(s))
     def plus[A,B](m1: StateTStringDTree[A,B], m2: StateTStringDTree[A,B])
       = s => m1(s) ++ m2(s)
     def assert[A,B](m1: StateTStringDTree[A,A], m2: StateTStringDTree[A,B])

@@ -7,6 +7,7 @@ sealed trait DTree[A,B]
 case class DLeaf[A,B](b: B) extends DTree[A,B]
 case class DSuccess[A,B]() extends DTree[A,B]
 case class DFail[A,B]() extends DTree[A,B]
+case class DFail1[A,B](t: DTree[A,B]) extends DTree[A,B]
 case class DOr[A,B](l: DTree[A,B], r: DTree[A,B]) extends DTree[A,B]
 case class DAssert[A,B](l: DTree[A,A], r: DTree[A,B]) extends DTree[A,B]
 case class DAssertNot[A,B](l: DTree[A,A], r: DTree[A,B]) extends DTree[A,B]
@@ -20,6 +21,7 @@ object DTree {
         case DLeaf(b) => DLeaf(b)
         case DSuccess() => DSuccess()
         case DFail() => DFail()
+        case DFail1(t) => DFail1(t `>>=l` f)
         case DOr(l,r) => DOr(l `>>=l` f, r `>>=l` f)
         case DAssert(l,r) => DAssert(l >>= f, r `>>=l` f)
         case DAssertNot(l,r) => DAssertNot(l >>= f, r `>>=l` f)
@@ -32,6 +34,7 @@ object DTree {
         case DLeaf(b) => f(b)
         case DSuccess() => DSuccess()
         case DFail() => DFail()
+        case DFail1(t) => DFail1(t `>>=r` f)
         case DOr(l,r) => DOr(l `>>=r` f, r `>>=r` f)
         case DAssert(l,r) => DAssert(l, r `>>=r` f)
         case DAssertNot(l,r) => DAssertNot(l, r `>>=r` f)
@@ -41,6 +44,7 @@ object DTree {
 
     def success[A,B] = DSuccess()
     def fail[A,B] = DFail()
+    def fail[A,B](m: DTree[A,B]) = DFail1(m)
     def plus[A,B](m1: DTree[A,B], m2: DTree[A,B]) = DOr(m1,m2)
     def assert[A, B](m1: DTree[A,A],m2: DTree[A,B]) = DAssert(m1,m2)
     def assertNot[A, B](m1: DTree[A,A],m2: DTree[A,B]) = DAssertNot(m1,m2)
@@ -50,6 +54,7 @@ object DTree {
         case DLeaf(a) => v(a)
         case DSuccess() => true
         case DFail() => false
+        case DFail1(_) => false
         case DOr(l,r) => eval(l)(v) || eval(r)(v)
         case DAssert(l,r) => eval(l)(v) && eval(r)(v)
         case DAssertNot(l,r) => !eval(l)(v) && eval(r)(v)
@@ -62,6 +67,7 @@ object DTree {
         case DLeaf(a) => v(a)
         case DSuccess() => true
         case DFail() => false
+        case DFail1(_) => false
         case DOr(l,r) => evalr(l)(v) || evalr(r)(v)
         case DAssert(l,r) => eval(l)(identity) && evalr(r)(v)
         case DAssertNot(l,r) => !eval(l)(identity) && evalr(r)(v)
@@ -73,6 +79,7 @@ object DTree {
       m match {
         case DLeaf(a) => Seq(a)
         case DSuccess() | DFail() => Seq()
+        case DFail1(t) => leaves(t)
         case DOr(l,r) => leaves(l) ++ leaves(r)
         case DAssert(l,r) => leaves(l) ++ leaves(r)
         case DAssertNot(l,r) => leaves(l) ++ leaves(r)
@@ -84,6 +91,7 @@ object DTree {
   def prune[Q](t: DTree[Q,Q], qs: Set[Q] = Set[Q]()): DTree[Q,Q] = {
     t match {
       case DOr(l,r) => if (DTreeMonad.eval(l)(qs)) DLft(prune(l,qs)) else DOr(l,prune(r,qs))
+      case DFail1(t) => prune(t,qs)
       case DAssert(l,r) => if (!DTreeMonad.eval(l)(qs)) DLft(prune(l,qs)) else DAssert(l,prune(r,qs))
       case DAssertNot(l,r) => if (DTreeMonad.eval(l)(qs)) DLft(prune(l,qs)) else DAssertNot(l,prune(r,qs))
       case _ => t

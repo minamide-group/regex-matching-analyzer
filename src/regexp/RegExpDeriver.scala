@@ -4,8 +4,8 @@ import matching.monad._
 import matching.monad.DMonad._
 import RegExp._
 
-class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M]) {
-  def derive[A](r: RegExp[A], u: List[Option[A]], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
+class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, String]) {
+  def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
     def consume(r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
       def accept(a: Option[A]): Boolean = {
         def acceptCharClass(r: CharClassElem, a: Option[Char]): Boolean = {
@@ -51,11 +51,11 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
           }
           case CharClassExp(es,positive) => es.exists(acceptCharClass(_,a)) ^ !positive
           case r @ MetaCharExp(_) => acceptCharClass(r,a)
-          case _ => throw new Exception(s"accept unsupported expression: ${r}")
+          case _ => throw new Exception(s"internal error.")
         }
       }
 
-      if (accept(a)) m(Some(EpsExp())) else m.fail
+      if (accept(a)) m.update(u => u + a) `>>=r` (_ => m(Some(EpsExp()))) else m.fail
     }
 
     r match {
@@ -63,14 +63,14 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
       case EmptyExp() => m.fail
       case EpsExp() => m(None)
       case ConcatExp(r1,r2) =>
-        derive(r1,u,a) `>>=r` {
+        derive(r1,a) `>>=r` {
           case Some(r) => m(Some(optConcatExp(r,r2)))
-          case None => derive(r2,u,a)
+          case None => derive(r2,a)
         }
       case AltExp(r1,r2) =>
-        derive(r1,u,a) ++ derive(r2,u,a)
+        derive(r1,a) ++ derive(r2,a)
       case StarExp(r1,greedy) =>
-        val rd: M[Option[RegExp[A]], Option[RegExp[A]]] = derive(r1,u,a) `>>=r` {
+        val rd: M[Option[RegExp[A]], Option[RegExp[A]]] = derive(r1,a) `>>=r` {
           case Some(r2) => m(Some(optConcatExp(r2,r)))
           case None => m(None)
         }
@@ -81,12 +81,12 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         }
       case PlusExp(r,greedy) =>
         val rStar = StarExp(r,greedy)
-        derive(r,u,a) `>>=r` {
+        derive(r,a) `>>=r` {
           case Some(r1) => m(Some(optConcatExp(r1,rStar)))
-          case None => derive(rStar,u,a)
+          case None => derive(rStar,a)
         }
       case OptionExp(r,greedy) =>
-        val dr = derive(r,u,a)
+        val dr = derive(r,a)
         if (greedy ^ options.ungreedy) {
           dr ++ m(None)
         } else {
@@ -94,9 +94,9 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         }
       case RepeatExp(r,min,max,greedy) =>
         val rDec = RepeatExp(r,min.map(_-1),max.map(_-1),greedy)
-        val rd: M[Option[RegExp[A]], Option[RegExp[A]]] = derive(r,u,a) `>>=r` {
+        val rd: M[Option[RegExp[A]], Option[RegExp[A]]] = derive(r,a) `>>=r` {
           case Some(r1) => m(Some(optConcatExp(r1,rDec)))
-          case None => derive(rDec,u,a)
+          case None => derive(rDec,a)
         }
         if (min.isDefined) {
           rd
@@ -105,26 +105,25 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         } else {
           (m(None): M[Option[RegExp[A]], Option[RegExp[A]]]) ++ rd
         }
-      case GroupExp(r,_,_) => derive(r,u,a)
-      case StartAnchorExp() => if (u.isEmpty) m(None) else m.fail
+      case StartAnchorExp() => m.update(identity) `>>=r` (u => if (u.isEmpty) m(None) else m.fail)
       case EndAnchorExp() => m.fail
       case LookaheadExp(r,positive) =>
-        val rd = derive(r,u,a)
+        val rd = derive(r,a)
         if (positive) m.assert(rd, m(None)) else m.assertNot(rd, m(None))
-      case LookbehindExp(_,_) => throw new Exception(s"lookbehind is unsupported.")
-      case BackReferenceExp(_,_) => throw new Exception(s"back reference is unsupported.")
-      case IfExp(_,_,_) => throw new Exception(s"conditional expression is unsupported.")
+      case LookbehindExp(r,positive) => ???
+      case FailEpsExp() => m.fail(m(None))
+      case _ => throw new Exception(s"internal error.")
     }
   }
 
-  def deriveEOL[A](r: RegExp[A], u: List[Option[A]]): M[Unit, Unit] = {
+  def deriveEOL[A](r: RegExp[A]): M[Unit, Unit] = {
     r match {
       case ElemExp(_) | EmptyExp() | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => m.fail
       case EpsExp() => m(())
-      case ConcatExp(r1,r2) => deriveEOL(r1,u) `>>=r` (_ => deriveEOL(r2,u))
-      case AltExp(r1,r2) => deriveEOL(r1,u) ++ deriveEOL(r2,u)
+      case ConcatExp(r1,r2) => deriveEOL(r1) `>>=r` (_ => deriveEOL(r2))
+      case AltExp(r1,r2) => deriveEOL(r1) ++ deriveEOL(r2)
       case StarExp(r,greedy) =>
-        val rd = deriveEOL(r,u)
+        val rd = deriveEOL(r)
         if (greedy ^ options.ungreedy) {
           rd ++ m(())
         } else {
@@ -132,9 +131,9 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         }
       case PlusExp(r,greedy) =>
         val rStar = StarExp(r,greedy)
-        deriveEOL(r,u) `>>=r` (_ => deriveEOL(rStar,u))
+        deriveEOL(r) `>>=r` (_ => deriveEOL(rStar))
       case OptionExp(r,greedy) =>
-        val dr = deriveEOL(r,u)
+        val dr = deriveEOL(r)
         if (greedy ^ options.ungreedy) {
           dr ++ m(())
         } else {
@@ -142,7 +141,7 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         }
       case RepeatExp(r,min,max,greedy) =>
         val rDec = RepeatExp(r,min.map(_-1),max.map(_-1),greedy)
-        val rd = deriveEOL(r,u) `>>=r` (_ => deriveEOL(rDec,u))
+        val rd = deriveEOL(r) `>>=r` (_ => deriveEOL(rDec))
         if (min.isDefined) {
           rd
         } else if (greedy ^ options.ungreedy) {
@@ -150,15 +149,14 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         } else {
           m(()) ++ rd
         }
-      case GroupExp(r,_,_) => deriveEOL(r,u)
-      case StartAnchorExp() => if (u.isEmpty) m(()) else m.fail
+      case StartAnchorExp() => m.update(identity) `>>=r` (u => if (u.isEmpty) m(()) else m.fail)
       case EndAnchorExp() => m(())
       case LookaheadExp(r,positive) =>
-        val rd = deriveEOL(r,u)
+        val rd = deriveEOL(r)
         if (positive) m.assert(rd, m(())) else m.assertNot(rd, m(()))
-      case LookbehindExp(_,_) => throw new Exception(s"lookbehind is unsupported.")
-      case BackReferenceExp(_,_) => throw new Exception(s"back reference is unsupported.")
-      case IfExp(_,_,_) => throw new Exception(s"conditional expression is unsupported.")
+      case LookbehindExp(r,positive) => ???
+      case FailEpsExp() => m.fail(m(()))
+      case _ => throw new Exception(s"internal error.")
     }
   }
 }

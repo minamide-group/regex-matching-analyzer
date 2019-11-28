@@ -6,6 +6,7 @@ trait DMonad[M[_,_]] {
   def bindr[A,B,C](m: M[A,B], f: B => M[A,C]): M[A,C]
   def success[A,B]: M[A,B]
   def fail[A,B]: M[A,B]
+  def fail[A,B](m: M[A,B]): M[A,B]
   def plus[A,B](m1: M[A,B], m2: M[A,B]): M[A,B]
   def assert[A,B](m1: M[A,A], m2: M[A,B]): M[A,B]
   def assertNot[A,B](m1: M[A,A], m2: M[A,B]): M[A,B]
