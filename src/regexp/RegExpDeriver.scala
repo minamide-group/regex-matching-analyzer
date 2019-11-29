@@ -5,7 +5,6 @@ import DMonad._
 import StateT._
 import RegExp._
 
-
 class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, OptString]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
     def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]], Option[RegExp[Char]]] = {

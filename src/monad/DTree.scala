@@ -1,7 +1,6 @@
 package matching.monad
 
-import DMonad._
-
+import DMonad._ 
 
 sealed trait DTree[A,B]
 case class DLeaf[A,B](b: B) extends DTree[A,B]

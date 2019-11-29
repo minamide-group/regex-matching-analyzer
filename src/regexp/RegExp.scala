@@ -224,7 +224,7 @@ object RegExp {
           }
         case IfExp(_,_,_) => throw RegExp.InvalidRegExpException(
             s"conditional expression is unsupported.")
-        case _ => // noop
+        case _ => // NOP
       }
     }
 
