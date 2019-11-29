@@ -450,7 +450,7 @@ object RegExp {
   ): (Option[Int], Witness[Char], Boolean, Int) // (degree, witness, approximated?, size of transducer)
   = {
     def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
-      val charForNone = '.'
+      val charForNone = '\u25AE'
       Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
     }
 

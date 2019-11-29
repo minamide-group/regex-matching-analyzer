@@ -1,8 +1,14 @@
 Language: [English](README.md) | [日本語](README_ja.md)
 
 # regex-matching-analyzer
-An analyzer to determine time complexity of backtracking regular expression matching.
-For a given regular expression, it determines the order of worst case time complexity to the length of input strings.
+This is an analyzer to determine the time complexity of regular expression matching.
+For a given regular expression, it determines the order of the worst case time complexity to the length of input strings.
+
+The conditions of matching below are assumed.
+
+- The matching algorithm is based on backtracking.
+- It performs substring matching and terminates when one successful matching was found.
+
 
 ## Usage
 We recommend to use sbt.
@@ -18,30 +24,38 @@ run [options]
 run <input file> [options]
 ```
 
+example：
+```
+run path/to/your_file.txt --style PCRE --timeout 5
+```
+
 ### Options
 |Option|Argument|Default||
 |:----|:----|:----|:----|
-|`--style`|`raw`,`PCRE`|`raw`|Specifying a [style of regular expressions](#Style-of-Regular-Expressions)|
-|`--method`|`Lookahead`,`SubsetPrune`,`Nondeterminism`,`Exhaustive`|`Lookahead`|Specifying an [algorithm to simulate backtracking](#Algorithm-to-Simulate-Backtracking)|
-|`--timeout`|integer|`10`|Specifying time limit (second) of analysis (specify `<= 0` to disable timeout)|
-|`--debug`|(no argument)|disabled|Enable debug mode|
+| `--style` | `raw` , `PCRE` | `raw` |Specifying a [style of regular expressions](#Style-of-Regular-Expressions)|
+| `--method` | `Lookahead` ,  ~~`SubsetPrune`~~ , ~~`Nondeterminism`~~ , `Exhaustive` | `Lookahead` |Specifying an [algorithm to simulate backtracking](#Algorithm-to-Simulate-Backtracking)|
+| `--timeout` |Integer| `10` |Specifying time limit (second) of analysis (specify `<= 0` to disable timeout)|
+| `--debug` |(no argument)|disabled|Enable debug mode|
+
+- The methods `SubsetPrune` , `Nondeterminism` are no longer available in order to support lookaheads of regular expression,
 
 
 ## Inputs
 ### Style of Regular Expressions
 - `raw`  
-Expressions are written directly.  
+Write expressions directly.  
 e.g.) `^a*|b`
 - `PCRE`  
-Expressions are enclosed by `/.../`.
+Write expressions in `/.../` .
 Some [modifiers](#Modifiers-in-PCRE-Style) are available.  
 e.g.) `/^a*|b/s`  
-We support to use other characters as delimiters.
-We also support bracket style delimiters such as `(...)`,`{...}`,`[...]`, and `<...>`.
+Using other characters as delimiters are supported.
+It also supports bracket style delimiters such as `(...)` , `{...}` , `[...]` , and `<...>` .
 
-### Format of Input Files
+### Input File Format
 The analyzer reads expressions line by line.
 Thus, expressions must be separated by line breaks in your input file.
+
 
 ## Outputs
 The possible results are follows:
@@ -50,112 +64,107 @@ The possible results are follows:
 - `polynomial, degree = n`
 - `exponential`
 - `timeout`
-- `skipped`: A given expression has unsupported features.
-- `error`: Error, mainly a parse error.
+- `skipped` : A given expression has unsupported features.
+- `error` : Error, mainly a parse error.
 
 The output also contains following information:
-- a witness of polynomial or exponential order (Currently, this feature is supported only when using algorithm `Lookahead`.)
+- A witness of polynomial or exponential order.
 - Execution time taken to analyze
 
 ### Output Files
-If the analysis is performed on expressions from an input file, the output files are generated in directory `output/<input file>_<timestamp>`.
-This contains the following files:
-- `summary.txt`: The summary of results
-- `list.txt`: A list of all analyzed expressions
-- `result.txt`: A list of results
-- `<result>/...`: A list of expressions and results whose result is `<result>`(In `polynomial/...`, files for each degree of polynomial will be generated.)
+If the analysis is performed on expressions from an input file, the output files are generated in the directory `output/<input file>_<timestamp>` ,
+which contains the following files:
+- `summary.txt` : The summary of results
+- `list.txt` : A list of all analyzed expressions
+- `result.txt` : A list of results
+- `<result>/...` : A list of expressions and results whose result is `<result>` (In `polynomial/...` , files for each degree of polynomial will also be generated.)
+- `approximated/<result>/...` : A list of expressions and results whose result is `<result>` by [overapproximation](#Overapproximation).
 
 
 ## Regular Expression Parser
-Here is a list of supported features.
+Here is the list of supported features.
 All characters that do not appear in the following list will become a expression just matches the character itself.
-- `∅`: The empty set
-- `ε`: The empty string
-- `r1|r2`: `r1` or `r2`
-- `\unnnn`: A character with hexadecimal code `nnnn`
-- `\xnn`: A character with hexadecimal code `nn`
-- `\nnn`: A character with octal code `nnn`
-- `.`: Any one character except for a newline character
+- `∅` : Never matches to any character.
+- `ε` : The empty string
+- `r1|r2` : `r1` or `r2`
+- `\unnnn` : A character with hexadecimal code `nnnn`
+- `\xnn` : A character with hexadecimal code `nn`
+- `\nnn` : A character with octal code `nnn`
+- `.` : Any one character except for a newline character
 - Repetition
-  + `r*`: 0 or more times
-  + `r+`: 1 or more times
-  + `r?`: 0 or 1 times
-  + `r{n}`: `n` times
-  + `r{n,}`: More than or equal to `n` times
-  + `r{,m}`: Less than or equal to `m` times
-  + `r{n,m}`: `n` to `m` times
+  + `r*` : 0 or more times
+  + `r+` : 1 or more times
+  + `r?` : 0 or 1 times
+  + `r{n}` : `n` times
+  + `r{n,}` : More than or equal to `n` times
+  + `r{,m}` : Less than or equal to `m` times
+  + `r{n,m}` : More than or equal to `n` , and less than or equal to `m` times
 - Groups
-  + `(r)`: Capturing group
-  + `(?:r)`: Non-capturing group
-  + `(?<name>r)`,`(?'name'r)`,`(?P<name>r)`: Named group
+  + `(r)` : Capturing group
+  + `(?:r)` : Non-capturing group
+  + `(?<name>r)` , `(?'name'r)` , `(?P<name>r)` : Named capturing group
 - Character classes
-  + `[...]`: One of specified characters
-  + `[^...]`: One of not specified characters
+  + `[...]` : One of specified characters
+  + `[^...]` : One of not specified characters
 - Special characters
-  + `\a`: Alarm (`\u0007`)
-  + `\e`: Escape (`\u001B`)
-  + `\f`: Formfeed (`\u000C`)
-  + `\n`: Newline (`\u000A`)
-  + `\r`: Carriage return (`\u000D`)
-  + `\t`: Tab (`\u0009`)
+  + `\a` : Alarm ( `\u0007` )
+  + `\e` : Escape ( `\u001B` )
+  + `\f` : Formfeed ( `\u000C` )
+  + `\n` : Newline ( `\u000A` )
+  + `\r` : Carriage return ( `\u000D` )
+  + `\t` : Tab ( `\u0009` )
 - Predefined character classes
-  + `\d`: Digits (`[0-9]`)
-  + `\D`: Any character that is not digits (`[^0-9]`)
-  + `\h`: Horizontal whitespace (`[\u0009]`)
-  + `\H`: Any character that is not horizontal whitespace (`[^\u0009]`)
-  + `\s`: Any whitespace character (`[ \t\n\r\f]`)
-  + `\S`: Any character that is not whitespace character (`[^ \t\n\r\f]`)
-  + `\v`: Vertical whitespace (`[\u000B]`)
-  + `\V`: Any character that is not vertical whitespace (`[^\u000B]`)
-  + `\w`: Any word character (`[a-zA-Z0-9_]`)
-  + `\W`: Any non-word character (`[^a-zA-Z0-9_]`)
-  + `\R`: Line breaks (`[\r\n]`)
-- Anchors
-  + `^`: Start of string
-  + `$`: End of string
-
-The parser is also able to handle the following features,
-but they are unsupported for analyzer and its result will be `skipped`.
+  + `\d` : Digits ( `[0-9]` )
+  + `\D` : Any character that is not digits ( `[^0-9]` )
+  + `\h` : Horizontal whitespace ( `[\u0009]` )
+  + `\H` : Any character that is not horizontal whitespace ( `[^\u0009]` )
+  + `\s` : Any whitespace character ( `[ \t\n\r\f]` )
+  + `\S` : Any character that is not whitespace character ( `[^ \t\n\r\f]` )
+  + `\v` : Vertical whitespace ( `[\u000B]` )
+  + `\V` : Any character that is not vertical whitespace ( `[^\u000B]` )
+  + `\w` : Any word character ( `[a-zA-Z0-9_]` )
+  + `\W` : Any non-word character ( `[^a-zA-Z0-9_]` )
+  + `\R` : Line breaks ( `[\r\n]` )
+- match to start/end of string
+  + `^` : Start of string
+  + `$` : End of string
 - Lookahead/Lookbehind
-  + `(?=r)`: Positive lookahead
-  + `(?!r)`: Negative lookahead
-  + `(?<=r)`: Positive lookbehind
-  + `(?<!r)`: Negative lookbehind
-- `(?(r)r1)`,`(?(r)r1|r2)`: Conditional
+  + `(?=r)` : Positive lookahead
+  + `(?!r)` : Negative lookahead
+  + `(?<=r)` : Positive lookbehind
+  + `(?<!r)` : Negative lookbehind
 - Back references
-  + `\1`,`\2`, ...: Reference with index
-  + `(?P=name)`,`\k<name>`,`\k'name'`,`\k{name}`: Reference with name
+  + `\1`,`\2` , ...: Reference with index
+  + `(?P=name)` , `\k<name>` , `\k'name'` , `\k{name}` : Reference with name
+- `(?(r)r1)` , `(?(r)r1|r2)` : Conditional
 
 ### Escaping
-You can escape any characters except for alphanumeric by backslash `\` and then it will become a expression just matches the character itself.
+You can escape any characters except for alphanumeric by a backslash `\` and then it will become a expression just matches the character itself.
 The following characters must be escaped:
 + Outside of character classes  
-`∅`,`ε`,`.`,`|`,`*`,`+`,`?`,`^`,`$`,`(`,`)`,`[`,`]`,`\`
+`∅` , `ε` , `.` , `|` , `*` , `+` , `?` , `^` , `$` , `(` , `)` , `[` , `]` , `\`
 + Inside of character classes  
-`]`,`\`
+`]` , `\`
 
 ### Repetition
-Repetition expression matches greedy by default.
+A repetition expression matches greedy by default.
 Thus, it tries to match as much as possible.
 But if it is followed by `?`, then it becomes lazy and matches the minimum number of times possible.
 
 ### Character classes
 In character classes, the following forms are supported:
-- `char`: Single character
-- `char-char`: range
+- `char` : Single character
+- `char-char` : Range notation
 - Special characters
 - Predefined character classes
 
-A hyphen `-` put at the head or tail of brackets, or immediately before or after predefined character classes represents just a hyphen as symbol.
+A hyphen `-` put at the head or tail of brackets, or immediately before or after predefined character classes represents just a hyphen as a symbol.
 
 The following special character can be used only in character classes:
-- `\b`: backspace (`\u0008`)
-
-### Anchors
-`^` and `$` are supported only when they appear in the head and the tail of expressions, respectively.
+- `\b` : backspace ( `\u0008` )
 
 ### Backslashes Followed by Digits
-They will be parsed according to this specification basically.  
+They will be parsed according to the following specification basically.  
 https://www.php.net/manual/en/regexp.reference.escape.php
 - If the head is `0`  
 Pattern A
@@ -166,27 +175,41 @@ Parse digits as a decimal number.
   + Otherwise  
   Pattern A
 
-- Pattern A: Read up to 3 characters of digits which is less than or equal to 7, and then parse it as octal code. The rest of digits are parsed as just expressions that represent the numeral.
+- Pattern A: Read up to 3 characters of digits which are less than or equal to 7, and then parse it as an octal code. The rest of digits are parsed as just expressions that represent the numeral.
 - Pattern B: Parse it as back references. If the specified index is larger then the number of capturing groups in the whole expressions, then an error occurs.
 
 ### Modifiers in PCRE Style
 The following modifiers are supported:
-- `i`: Ignore the case of letters
-- `s`: `.` become to match with newline characters
-- `U`: Reverse greediness of repetition
+- `i` : Ignore the case of letters
+- `s` : Make `.` to match newline characters
+- `U` : Reverse greediness of repetitions
+
+
+## Supported Expressions
+The expressions below are unsupported for analyzer, and its result will be `skipped` .
+- Conditional expressions
+- Groups whose name are duplicated
+- Lookbehind with unbounded matching length
+- lookbehind/back reference in lookahead
+- back reference with cyclic dependency
+
+### Overapproximation
+If the given expression contains lookbehind or back references,
+the analyzer performs overapproximation.
+Thus, the result might be larger than true matching complexity.
 
 
 ## Algorithm to Simulate Backtracking
-- `Lookahead`:
+- `Lookahead` :
   + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/sugiyama2013.pdf
   + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
-- `SubsetPrune`:
+- `SubsetPrune` :
   + https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27
   + https://github.com/NicolaasWeideman/RegexStaticAnalysis
-- `Nondeterminism`:
+- `Nondeterminism` :
   + https://www.jalc.de/issues/2018/issue_23_1-3/jalc-2018-019-038.php
-- `Exhaustive`: Performs no backtracking
+- `Exhaustive` : Performs no backtracking
 
-- If you specify `Exhaustive`, the analyzer determines time complexity of exhaustive matching and its result might be different from one obtained by other algorithms.
+- If you specify `Exhaustive`, the analyzer determines the time complexity of exhaustive matching and its result might be different from one obtained by other algorithms.
 
 - If you specify `Nondeterminism`, expressions which have constant matching time will be determined to be `linear` instead of `constant`.
