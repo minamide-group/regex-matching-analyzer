@@ -37,7 +37,7 @@ run path/to/your_file.txt --style PCRE --timeout 5
 | `--timeout` |Integer| `10` |Specifying time limit (second) of analysis (specify `<= 0` to disable timeout)|
 | `--debug` |(no argument)|disabled|Enable debug mode|
 
-- The methods `SubsetPrune` , `Nondeterminism` are no longer available in order to support lookaheads of regular expression,
+- The methods `SubsetPrune` , `Nondeterminism` are no longer available in order to support lookaheads of regular expression.
 
 
 ## Inputs
