@@ -203,6 +203,10 @@ class RegExpParserSpec extends FlatSpec with Matchers {
     RegExpParser("""\t""") should be (ElemExp('\t'))
   }
 
+  it should "parse word boundary" in {
+    RegExpParser("""\b""") should be (BoundaryExp())
+  }
+
   it should "parse character class" in {
     RegExpParser("[abc]") should be (CharClassExp(Seq(
       SingleCharExp('a'),

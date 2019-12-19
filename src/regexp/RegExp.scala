@@ -86,6 +86,7 @@ case class MetaCharExp(c: Char) extends RegExp[Char] with CharClassElem {
 
   val negative = negetiveChar(c)
 }
+case class BoundaryExp() extends RegExp[Char]
 
 case class FailEpsExp[A]() extends RegExp[A]
 
@@ -157,6 +158,7 @@ object RegExp {
         s"${reg}${rep}"
       case CharClassExp(es,positive) => s"[${if (positive) "" else "^"}${es.mkString}]"
       case MetaCharExp(c) => s"\\${c}"
+      case BoundaryExp() => "\\b"
       case GroupExp(r,_,name) => name match {
         case Some(name) => s"(?<${name}>${r})"
         case None => s"(${r})"
@@ -323,7 +325,7 @@ object RegExp {
 
         r match {
           case GroupExp(r,_,_) => replace(r)
-          case LookbehindExp(_,_) =>
+          case LookbehindExp(_,_) | BoundaryExp() =>
             approximated = true
             FailEpsExp()
           case BackReferenceExp(n,_) =>
@@ -364,7 +366,7 @@ object RegExp {
     // approximate lookbehind/back reference
     val r2 = replace(r1, groupMap)
 
-    (r2, approximated, maxLength)
+    (r2, approximated, 0)
   }
 
   def constructTransducer(

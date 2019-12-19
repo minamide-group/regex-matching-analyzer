@@ -99,6 +99,7 @@ class RegExpParser() extends RegexParsers {
 
             def exp: Parser[RegExp[Char]] = rep1sep(term,"|") ^^ {_.reduceLeft(AltExp(_,_))}
             def meta: Parser[MetaCharExp] = "\\" ~> metas ^^ {s => MetaCharExp(s.last)}
+            def boundary: Parser[BoundaryExp] = "\\b" ^^ {_ => BoundaryExp()}
             def namedBackRef: Parser[NamedBackReferenceExpIR[Char]] = (
               "(?P=" ~> variable <~ ")" |
               "\\k" ~> ("<" ~> variable <~ ">" |
@@ -117,7 +118,7 @@ class RegExpParser() extends RegexParsers {
             def esc: Parser[Char] = "\\" ~> "[^a-zA-Z]".r ^^ {_.head}
             def variable: Parser[String] = "[a-zA-Z][a-zA-Z0-9]*".r
 
-            meta | num | namedBackRef | elem | empty | eps | dot | group | charClass |
+            meta | boundary | num | namedBackRef | elem | empty | eps | dot | group | charClass |
             startAnchor | endAnchor | lookaround | ifCond
           }
           def quantifier: Parser[Either[(Option[Int],Option[Int]),String]] = {
