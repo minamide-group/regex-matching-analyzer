@@ -186,12 +186,12 @@ object RegExp {
     }
   }
 
-  def modifyRegExp[A](r: RegExp[A]): (RegExp[A], Boolean, Int) = {
+  def modifyRegExp[A](r: RegExp[A]): (RegExp[A], Boolean) = {
     var approximated = false
 
     def recursiveApply(r: RegExp[A], f: RegExp[A] => RegExp[A]): RegExp[A] = {
       r match {
-        case ConcatExp(r1,r2) => ConcatExp(f(r1),f(r2))
+        case ConcatExp(r1,r2) => optConcatExp(f(r1),f(r2))
         case AltExp(r1,r2) => AltExp(f(r1),f(r2))
         case StarExp(r,greedy) => StarExp(f(r),greedy)
         case PlusExp(r,greedy) => PlusExp(f(r),greedy)
@@ -205,6 +205,27 @@ object RegExp {
     }
 
     def checkSupported(r: RegExp[A], inLookAhaed: Boolean = false): Unit = {
+      def isBounded(r: RegExp[A]): Unit = {
+        r match {
+          case StarExp(_,_) | PlusExp(_,_) | BackReferenceExp(_,_) =>
+            throw RegExp.InvalidRegExpException(
+              s"lookbehind with unbounded matching length is unsupported.")
+          case ConcatExp(r1, r2) => isBounded(r1); isBounded(r2)
+          case AltExp(r1, r2) => isBounded(r1); isBounded(r2)
+          case OptionExp(r,_) => isBounded(r)
+          case RepeatExp(r,_,max,_) => if (max.isDefined) {
+            isBounded(r)
+          } else {
+            throw RegExp.InvalidRegExpException(
+              s"lookbehind with unbounded matching length is unsupported.")
+          }
+          case GroupExp(r,_,_) => isBounded(r)
+          case LookaheadExp(r,_) => isBounded(r)
+          case LookbehindExp(r,_) => isBounded(r)
+          case _ => // NOP
+        }
+      }
+
       r match {
         case ConcatExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
         case AltExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
@@ -213,19 +234,21 @@ object RegExp {
         case OptionExp(r,_) => checkSupported(r, inLookAhaed)
         case RepeatExp(r,_,_,_) => checkSupported(r, inLookAhaed)
         case GroupExp(r,_,_) => checkSupported(r, inLookAhaed)
-        case BackReferenceExp(_,_) => if (inLookAhaed) {
+        case BackReferenceExp(_,_) if inLookAhaed =>
           throw RegExp.InvalidRegExpException(
             s"back reference in lookahead is unsupported.")
-          }
         case LookaheadExp(r,_) => checkSupported(r, true)
         case LookbehindExp(r,_) => if (inLookAhaed) {
             throw RegExp.InvalidRegExpException(
               s"lookbehind in lookahead is unsupported.")
           } else {
-            checkSupported(r, inLookAhaed)
+            checkSupported(r, inLookAhaed); isBounded(r)
           }
         case IfExp(_,_,_) => throw RegExp.InvalidRegExpException(
             s"conditional expression is unsupported.")
+        case BoundaryExp() if inLookAhaed =>
+          throw RegExp.InvalidRegExpException(
+            s"word boundary in lookahead is unsupported.")
         case _ => // NOP
       }
     }
@@ -239,39 +262,6 @@ object RegExp {
         case RepeatExp(r,min,_,_) if min.isDefined => isStartAnchorHead(r)
         case GroupExp(r,_,_) => isStartAnchorHead(r)
         case _ => false
-      }
-    }
-
-    def getLookbehindMaxLength(r: RegExp[A]): Option[Int] = {
-      def getMaxLength(r: RegExp[A]): Option[Int] = {
-        r match {
-          case ElemExp(_) | DotExp() | CharClassExp(_,_) | MetaCharExp(_) => Some(1)
-          case ConcatExp(r1, r2) =>
-            for (n1 <- getMaxLength(r1); n2 <- getMaxLength(r2)) yield n1 + n2
-          case AltExp(r1, r2) =>
-            for (n1 <- getMaxLength(r1); n2 <- getMaxLength(r2)) yield n1.max(n2)
-          case StarExp(_,_) | PlusExp(_,_) => None
-          case OptionExp(r,_) => getMaxLength(r)
-          case RepeatExp(r,_,max,_) =>
-            if (max.isDefined) getMaxLength(r).map(_*max.get) else None
-          case GroupExp(r,_,_) => getMaxLength(r)
-          case StartAnchorExp() => None
-          case _ => Some(0)
-        }
-      }
-
-      r match {
-        case LookbehindExp(r,_) => getMaxLength(r)
-        case ConcatExp(r1, r2) =>
-          for (n1 <- getLookbehindMaxLength(r1); n2 <- getLookbehindMaxLength(r2)) yield n1.max(n2)
-        case AltExp(r1, r2) =>
-          for (n1 <- getLookbehindMaxLength(r1); n2 <- getLookbehindMaxLength(r2)) yield n1.max(n2)
-        case StarExp(r,_) => getLookbehindMaxLength(r)
-        case PlusExp(r,_) => getLookbehindMaxLength(r)
-        case OptionExp(r,_) => getLookbehindMaxLength(r)
-        case RepeatExp(r,_,_,_) => getLookbehindMaxLength(r)
-        case GroupExp(r,_,_) => getLookbehindMaxLength(r)
-        case _ => Some(0)
       }
     }
 
@@ -304,21 +294,13 @@ object RegExp {
       }
     }
 
-    def replaceLookbehind(r: RegExp[A]): RegExp[A] = {
-      r match {
-        case LookbehindExp(_,_) =>
-          approximated = true
-          EpsExp()
-          case _ => recursiveApply(r,replaceLookbehind)
-      }
-    }
-
     def replace(r: RegExp[A], groupMap: Map[Int, RegExp[A]]): RegExp[A] = {
       def replace(r: RegExp[A]): RegExp[A] = {
         def removeAssert(r: RegExp[A]): RegExp[A] = {
           r match {
-            case LookaheadExp(_,_) | LookbehindExp(_,_) | StartAnchorExp() | EndAnchorExp() => FailEpsExp()
-            case GroupExp(r,_,_) => r
+            case LookaheadExp(_,_) | LookbehindExp(_,_) |
+              StartAnchorExp() | EndAnchorExp() |
+              BoundaryExp() => EpsExp()
             case _ => recursiveApply(r,removeAssert)
           }
         }
@@ -339,11 +321,6 @@ object RegExp {
     }
 
     checkSupported(r)
-    val maxLength = getLookbehindMaxLength(r) match {
-      case Some(n) => n
-      case None => throw RegExp.InvalidRegExpException(
-        s"lookbehind with unbounded matching length is unsupported.")
-    }
 
     // simulates suffix match
     val r1 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r)
@@ -366,12 +343,11 @@ object RegExp {
     // approximate lookbehind/back reference
     val r2 = replace(r1, groupMap)
 
-    (r2, approximated, 0)
+    (r2, approximated)
   }
 
-  def constructTransducer(
-    r: RegExp[Char], maxLength: Int, options: PCREOptions = new PCREOptions()
-  ): DetTransducer[(RegExp[Char], OptString), Option[Char]] = {
+  def constructTransducer(r: RegExp[Char], options: PCREOptions = new PCREOptions()
+): DetTransducer[(RegExp[Char], Boolean), Option[Char]] = {
     def getElems(r: RegExp[Char]): Set[Char] = {
       r match {
         case ElemExp(a) => if (options.ignoreCase && a.isLetter) Set(a.toLower) else Set(a)
@@ -380,11 +356,8 @@ object RegExp {
         case StarExp(r,_) => getElems(r)
         case PlusExp(r,_) => getElems(r)
         case OptionExp(r,_) => getElems(r)
-        case DotExp() => if (options.dotAll) Set() else Set('\n')
         case RepeatExp(r,_,_,_) => getElems(r)
-        case GroupExp(r,_,_) => getElems(r)
         case LookaheadExp(r,_) => getElems(r)
-        case LookbehindExp(r,_) => getElems(r)
         case r @ CharClassExp(es,positive) =>
           val s = es.flatMap(_.charSet).toSet
           if (options.ignoreCase) {
@@ -393,6 +366,7 @@ object RegExp {
               case a => a
             }
           } else s
+        case DotExp() => if (options.dotAll) Set() else Set('\n')
         case r @ MetaCharExp(c) =>
           val s = r.charSet
           if (options.ignoreCase) {
@@ -405,23 +379,15 @@ object RegExp {
       }
     }
 
-    def cutState(s: OptString): OptString = {
-      if (maxLength == 0) { // only start anchor
-        if (s.isEmpty) Vector() else Vector(None)
-      } else {
-        s.takeRight(maxLength)
-      }
-    }
-
     val sigma = getElems(r).map(Option(_)) + None // None: character which does not appear in the given expression
-    val initialState: (RegExp[Char], OptString) = (r, Vector())
+    val initialState: (RegExp[Char], Boolean) = (r, true)
     var states = Set(initialState)
     val stack = Stack(initialState)
     var delta = Map[
-      ((RegExp[Char], OptString), Option[Option[Char]]),
-      DTree[(RegExp[Char], OptString), (RegExp[Char], OptString)]
+      ((RegExp[Char], Boolean), Option[Option[Char]]),
+      DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)]
     ]()
-    implicit val deriver = new RegExpDeriver[StateTStringDTree](options)
+    implicit val deriver = new RegExpDeriver[StateTBooleanDTree](options)
 
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
@@ -430,9 +396,7 @@ object RegExp {
         val t = (r.derive(a) >>= {
           case Some(r) => StateTDTreeMonad[RegExp[Char], RegExp[Char]](r)
           case None => StateTDTreeMonad.success[RegExp[Char], RegExp[Char]] // simulates prefix match
-        })(u) >>= {
-          case (r,s) => DTreeMonad[(RegExp[Char], OptString), (RegExp[Char], OptString)]((r, cutState(s)))
-        }
+        })(u)
         delta += (s,Some(a)) -> t
         val newExps = DTreeMonad.leaves(t).filterNot(states.contains)
         states |= newExps.toSet
@@ -456,10 +420,10 @@ object RegExp {
       Witness(w.separators.map(_.map(_.getOrElse(charForNone))), w.pumps.map(_.map(_.getOrElse(charForNone))))
     }
 
-    val (rm, approximated, maxLength) = modifyRegExp(r)
+    val (rm, approximated) = modifyRegExp(r)
 
     val transducer = Debug.time("regular expression -> transducer") {
-      constructTransducer(rm, maxLength, options)
+      constructTransducer(rm, options)
     }.rename()
 
     val (growthRate, witness) = method match {

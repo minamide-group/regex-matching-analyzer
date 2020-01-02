@@ -6,12 +6,12 @@ import DMonad._
 
 class StateTSpec extends FlatSpec with Matchers {
   "update" should "read current state" in {
-    val t = StateTDTreeMonad.update[Int](identity) `>>=r` (s => StateTDTreeMonad[Int,String](s.map(_.get).mkString * 2))
-    t(Vector(Some('a'), Some('b'))) should be (DLeaf(("abab", Vector(Some('a'), Some('b')))))
+    val t = StateTDTreeMonad.update[Int](identity) `>>=r` (b => StateTDTreeMonad[Int,String](if(b) "t" else "f"))
+    t(true) should be (DLeaf(("t", true)))
   }
 
   it should "update state" in {
-    val t = StateTDTreeMonad.update[Int](_ :+ None) `>>=r` (_ => StateTDTreeMonad[Int,String]("bb"))
-    t(Vector(Some('a'), Some('b'))) should be (DLeaf(("bb", Vector(Some('a'), Some('b'), None))))
+    val t = StateTDTreeMonad.update[Int](_ => false) `>>=r` (_ => StateTDTreeMonad[Int,String]("bb"))
+    t(true) should be (DLeaf(("bb", false)))
   }
 }

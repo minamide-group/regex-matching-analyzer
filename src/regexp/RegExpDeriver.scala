@@ -2,10 +2,9 @@ package matching.regexp
 
 import matching.monad._
 import DMonad._
-import StateT._
 import RegExp._
 
-class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, OptString]) {
+class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, Boolean]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
     def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]], Option[RegExp[Char]]] = {
       def accept(a: Option[Char]): Boolean = {
@@ -55,7 +54,7 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         }
       }
 
-      if (accept(a)) m.update(u => u :+ a) `>>=r` (_ => m(Some(EpsExp()))) else m.fail
+      if (accept(a)) m.update(_ => false) `>>=r` (_ => m(Some(EpsExp()))) else m.fail
     }
 
     r match {
@@ -105,7 +104,7 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         } else {
           (m(None): M[Option[RegExp[A]], Option[RegExp[A]]]) ++ rd
         }
-      case StartAnchorExp() => m.update(identity) `>>=r` (u => if (u.isEmpty) m(None) else m.fail)
+      case StartAnchorExp() => m.update(identity) `>>=r` (b => if (b) m(None) else m.fail)
       case EndAnchorExp() => m.fail
       case LookaheadExp(r,positive) =>
         val rd = derive(r,a)
@@ -149,7 +148,7 @@ class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m
         } else {
           m(()) ++ rd
         }
-      case StartAnchorExp() => m.update(identity) `>>=r` (u => if (u.isEmpty) m(()) else m.fail)
+      case StartAnchorExp() => m.update(identity) `>>=r` (b => if (b) m(()) else m.fail)
       case EndAnchorExp() => m(())
       case LookaheadExp(r,positive) =>
         val rd = deriveEOL(r)

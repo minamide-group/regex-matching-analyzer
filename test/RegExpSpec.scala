@@ -41,18 +41,15 @@ class RegExpSpec extends FlatSpec with Matchers {
   }
 
   "constructTransducer" should "construct transducer which simulates exhaustive search" in {
-    val eps = Vector()
-    val anyChar = Vector(None)
-
     val r0 = RegExpParser("^(?:a*a*b|ba)")
     val r1 = RegExpParser("a*a*b")
     val r2 = RegExpParser("a*b")
     val r3 = RegExpParser("a")
     val r4 = RegExpParser("ε")
-    val transducer = constructTransducer(r0, 0)
-    transducer.states should be (Set((r0,eps), (r1,anyChar), (r2,anyChar), (r3,anyChar), (r4,anyChar)))
+    val transducer = constructTransducer(r0)
+    transducer.states should be (Set((r0,true), (r1,false), (r2,false), (r3,false), (r4,false)))
     transducer.sigma should be (Set(Some('a'),Some('b'),None))
-    transducer.initialState should be ((r0,eps))
+    transducer.initialState should be ((r0,true))
     transducer.delta should have size (20)
   }
 
@@ -66,6 +63,12 @@ class RegExpSpec extends FlatSpec with Matchers {
         FailEpsExp()
       ).reduceLeft(ConcatExp(_,_)))
     modifyRegExp(RegExpParser("^a(?<!ab|c)"))._1 should be (
+      List[RegExp[Char]](
+        StartAnchorExp(),
+        ElemExp('a'),
+        FailEpsExp()
+      ).reduceLeft(ConcatExp(_,_)))
+    modifyRegExp(RegExpParser("""^a\b"""))._1 should be (
       List[RegExp[Char]](
         StartAnchorExp(),
         ElemExp('a'),
@@ -85,11 +88,11 @@ class RegExpSpec extends FlatSpec with Matchers {
         StarExp(ElemExp('b'),true),
         ConcatExp(StarExp(ElemExp('b'),true), FailEpsExp()),
       ).reduceLeft(ConcatExp(_,_)))
-    modifyRegExp(RegExpParser("""^((?<=a))\1"""))._1 should be (
+    modifyRegExp(RegExpParser("""^((?<=a)b)\1"""))._1 should be (
       List[RegExp[Char]](
         StartAnchorExp(),
-        FailEpsExp(),
-        ConcatExp(FailEpsExp(), FailEpsExp())
+        ConcatExp(FailEpsExp(), ElemExp('b')),
+        ConcatExp(ElemExp('b'), FailEpsExp())
       ).reduceLeft(ConcatExp(_,_)))
     modifyRegExp(RegExpParser("""^(a)(b\1)\2"""))._1 should be (
       List[RegExp[Char]](
@@ -104,6 +107,7 @@ class RegExpSpec extends FlatSpec with Matchers {
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?(a)b|c)"))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?=(?<=a))"))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?!(?<!a))"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(?=\b)"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?<=a*)"))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?<!a+)"))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a)(?=\1)"""))}

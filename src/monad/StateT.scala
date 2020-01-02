@@ -8,27 +8,26 @@ trait StateOperatable[M[_,_], S] {
 }
 
 object StateT {
-  type OptString = Vector[Option[Char]]
   type StateT[S,M[_,_],A,B] = S => M[(A,S),(B,S)]
-  trait StateTStringDTree[A,B] extends StateT[OptString, DTree, A, B]
+  trait StateTBooleanDTree[A,B] extends StateT[Boolean, DTree, A, B]
 
-  implicit object StateTDTreeMonad extends DMonad[StateTStringDTree] with StateOperatable[StateTStringDTree, OptString] {
+  implicit object StateTDTreeMonad extends DMonad[StateTBooleanDTree] with StateOperatable[StateTBooleanDTree, Boolean] {
     def unit[A,B](b: B) = s => DTreeMonad((b,s))
-    def bindl[A,B,C](m: StateTStringDTree[A,B], f: A => StateTStringDTree[C,C])
+    def bindl[A,B,C](m: StateTBooleanDTree[A,B], f: A => StateTBooleanDTree[C,C])
       = s => m(s) `>>=l` {case (a,s) => f(a)(s)}
-    def bindr[A,B,C](m: StateTStringDTree[A,B], f: B => StateTStringDTree[A,C])
+    def bindr[A,B,C](m: StateTBooleanDTree[A,B], f: B => StateTBooleanDTree[A,C])
       = s => m(s) `>>=r` {case (b,s) => f(b)(s)}
     def success[A,B] = _ => DTreeMonad.success
     def fail[A,B] = _ => DTreeMonad.fail
-    def fail[A,B](m: StateTStringDTree[A,B]) = s => DTreeMonad.fail(m(s))
-    def plus[A,B](m1: StateTStringDTree[A,B], m2: StateTStringDTree[A,B])
+    def fail[A,B](m: StateTBooleanDTree[A,B]) = s => DTreeMonad.fail(m(s))
+    def plus[A,B](m1: StateTBooleanDTree[A,B], m2: StateTBooleanDTree[A,B])
       = s => m1(s) ++ m2(s)
-    def assert[A,B](m1: StateTStringDTree[A,A], m2: StateTStringDTree[A,B])
+    def assert[A,B](m1: StateTBooleanDTree[A,A], m2: StateTBooleanDTree[A,B])
       = s => DTreeMonad.assert(m1(s), m2(s))
-    def assertNot[A,B](m1: StateTStringDTree[A,A], m2: StateTStringDTree[A,B])
+    def assertNot[A,B](m1: StateTBooleanDTree[A,A], m2: StateTBooleanDTree[A,B])
       = s => DTreeMonad.assertNot(m1(s), m2(s))
 
-    def update[A](f: OptString => OptString)
+    def update[A](f: Boolean => Boolean)
       = s => DTreeMonad((s, f(s)))
   }
 }
