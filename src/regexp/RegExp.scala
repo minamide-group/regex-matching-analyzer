@@ -411,7 +411,7 @@ object RegExp {
 
   def calcTimeComplexity(
     r: RegExp[Char],
-    options: PCREOptions = new PCREOptions(),
+    options: PCREOptions,
     method: Option[BacktrackMethod]
   ): (Option[Int], Witness[Char], Boolean, Int) // (degree, witness, approximated?, size of transducer)
   = {

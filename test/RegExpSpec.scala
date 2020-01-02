@@ -2,6 +2,7 @@ package matching.regexp
 
 import org.scalatest._
 import RegExp._
+import matching.transition._
 
 class RegExpSpec extends FlatSpec with Matchers {
   "optConcatExp" should "concat expressions with optimization on ε" in {
@@ -114,5 +115,41 @@ class RegExpSpec extends FlatSpec with Matchers {
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a|\1)"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a\2)(\1|b\1)"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a\2)(\3|b)|(\1c*)"""))}
+  }
+
+  "calcTimeComplexity" should "calculate time complexity of backtrack matching" in {
+    val option = new PCREOptions()
+    val method = Some(Lookahead)
+    option.dotAll = true
+
+    calcTimeComplexity(RegExpParser("^abc$"),
+      option, method)._1 should be (Some(0))
+
+    calcTimeComplexity(RegExpParser("^a*$"),
+      option, method)._1 should be (Some(1))
+
+    calcTimeComplexity(RegExpParser("^a*a*$"),
+      option, method)._1 should be (Some(2))
+
+    calcTimeComplexity(RegExpParser("^((ab)*){3}$"),
+      option, method)._1 should be (Some(3))
+
+    calcTimeComplexity(RegExpParser("^a*a*bcd*d*$"),
+      option, method)._1 should be (Some(3))
+
+    calcTimeComplexity(RegExpParser("^(a|a)*$"),
+      option, method)._1 should be (None)
+
+    calcTimeComplexity(RegExpParser("^(a*)*$"),
+      option, method)._1 should be (None)
+
+    calcTimeComplexity(RegExpParser("^.*a.*a.*$"),
+      option, method)._1 should be (Some(1))
+
+    calcTimeComplexity(RegExpParser("^.*a.*b.*$"),
+      option, method)._1 should be (Some(2))
+
+    calcTimeComplexity(RegExpParser("^(?=a*$)a*a*$"),
+      option, method)._1 should be (Some(1))
   }
 }
