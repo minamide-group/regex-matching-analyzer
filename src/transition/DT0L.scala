@@ -282,7 +282,7 @@ class PairDT0L[A,R,P](
               if p11 == p21 && p12 == p22
             ) yield {
               Analysis.checkInterrupted("construct G2")
-              (((r11,r21), p11), a, ((r12,r22),p12))
+              (((r11,r21),p11), a, ((r12,r22),p12))
             }
 
             new LabeledGraph(e2)
@@ -299,7 +299,7 @@ class PairDT0L[A,R,P](
                 sc.exists{case ((r1,r2),_) => r1 == r2} &&
                 sc.exists{case ((r1,r2),_) => r1 != r2}
               ).map{ case sc =>
-                val q1 @ ((r1,r2),p) = sc.find{case ((r1,r2),p) => r1 != r2}.get
+                val q1 @ ((r1,r2),_) = sc.find{case ((r1,r2),p) => r1 != r2}.get
                 val q2 @ (_,p0) = sc.find{case ((r3,r4),_) => r3 == r1 && r4 == r1}.get
                 val path1 = g2.getPath(q2,q1).get
                 val path2 = g2.getPath(q1,q2).get
@@ -432,20 +432,6 @@ class IndexedDT0L[A,Q,P](
   indexedMorphs: Map[(P,P), Map[A, Map[Q,Seq[Q]]]]
 ) {
   def calcGrowthRate(initials: Set[(Q,P)], lookaheadDFA: DFA[P,A]): (Option[Int], Witness[A], Option[P]) = {
-    def toDT0L(): DT0L[(A,P),(Q,P)] = {
-      val statesDT0L = for (state <- states; index <- indices) yield (state, index)
-
-      val morphs = indexedMorphs.flatMap{ case ((p1,p2),morphs) =>
-        morphs.map{ case (a,morph) =>
-          (a,p2) -> morph.map{ case (b,bs) =>
-             (b,p1) -> bs.map((_,p2))
-          }
-        }
-      }
-
-      new DT0L(statesDT0L, morphs)
-    }
-
     def toPairDT0L(): PairDT0L[(A,P),Q,P] = {
       val statesDT0L = for (state <- states; index <- indices) yield (state, index)
 
@@ -473,20 +459,5 @@ class IndexedDT0L[A,Q,P](
     }
 
     (growthRate, convertWitness(witness), last.map(_._2))
-
-
-    // val dt0l = Debug.time("indexed DT0L -> DT0L") {
-    //   toDT0L()
-    // }
-    //
-    // val (renamedDT0L, renameMap) = dt0l.rename()
-    //
-    // val (growthRate, witness, last) = Debug.time("calculate growth rate") {
-    //   renamedDT0L.calcGrowthRate(initials.map(renameMap))
-    // }
-    //
-    // (growthRate, convertWitness(witness), last.map{ last =>
-    //   renameMap.find{case (_,v) => v == last}.get._1._2
-    // })
   }
 }

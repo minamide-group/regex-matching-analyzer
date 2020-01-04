@@ -106,11 +106,11 @@ class DetTransducer[Q,A](
     new DetTransducer(renamedStates, sigma, renamedInitialState, renamedDelta)
   }
 
-  def deltaHat(qs: Set[Q], a: Option[A]): Set[Q] = {
-    qs.collect{ case q if deltaDet.isDefinedAt((q,a)) =>
-      ATreeMonad.leaves(deltaDet((q,a)))
-    }.flatten
-  }
+  // def deltaHat(qs: Set[Q], a: Option[A]): Set[Q] = {
+  //   qs.collect{ case q if deltaDet.isDefinedAt((q,a)) =>
+  //     ATreeMonad.leaves(deltaDet((q,a)))
+  //   }.flatten
+  // }
 
   // def toNFA(): NFA[Option[Q],A] = {
   //   val statesNFA = states.map(Option(_)) + None
@@ -259,7 +259,7 @@ class DetTransducer[Q,A](
   def calcGrowthRateBacktrack(method: BacktrackMethod): (Option[Int], Witness[A]) = {
     def calcBtrGrowthRateLookahead(): (Option[Int], Witness[A]) = {
       def toTransducerWithLA(): TransducerWithLA[Q,A,Set[Q]] = {
-        val lookaheadDFA = toReverseDFA() // toNFA().reverse().toDFA()
+        val lookaheadDFA = toReverseDFA()
 
         var deltaLA = Map[(Q,Option[(A,Set[Q])]), ATree[Q,Q]]()
         deltaDet.foreach{
