@@ -3,8 +3,8 @@ package matching.regexp
 import collection.mutable.Stack
 import matching.Witness
 import matching.monad._
-import matching.monad.DMonad._
-import matching.monad.DTree._
+import matching.monad.AMonad._
+import matching.monad.ATree._
 import matching.monad.StateT._
 import matching.transition._
 import matching.tool.{Analysis, Debug, IO}
@@ -385,24 +385,24 @@ object RegExp {
     val stack = Stack(initialState)
     var delta = Map[
       ((RegExp[Char], Boolean), Option[Option[Char]]),
-      DTree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)]
+      ATree[(RegExp[Char], Boolean), (RegExp[Char], Boolean)]
     ]()
-    implicit val deriver = new RegExpDeriver[StateTBooleanDTree](options)
+    implicit val deriver = new RegExpDeriver[StateTBooleanATree](options)
 
     while (stack.nonEmpty) {
       Analysis.checkInterrupted("regular expression -> transducer")
       val s @ (r,u) = stack.pop
       sigma.foreach{ a =>
         val t = (r.derive(a) >>= {
-          case Some(r) => StateTDTreeMonad[RegExp[Char], RegExp[Char]](r)
-          case None => StateTDTreeMonad.success[RegExp[Char], RegExp[Char]] // simulates prefix match
+          case Some(r) => StateTATreeMonad[RegExp[Char], RegExp[Char]](r)
+          case None => StateTATreeMonad.success[RegExp[Char], RegExp[Char]] // simulates prefix match
         })(u)
         delta += (s,Some(a)) -> t
-        val newExps = DTreeMonad.leaves(t).filterNot(states.contains)
+        val newExps = ATreeMonad.leaves(t).filterNot(states.contains)
         states |= newExps.toSet
         stack.pushAll(newExps)
       }
-      val t = (r.deriveEOL >>= (_ => StateTDTreeMonad.success[RegExp[Char], RegExp[Char]]))(u)
+      val t = (r.deriveEOL >>= (_ => StateTATreeMonad.success[RegExp[Char], RegExp[Char]]))(u)
       delta += (s,None) -> t
     }
 

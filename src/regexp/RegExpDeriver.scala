@@ -1,10 +1,10 @@
 package matching.regexp
 
 import matching.monad._
-import DMonad._
+import AMonad._
 import RegExp._
 
-class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: DMonad[M] with StateOperatable[M, Boolean]) {
+class RegExpDeriver[M[_,_]](options: PCREOptions = new PCREOptions())(implicit m: AMonad[M] with StateOperatable[M, Boolean]) {
   def derive[A](r: RegExp[A], a: Option[A]): M[Option[RegExp[A]], Option[RegExp[A]]] = {
     def consume(r: RegExp[Char], a: Option[Char]): M[Option[RegExp[Char]], Option[RegExp[Char]]] = {
       def accept(a: Option[Char]): Boolean = {

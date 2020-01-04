@@ -3,13 +3,13 @@ package matching.regexp
 import org.scalatest._
 import RegExp._
 import matching.monad._
-import DTree.DTreeMonad._
+import ATree.ATreeMonad._
 import StateT._
 
 class RegExpDeriverSpec extends FlatSpec with Matchers {
-  implicit var deriver = new RegExpDeriver[StateTBooleanDTree]()
+  implicit var deriver = new RegExpDeriver[StateTBooleanATree]()
 
-  def applyLeaves[A](m: StateTBooleanDTree[A,A])
+  def applyLeaves[A](m: StateTBooleanATree[A,A])
     = leaves(m.apply(true))
 
   "derive" should "derive a" in {
@@ -218,12 +218,12 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
 
   it should "derive lookahead" in {
     val r1 = RegExpParser("(?=ab)")
-    r1.derive('a').apply(true) should be (DAssert[(Option[RegExp[Char]], Boolean),(Option[RegExp[Char]], Boolean)](
-      DLeaf((Some(ElemExp('b')), false)), DLeaf((None, true))))
+    r1.derive('a').apply(true) should be (AAssert[(Option[RegExp[Char]], Boolean),(Option[RegExp[Char]], Boolean)](
+      ALeaf((Some(ElemExp('b')), false)), ALeaf((None, true))))
 
     val r2 = RegExpParser("(?!ab)")
-    r2.derive('a').apply(true) should be (DAssertNot[(Option[RegExp[Char]], Boolean),(Option[RegExp[Char]], Boolean)](
-      DLeaf((Some(ElemExp('b')), false)), DLeaf((None, true))))
+    r2.derive('a').apply(true) should be (AAssertNot[(Option[RegExp[Char]], Boolean),(Option[RegExp[Char]], Boolean)](
+      ALeaf((Some(ElemExp('b')), false)), ALeaf((None, true))))
   }
 
   it should "derive lazy operations" in {
@@ -309,7 +309,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
 
 
   "derive with ignore case option" should "derive character" in {
-    deriver = new RegExpDeriver[StateTBooleanDTree](new PCREOptions("i"))
+    deriver = new RegExpDeriver[StateTBooleanATree](new PCREOptions("i"))
 
     val r1 = RegExpParser("a")
     applyLeaves(r1.derive('a')) should be (List((Some(EpsExp()), false)))
@@ -325,7 +325,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   it should "derive character class" in {
-    deriver = new RegExpDeriver[StateTBooleanDTree](new PCREOptions("i"))
+    deriver = new RegExpDeriver[StateTBooleanATree](new PCREOptions("i"))
 
     val r1 = RegExpParser("[ac-e]")
     applyLeaves(r1.derive('a')) should be (List((Some(EpsExp()), false)))
@@ -345,7 +345,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   "derive with dot all option" should "derive dot" in {
-    deriver = new RegExpDeriver[StateTBooleanDTree](new PCREOptions("s"))
+    deriver = new RegExpDeriver[StateTBooleanATree](new PCREOptions("s"))
 
     val r = RegExpParser(".")
     applyLeaves(r.derive('a')) should be (List((Some(EpsExp()), false)))
@@ -353,7 +353,7 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   }
 
   "derive with ungreedy option" should "derive repeat expression" in {
-    deriver = new RegExpDeriver[StateTBooleanDTree](new PCREOptions("U"))
+    deriver = new RegExpDeriver[StateTBooleanATree](new PCREOptions("U"))
 
     val r1 = RegExpParser("a*")
     applyLeaves(r1.derive('a')) should be (List((None, true), (Some(StarExp(ElemExp('a'), true)), false)))
@@ -451,11 +451,11 @@ class RegExpDeriverSpec extends FlatSpec with Matchers {
   it should "derive lookahead" in {
     val r1 = RegExpParser("(?=ab)")
     r1.deriveEOL().apply(true) should be (
-      DAssert[(Unit, Boolean), (Unit, Boolean)](DFail(), DLeaf(((), true))))
+      AAssert[(Unit, Boolean), (Unit, Boolean)](AFail(), ALeaf(((), true))))
 
     val r2 = RegExpParser("(?!ab)")
     r2.deriveEOL().apply(true) should be (
-      DAssertNot[(Unit, Boolean), (Unit, Boolean)](DFail(), DLeaf(((), true))))
+      AAssertNot[(Unit, Boolean), (Unit, Boolean)](AFail(), ALeaf(((), true))))
   }
 
   it should "derive complex expression" in {

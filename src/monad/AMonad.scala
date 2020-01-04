@@ -1,6 +1,6 @@
 package matching.monad
 
-trait DMonad[M[_,_]] {
+trait AMonad[M[_,_]] {
   def unit[A,B](b: B): M[A,B]
   def bindl[A,B,C](m: M[A,B], f: A => M[C,C]): M[C,B]
   def bindr[A,B,C](m: M[A,B], f: B => M[A,C]): M[A,C]
@@ -14,14 +14,14 @@ trait DMonad[M[_,_]] {
   final def apply[A,B](b: B) = unit[A,B](b)
 }
 
-object DMonad {
-  implicit class DMonadOp[M[_,_],A,B](self: M[A,B])(implicit m: DMonad[M]) {
+object AMonad {
+  implicit class AMonadOp[M[_,_],A,B](self: M[A,B])(implicit m: AMonad[M]) {
     def `>>=l`[C](f: A => M[C,C]) = m.bindl(self, f)
     def `>>=r`[C](f: B => M[A,C]) = m.bindr(self, f)
     def ++(m2: M[A,B]) = m.plus(self,m2)
   }
 
-  implicit class DMonadAbbrev[M[_,_],A](self: M[A,A])(implicit m: DMonad[M]) {
+  implicit class AMonadAbbrev[M[_,_],A](self: M[A,A])(implicit m: AMonad[M]) {
     def >>=[B](f: A => M[B,B]) = self `>>=l` f `>>=r` f
   }
 }
