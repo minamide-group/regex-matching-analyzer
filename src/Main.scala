@@ -21,7 +21,6 @@ object Main {
       List(
         s"${"-"*3} settings ${"-"*27}",
         s"style: ${style}",
-        s"method: ${if (method.isDefined) s"${method.get}" else "Exhaustive"}",
         s"timeout: ${if (timeout.isDefined) s"${timeout.get}s" else "disabled"}",
         s"${"-"*40}"
       ).mkString("\n")
@@ -37,15 +36,6 @@ object Main {
               case "raw" => Raw
               case "PCRE" => PCRE
               case _ => throw new Exception(s"invalid style option: ${style}")
-            }
-            parseOptions(options, setting)
-          case "--method" :: method :: options =>
-            setting.method = method match {
-              case "Lookahead" => Some(Lookahead)
-              case "SubsetPrune" => Some(SubsetPrune)
-              case "Nondeterminism" => Some(Nondeterminism)
-              case "Exhaustive" => None
-              case _ => throw new Exception(s"invalid method option: ${method}")
             }
             parseOptions(options, setting)
           case "--timeout" :: timeout :: options =>
