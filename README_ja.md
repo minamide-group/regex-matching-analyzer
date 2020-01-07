@@ -30,11 +30,8 @@ run path/to/your_file.txt --style PCRE --timeout 5
 |オプション|引数|デフォルト値||
 |:----|:----|:----|:----|
 | `--style` | `raw` , `PCRE` | `raw` |[正規表現の形式](#正規表現の形式)指定|
-| `--method` | `Lookahead` , ~~`SubsetPrune`~~, ~~`Nondeterminism`~~, `Exhaustive` | `Lookahead` |[バックトラックを模倣するアルゴリズム](#バックトラックを模倣するアルゴリズム)の指定|
 | `--timeout` |整数| `10` |タイムアウト秒数の指定（0以下の値を指定でタイムアウト無効）|
 | `--debug` |なし|無効|デバッグモードの有効化|
-
-- 正規表現の先読みに対応させたため，`SubsetPrune` , `Nondeterminism` は使用できなくなりました．
 
 
 ## 入力
@@ -72,7 +69,7 @@ e.g.) `/^a*|b/s`
 - `list.txt` : 検査された正規表現の一覧
 - `result.txt` : 検査結果の一覧
 - `<result>/...` : 検査結果が`<result>`であった正規表現の一覧とその検査結果の一覧（ `polynomial/...` についてはさらに次数ごとにまとめたものも出力されます）
-- `approximated/<result>/...`: [過大近似](#過大近似)で検査結果が `<result>` であった正規表現の一覧とその検査結果の一覧．
+- `approximated/<result>/...`: [保守的検査](#保守的検査)で検査結果が `<result>` であった正規表現の一覧とその検査結果の一覧．
 
 
 ## 正規表現パーサ
@@ -118,9 +115,10 @@ e.g.) `/^a*|b/s`
   + `\w` : 単語構成文字 ( `[a-zA-Z0-9_]` )
   + `\W` : 単語構成文字以外 ( `[^a-zA-Z0-9_]` )
   + `\R` : 改行/復帰 ( `[\r\n]` )
-- 先頭・末尾のマッチ
+- アンカー
   + `^` : 先頭にマッチ
   + `$` : 末尾にマッチ
+  + `\b` : 単語境界
 - 先読み/後読み
   + `(?=r)` : 肯定先読み
   + `(?!r)` : 否定先読み
@@ -180,24 +178,8 @@ https://www.php.net/manual/ja/regexp.reference.escape.php
 - 条件分岐
 - 名前が重複しているグループ
 - マッチする文字数に上限がない後読み
-- 先読みの中の後読み/後方参照
+- 先読みの中の後読み/後方参照/単語境界
 - 依存関係にループのある後方参照
 
-### 過大近似
-後読みと後方参照が含まれる場合，検査結果は過大近似されたものになり，
-正しい計算量よりも大きく見積もられた結果が出力されます．
-
-
-## バックトラックを模倣するアルゴリズム
-- `Lookahead` :
-  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/sugiyama2013.pdf
-  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
-- `SubsetPrune` :
-  + https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27
-  + https://github.com/NicolaasWeideman/RegexStaticAnalysis
-- `Nondeterminism` :
-  + https://www.jalc.de/issues/2018/issue_23_1-3/jalc-2018-019-038.php
-- `Exhaustive` : バックトラックの模倣を行わない
-
-- `Exhaustive` を指定すると全探索でマッチングした場合の計算量を判定するため，他のアルゴリズムを指定した場合とは異なる結果が出力される可能性があります．
-- `Nondeterminism` を指定した場合，定数時間でマッチングを完了できる場合でも `constant` ではなく `linear` と判定されます．
+### 保守的検査
+後読み，後方参照，単語境界が含まれる場合，計算量を上から評価する保守的な検査を行います．
