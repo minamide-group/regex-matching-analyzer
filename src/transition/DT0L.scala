@@ -127,15 +127,15 @@ class DT0L[A,Q](
 
           val g3 = constructG3()
           val e3WithBack = g3.labeledEdges.map{
-            case (v1,a,v2) => (v1,Some(a),v2)
+            case (v1,_,v2) => (v1,v2)
           } ++ (for (
             p <- start;
             q <- end
           ) yield {
             Analysis.checkInterrupted("construct G3")
-            ((p,q,q), None, (p,p,q))
+            ((p,q,q), (p,p,q))
           })
-          val g3WithBack = new LabeledGraph(e3WithBack)
+          val g3WithBack = new Graph(e3WithBack)
           g3WithBack.calcStrongComponents().toStream.map{ sc =>
             sc.collect{
               case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
