@@ -60,30 +60,17 @@ object ATree {
         case ALft(_) => throw new Exception("eval operetor is undefined for ALft.")
       }
     }
+  }
 
-    def evalr[A](m: ATree[Nothing,A])(v: A => Boolean) = {
-      m match {
-        case ALeaf(a) => v(a)
-        case ASuccess() => true
-        case AFail() => false
-        case AFail1(_) => false
-        case AOr(l,r) => evalr(l)(v) || evalr(r)(v)
-        case AAssert(l,r) => eval(l)(identity) && evalr(r)(v)
-        case AAssertNot(l,r) => !eval(l)(identity) && evalr(r)(v)
-        case ALft(_) => throw new Exception("eval operetor is undefined for ALft.")
-      }
-    }
-
-    def leaves[A](m: ATree[A,A]) = {
-      m match {
-        case ALeaf(a) => Seq(a)
-        case ASuccess() | AFail() => Seq()
-        case AFail1(t) => leaves(t)
-        case AOr(l,r) => leaves(l) ++ leaves(r)
-        case AAssert(l,r) => leaves(l) ++ leaves(r)
-        case AAssertNot(l,r) => leaves(l) ++ leaves(r)
-        case ALft(l) => leaves(l)
-      }
+  def leaves[A](m: ATree[A,A]): Seq[A] = {
+    m match {
+      case ALeaf(a) => Seq(a)
+      case ASuccess() | AFail() => Seq()
+      case AFail1(t) => leaves(t)
+      case AOr(l,r) => leaves(l) ++ leaves(r)
+      case AAssert(l,r) => leaves(l) ++ leaves(r)
+      case AAssertNot(l,r) => leaves(l) ++ leaves(r)
+      case ALft(l) => leaves(l)
     }
   }
 

@@ -108,7 +108,7 @@ class DetTransducer[Q,A](
 
   // def deltaHat(qs: Set[Q], a: Option[A]): Set[Q] = {
   //   qs.collect{ case q if deltaDet.isDefinedAt((q,a)) =>
-  //     ATreeMonad.leaves(deltaDet((q,a)))
+  //     leaves(deltaDet((q,a)))
   //   }.flatten
   // }
 
@@ -117,7 +117,7 @@ class DetTransducer[Q,A](
   //   var deltaNFA = Seq[(Option[Q],A,Option[Q])]()
   //   deltaDet.collect{
   //     case ((q,Some(a)),t) =>
-  //       ATreeMonad.leaves(t).map(q1 => deltaNFA +:= ((Some(q),a,Some(q1))))
+  //       leaves(t).map(q1 => deltaNFA +:= ((Some(q),a,Some(q1))))
   //       if (hasSuccess(t)) deltaNFA +:= ((Some(q),a,None))
   //   }
   //   sigma.foreach(a => deltaNFA +:= ((None,a,None)))
@@ -238,7 +238,7 @@ class DetTransducer[Q,A](
       val morphs = sigma.map{ a =>
         Analysis.checkInterrupted("transducer -> DT0L")
         a -> states.map( q =>
-          q -> ATreeMonad.leaves(deltaDet((q,Some(a))))
+          q -> leaves(deltaDet((q,Some(a))))
         ).toMap
       }.toMap
 
@@ -476,7 +476,7 @@ class TransducerWithLA[Q,A,P](
         lookaheadDFA.states.map( p2 =>
           (p1,p2) -> pairToTrans((p2,p1)).map( a =>
             a -> states.map( q =>
-              q -> ATreeMonad.leaves(delta((q,Some((a,p2)))))
+              q -> leaves(delta((q,Some((a,p2)))))
             ).toMap
           ).toMap
         )

@@ -398,7 +398,7 @@ object RegExp {
           case None => StateTATreeMonad.success[RegExp[Char], RegExp[Char]] // simulates prefix match
         })(u)
         delta += (s,Some(a)) -> t
-        val newExps = ATreeMonad.leaves(t).filterNot(states.contains)
+        val newExps = leaves(t).filterNot(states.contains)
         states |= newExps.toSet
         stack.pushAll(newExps)
       }

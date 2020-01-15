@@ -3,7 +3,7 @@ package matching.regexp
 import org.scalatest._
 import RegExp._
 import matching.monad._
-import ATree.ATreeMonad._
+import ATree._
 import StateT._
 
 class RegExpDeriverSpec extends FlatSpec with Matchers {
