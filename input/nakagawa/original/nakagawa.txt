@@ -47,6 +47,7 @@
 /^(Location:|URI:)/i
 /^(Location:|URI:)[ ]+(.*)/i
 /^([0-9]{4})([0-9]{2})([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})$/
+/^([0-9a-h\:]+)::([0-9a-h\:]+)$/i
 /^([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)\:([0-9a-h]+)$/i
 /^([A-Ia-i]?[A-Za-z])(\d+)\.\.([A-Ia-i]?[A-Za-z])(\d+)$/
 /^([A-Ia-i]?[A-Za-z])(\d+)\:([A-Ia-i]?[A-Za-z])(\d+)$/
@@ -81,6 +82,7 @@
 /^[0-9A-Za-z]+$/
 /^[0-9]+$/
 /^[0-9]{3,4}$/
+/^[0-9a-z]{32}$/
 /^[1-9]{1}(\.[0-9]+)?E{1}$/
 /^[A-Ia-i]?[A-Za-z](\d+)\.\.[A-Ia-i]?[A-Za-z](\d+)$/
 /^[A-Z0-9\xc0-\xdc\.]+$/
@@ -335,5 +337,57 @@
 /^\*\s[0-9]+\sEXPUNGE/AUi
 /^\\*\s+([0-9]+)\s+FETCH.*UID\s+([0-9]+)\s+/iAU
 /^\\*\s+([0-9]+)\s+FETCH/iAU
+#</*(applet|link|style|script|iframe|frame|frameset)[^>]*>#i
+#\[code\](.*?)\[/code\]#si
+'<textinput(|[^>]*[^/])>(.*?)</textinput>'si
+/(.*)(BAD|NO)(.*)$/
+/(.*)(quota)(.*)$/i
+/(.*)\.(gif|jpg|jpeg|png)$/i
+/([$]?[A-Z]+)([$]?\d+)/
+/.*SQLCODE=([^\]]*)/
+/^\* (LSUB|LIST) \([^\)]*\\\\Noselect[^\)]*\)/i
+!([a-zA-Z\s]+)$!s
+!<body[^>]*>(.*)</body>!is
+![\w\d-]+: .+!
+/ *"([^\r\n"]*)"[ \r\n]*$/
+/([0-9]+\.([0-9\.])+)/
+/(\$)?(\d+)\:(\$)?(\d+)/
+/(\d*)([-+,])(\d*)/
+/0?.*\?\/\?/
+/[^ ]+ +([^ ]+) +EXISTS/
+/\((.+)\)/
+/\(([^)]*)\)/
+/\*.+\"([^\r\n\"]*)\"[\s\r\n]*$/
+/\s*UNION\s*/is
+/\s+GROUP\s+BY\s+/is
+/\s+UNION\s+/is
+/\s.*(\) WHERE .*)/is
+/\{([^\}]*)\}/
+/^(\* [A-Z]+.*)\{[0-9]+\}([ \n\r\t]*)$/
+/^\-?[0-9]*\.?[0-9]*\s?\%$/
+/^\b(java)?script:([\s]*)history\.go\(-[0-9]*\)([\s]*[;]*[\s]*)$/si
+/^\s*(\s*\))/i
+/^set-cookie:[\s]+([^=]+)=([^;]+)/i
+/{.*}\//
+@(Konqueror/)(.*)(;)@
+@GD Version[[:space:]]*\(.*\)@
+@[[:space:]]+INTO[[:space:]]+OUTFILE[[:space:]]+@i
+@[[:space:]]+PROCEDURE[[:space:]]+ANALYSE@i
+@rv:1.9(.*)Gecko@
+|([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/([0-9]+)|
+|^(.+?)\((.*?)\)$|
+|^.*__.*\.inc\.php$|
+/.+FLAGS\s\((.*)\)\s/AUi
 /^.*(content-transfer-encoding:)\s*(\w+-?(\w+)?).*/i
+/\* NAMESPACE +(\( *\(.+\) *\)|NIL) +(\( *\(.+\) *\)|NIL) +(\( *\(.+\) *\)|NIL)/i
+@(.*)([[:space:]](LIMIT (.*)|PROCEDURE (.*)|FOR UPDATE|LOCK IN SHARE MODE))@i
+@[[:space:]]+(SUM|AVG|STD|STDDEV|MIN|MAX|BIT_OR|BIT_AND)\s*\(@i
 @char|binary|blob|text|set|date|time|year@i
+'<channel.*?>(.*?)</channel>'si
+'<image.*?>(.*?)</image>'si
+/ *([^ \r\n"]*)[ \r\n]*$/
+/^\-?[0]+[0-9]*\.?[0-9]*$/
+@(.*)([[:space:]]*(ASC|DESC))@si
+@^SELECT[[:space:]]+COUNT\((.*\.+)?.*\)@i
+#(\[code\](.*?)\[/code\]|\[geshi=(.*?)\](.*?)\[/geshi\]|\[php\](.*?)\[/php\])#si
+/^[-0-9A-Z_\.]{1,50}@([-0-9A-Z_\.]+\.){1,50}([0-9A-Z]){2,4}$/i
