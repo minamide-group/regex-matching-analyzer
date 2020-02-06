@@ -21,7 +21,6 @@ object Main {
       List(
         s"${"-"*3} settings ${"-"*27}",
         s"style: ${style}",
-        s"method: ${if (method.isDefined) s"${method.get}" else "Exhaustive"}",
         s"timeout: ${if (timeout.isDefined) s"${timeout.get}s" else "disabled"}",
         s"${"-"*40}"
       ).mkString("\n")
@@ -37,15 +36,6 @@ object Main {
               case "raw" => Raw
               case "PCRE" => PCRE
               case _ => throw new Exception(s"invalid style option: ${style}")
-            }
-            parseOptions(options, setting)
-          case "--method" :: method :: options =>
-            setting.method = method match {
-              case "Lookahead" => Some(Lookahead)
-              case "SubsetPrune" => Some(SubsetPrune)
-              case "Nondeterminism" => Some(Nondeterminism)
-              case "Exhaustive" => None
-              case _ => throw new Exception(s"invalid method option: ${method}")
             }
             parseOptions(options, setting)
           case "--timeout" :: timeout :: options =>
@@ -116,13 +106,6 @@ object Main {
         val result = test(regExpStr, settings)
         println(result)
         println()
-
-        if (Debug.debugModeGlobal && settings.style == Raw) {
-          result match {
-            case Success(_,witness,_,_,_) if witness != Witness.empty => checker(regExpStr, witness)
-            case _ => // NOP
-          }
-        }
       }
     }
   }
@@ -304,47 +287,5 @@ object Main {
     detailListFiles.values.foreach(_.close())
     degreeFiles.values.foreach(_.close())
     degreeListFiles.values.foreach(_.close())
-  }
-
-  def checker(regExpStr: String, witness: Witness[Char]) {
-    def generateTestString(n: Int): String = {
-      var ss = IndexedSeq[String]()
-      if (witness.pumps.nonEmpty) {
-        val separators = witness.separators.map(_.mkString)
-        val pumps = witness.pumps.map(_.mkString * n)
-        ss :+= separators.head
-        pumps.zip(separators.tail).foreach{
-          case (p,s) => ss ++= Seq(p,s)
-        }
-      }
-      ss.mkString
-    }
-
-    val file = IO.createFile(s"output/time.txt", true)
-
-    var prevTime: Long = 0
-    var continue = true
-    var n = 0
-    var step = 1
-    while (continue) {
-      val str = generateTestString(n)
-      runWithLimit(None) {
-        str.matches(regExpStr)
-      } match {
-        case (_, time) =>
-          println(s"${n}: ${time}")
-          file.writeln(s"${n}, ${time}")
-
-          step += (if (time - prevTime < 100) 1 else -1)
-          step = step.max(1)
-
-          prevTime = time
-
-          if (time > 2000) continue = false
-      }
-      n += step
-    }
-
-    file.close()
   }
 }

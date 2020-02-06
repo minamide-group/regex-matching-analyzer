@@ -33,11 +33,8 @@ run path/to/your_file.txt --style PCRE --timeout 5
 |Option|Argument|Default||
 |:----|:----|:----|:----|
 | `--style` | `raw` , `PCRE` | `raw` |Specifying a [style of regular expressions](#Style-of-Regular-Expressions)|
-| `--method` | `Lookahead` ,  ~~`SubsetPrune`~~ , ~~`Nondeterminism`~~ , `Exhaustive` | `Lookahead` |Specifying an [algorithm to simulate backtracking](#Algorithm-to-Simulate-Backtracking)|
 | `--timeout` |Integer| `10` |Specifying time limit (second) of analysis (specify `<= 0` to disable timeout)|
 | `--debug` |(no argument)|disabled|Enable debug mode|
-
-- The methods `SubsetPrune` , `Nondeterminism` are no longer available in order to support lookaheads of regular expression.
 
 
 ## Inputs
@@ -125,9 +122,10 @@ All characters that do not appear in the following list will become a expression
   + `\w` : Any word character ( `[a-zA-Z0-9_]` )
   + `\W` : Any non-word character ( `[^a-zA-Z0-9_]` )
   + `\R` : Line breaks ( `[\r\n]` )
-- match to start/end of string
+- anchors
   + `^` : Start of string
   + `$` : End of string
+  + `\b` : word boundary
 - Lookahead/Lookbehind
   + `(?=r)` : Positive lookahead
   + `(?!r)` : Negative lookahead
@@ -190,26 +188,10 @@ The expressions below are unsupported for analyzer, and its result will be `skip
 - Conditional expressions
 - Groups whose name are duplicated
 - Lookbehind with unbounded matching length
-- lookbehind/back reference in lookahead
+- lookbehind/back reference/word boundary in lookahead
 - back reference with cyclic dependency
 
 ### Overapproximation
-If the given expression contains lookbehind or back references,
+If the given expression contains lookbehind, back references or word boundary,
 the analyzer performs overapproximation.
-Thus, the result might be larger than true matching complexity.
-
-
-## Algorithm to Simulate Backtracking
-- `Lookahead` :
-  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/sugiyama2013.pdf
-  + https://github.com/minamide-group/group-only/blob/master/tsukuba-thesis/nakagawa-master-thesis.pdf
-- `SubsetPrune` :
-  + https://link.springer.com/chapter/10.1007/978-3-319-40946-7_27
-  + https://github.com/NicolaasWeideman/RegexStaticAnalysis
-- `Nondeterminism` :
-  + https://www.jalc.de/issues/2018/issue_23_1-3/jalc-2018-019-038.php
-- `Exhaustive` : Performs no backtracking
-
-- If you specify `Exhaustive`, the analyzer determines the time complexity of exhaustive matching and its result might be different from one obtained by other algorithms.
-
-- If you specify `Nondeterminism`, expressions which have constant matching time will be determined to be `linear` instead of `constant`.
+Thus, the result will be an upper bound of the true matching complexity.

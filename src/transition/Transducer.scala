@@ -3,22 +3,22 @@ package matching.transition
 import collection.mutable.Stack
 import matching.Witness
 import matching.monad._
-import matching.monad.DMonad._
-import matching.monad.DTree._
+import matching.monad.AMonad._
+import matching.monad.ATree._
 import matching.tool.{Analysis, Debug}
 
 class NonDetTransducer[Q,A](
   val states: Set[Q],
   val sigma: Set[A],
   val initialState: Q,
-  val delta: Seq[(Q,Option[A],DTree[Q,Q])] // None: EOF ($)
+  val delta: Seq[(Q,Option[A],ATree[Q,Q])] // None: EOF ($)
 ) {
   def rename(): NonDetTransducer[Int,A] = {
     val renameMap = states.zipWithIndex.toMap
     val renamedStates = states.map(renameMap)
     val renamedInitialState = renameMap(initialState)
     val renamedDelta = delta.map{ case (q,a,t) =>
-      (renameMap(q), a, t >>= (q => DLeaf[Int,Int](renameMap(q))))
+      (renameMap(q), a, t >>= (q => ALeaf[Int,Int](renameMap(q))))
     }
 
     new NonDetTransducer(renamedStates, sigma, renamedInitialState, renamedDelta)
@@ -85,7 +85,7 @@ class DetTransducer[Q,A](
   states: Set[Q],
   sigma: Set[A],
   initialState: Q,
-  val deltaDet: Map[(Q,Option[A]), DTree[Q,Q]]
+  val deltaDet: Map[(Q,Option[A]), ATree[Q,Q]]
 ) extends NonDetTransducer(
   states,
   sigma,
@@ -100,7 +100,7 @@ class DetTransducer[Q,A](
     val renamedStates = states.map(renameMap)
     val renamedInitialState = renameMap(initialState)
     val renamedDelta = deltaDet.map{ case ((q,a), t) =>
-      (renameMap(q),a) -> (t >>= (q => DLeaf[Int,Int](renameMap(q))))
+      (renameMap(q),a) -> (t >>= (q => ALeaf[Int,Int](renameMap(q))))
     }
 
     new DetTransducer(renamedStates, sigma, renamedInitialState, renamedDelta)
@@ -108,7 +108,7 @@ class DetTransducer[Q,A](
 
   // def deltaHat(qs: Set[Q], a: Option[A]): Set[Q] = {
   //   qs.collect{ case q if deltaDet.isDefinedAt((q,a)) =>
-  //     DTreeMonad.leaves(deltaDet((q,a)))
+  //     leaves(deltaDet((q,a)))
   //   }.flatten
   // }
 
@@ -117,7 +117,7 @@ class DetTransducer[Q,A](
   //   var deltaNFA = Seq[(Option[Q],A,Option[Q])]()
   //   deltaDet.collect{
   //     case ((q,Some(a)),t) =>
-  //       DTreeMonad.leaves(t).map(q1 => deltaNFA +:= ((Some(q),a,Some(q1))))
+  //       leaves(t).map(q1 => deltaNFA +:= ((Some(q),a,Some(q1))))
   //       if (hasSuccess(t)) deltaNFA +:= ((Some(q),a,None))
   //   }
   //   sigma.foreach(a => deltaNFA +:= ((None,a,None)))
@@ -131,7 +131,7 @@ class DetTransducer[Q,A](
   // }
 
   def toReverseDFA(): DFA[Set[Q], A] = {
-    val newInitial = states.filter(q => DTreeMonad.eval(deltaDet((q,None)))(_ => true))
+    val newInitial = states.filter(q => ATreeMonad.eval(deltaDet((q,None)))(_ => true))
     var newStates = Set(newInitial)
     val stack = Stack(newInitial)
     var newDelta = Map[(Set[Q],A), Set[Q]]()
@@ -140,7 +140,7 @@ class DetTransducer[Q,A](
       Analysis.checkInterrupted("transducer -> DFA")
       val qs = stack.pop
       sigma.foreach{a =>
-        val next = states.filter(q => DTreeMonad.eval(deltaDet((q,Some(a))))(qs))
+        val next = states.filter(q => ATreeMonad.eval(deltaDet((q,Some(a))))(qs))
         newDelta += (qs,a) -> next
         if (!newStates.contains(next)) {
           newStates += next
@@ -238,7 +238,7 @@ class DetTransducer[Q,A](
       val morphs = sigma.map{ a =>
         Analysis.checkInterrupted("transducer -> DT0L")
         a -> states.map( q =>
-          q -> DTreeMonad.leaves(deltaDet((q,Some(a))))
+          q -> leaves(deltaDet((q,Some(a))))
         ).toMap
       }.toMap
 
@@ -261,7 +261,7 @@ class DetTransducer[Q,A](
       def toTransducerWithLA(): TransducerWithLA[Q,A,Set[Q]] = {
         val lookaheadDFA = toReverseDFA()
 
-        var deltaLA = Map[(Q,Option[(A,Set[Q])]), DTree[Q,Q]]()
+        var deltaLA = Map[(Q,Option[(A,Set[Q])]), ATree[Q,Q]]()
         deltaDet.foreach{
           case ((q,Some(a)),t) =>
             Analysis.checkInterrupted("transducer -> transducer with lookahead")
@@ -437,7 +437,7 @@ class TransducerWithLA[Q,A,P](
   val states: Set[Q],
   val sigma: Set[A],
   val initialState: Q,
-  val delta: Map[(Q,Option[(A,P)]), DTree[Q,Q]],
+  val delta: Map[(Q,Option[(A,P)]), ATree[Q,Q]],
   val lookaheadDFA: DFA[P,A]
 ) {
   def rename(): TransducerWithLA[Q,A,Int] = {
@@ -476,7 +476,7 @@ class TransducerWithLA[Q,A,P](
         lookaheadDFA.states.map( p2 =>
           (p1,p2) -> pairToTrans((p2,p1)).map( a =>
             a -> states.map( q =>
-              q -> DTreeMonad.leaves(delta((q,Some((a,p2)))))
+              q -> leaves(delta((q,Some((a,p2)))))
             ).toMap
           ).toMap
         )

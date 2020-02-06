@@ -127,15 +127,15 @@ class DT0L[A,Q](
 
           val g3 = constructG3()
           val e3WithBack = g3.labeledEdges.map{
-            case (v1,a,v2) => (v1,Some(a),v2)
+            case (v1,_,v2) => (v1,v2)
           } ++ (for (
             p <- start;
             q <- end
           ) yield {
             Analysis.checkInterrupted("construct G3")
-            ((p,q,q), None, (p,p,q))
+            ((p,q,q), (p,p,q))
           })
-          val g3WithBack = new LabeledGraph(e3WithBack)
+          val g3WithBack = new Graph(e3WithBack)
           g3WithBack.calcStrongComponents().toStream.map{ sc =>
             sc.collect{
               case (p1,p2,p3) if p2 == p3 && p1 != p2 => (p1,p2)
@@ -630,20 +630,6 @@ class IndexedDT0L[A,Q,P](
   indexedMorphs: Map[(P,P), Map[A, Map[Q,Seq[Q]]]]
 ) {
   def calcGrowthRate(initials: Set[(Q,P)], lookaheadDFA: DFA[P,A]): (Option[Int], Witness[A], Option[P]) = {
-    // def toDT0L(): DT0L[(A,P),(Q,P)] = {
-    //   val statesDT0L = for (state <- states; index <- indices) yield (state, index)
-    //
-    //   val morphs = indexedMorphs.flatMap{ case ((p1,p2),morphs) =>
-    //     morphs.map{ case (a,morph) =>
-    //       (a,p2) -> morph.map{ case (b,bs) =>
-    //          (b,p1) -> bs.map((_,p2))
-    //       }
-    //     }
-    //   }
-    //
-    //   new DT0L(statesDT0L, morphs)
-    // }
-
     def toPairDT0L(): PairDT0L[(A,P),Q,P] = {
       val statesDT0L = for (state <- states; index <- indices) yield (state, index)
 
@@ -671,20 +657,5 @@ class IndexedDT0L[A,Q,P](
     }
 
     (growthRate, convertWitness(witness), last.map(_._2))
-
-
-    // val dt0l = Debug.time("indexed DT0L -> DT0L") {
-    //   toDT0L()
-    // }
-    //
-    // val (renamedDT0L, renameMap) = dt0l.rename()
-    //
-    // val (growthRate, witness, last) = Debug.time("calculate growth rate") {
-    //   renamedDT0L.calcGrowthRate(initials.map(renameMap))
-    // }
-    //
-    // (growthRate, convertWitness(witness), last.map{ last =>
-    //   renameMap.find{case (_,v) => v == last}.get._1._2
-    // })
   }
 }
