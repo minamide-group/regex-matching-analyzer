@@ -66,7 +66,7 @@ class NonDetTransducer[Q,A](
 //     new DetTransducer(statesDet, sigmaDet, (initialState, 1), deltaDet)
 //   }
 //
-  def calcGrowthRate(): (Option[Int], Witness[A]) = {
+  def calcGrowthRate(): (Option[Int], Witness[A], Int) = {
     ???
     // val detTransducer = Debug.time("nondeterministic transducer -> deterministic transducer") {
     //   determinize()
@@ -233,7 +233,7 @@ class DetTransducer[Q,A](
   //   new DetTransducer(newStates, sigma, newInitial, newDelta)
   // }
 
-  override def calcGrowthRate(): (Option[Int], Witness[A]) = {
+  override def calcGrowthRate(): (Option[Int], Witness[A], Int) = {
     def toDT0L(): DT0L[A,Q] = {
       val morphs = sigma.map{ a =>
         Analysis.checkInterrupted("transducer -> DT0L")
@@ -253,11 +253,11 @@ class DetTransducer[Q,A](
 
     witness.separators :+= Seq()
 
-    (growthRate.map(_+1), witness)
+    (growthRate.map(_+1), witness, 0)
   }
 
-  def calcGrowthRateBacktrack(method: BacktrackMethod): (Option[Int], Witness[A]) = {
-    def calcBtrGrowthRateLookahead(): (Option[Int], Witness[A]) = {
+  def calcGrowthRateBacktrack(method: BacktrackMethod): (Option[Int], Witness[A], Int) = {
+    def calcBtrGrowthRateLookahead(): (Option[Int], Witness[A], Int) = {
       def toTransducerWithLA(): TransducerWithLA[Q,A,Set[Q]] = {
         val lookaheadDFA = toReverseDFA()
 
@@ -465,7 +465,7 @@ class TransducerWithLA[Q,A,P](
     new TransducerWithLA(states, sigma, initialState, renamedDelta, renamedDFA)
   }
 
-  def calcGrowthRate(): (Option[Int], Witness[A]) = {
+  def calcGrowthRate(): (Option[Int], Witness[A], Int) = {
     def toIndexedDT0L(): IndexedDT0L[A,Q,P] = {
       val pairToTrans = lookaheadDFA.delta.groupBy{
         case (p1,_,p2) => (p1,p2)
@@ -493,15 +493,14 @@ class TransducerWithLA[Q,A,P](
       toIndexedDT0L()
     }
 
-    val (growthRate, witness, last) = indexedDT0L.calcGrowthRate(
-      lookaheadDFA.states.map((initialState,_)),
-      lookaheadDFA
+    val (growthRate, witness, last, size) = indexedDT0L.calcGrowthRate(
+      lookaheadDFA.states.map((initialState,_))
     )
 
     if (last.isDefined) {
       witness.separators :+= lookaheadDFA.getPath(lookaheadDFA.initialState, last.get).get.reverse
     }
 
-    (growthRate.map(_+1), witness)
+    (growthRate.map(_+1), witness, size)
   }
 }

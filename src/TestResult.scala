@@ -5,7 +5,7 @@ case class Success(
   growthRate: Option[Int],
   witness: Witness[Char],
   approximated: Boolean,
-  ruleSize: Int,
+  size: Int,
   time: Long
 ) extends TestResult {
   override def toString(): String = {
@@ -25,7 +25,7 @@ case class Success(
   }
 
   def getTime(): String = {
-    s"${ruleSize}, ${time / 1000.0}"
+    s"${size}, ${time / 1000.0}"
   }
 }
 

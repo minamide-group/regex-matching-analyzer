@@ -223,7 +223,7 @@ class PairDT0L[A,R,P](
   type Q = (R,P)
   type Pump = (Q,Seq[A],Q)
 
-  def calcGrowthRate1(initials: Set[Q]): (Option[Int], Witness[A], Option[Q]) = {
+  def calcGrowthRate1(initials: Set[Q]): (Option[Int], Witness[A], Option[Q], Int) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
       val labeledEdges = morphs.flatMap{ case (a,morph) =>
         morph.flatMap{ case (q,qs) =>
@@ -299,7 +299,7 @@ class PairDT0L[A,R,P](
                 sc.exists{case ((r1,r2),_) => r1 == r2} &&
                 sc.exists{case ((r1,r2),_) => r1 != r2}
               ).map{ case sc =>
-                val q1 @ ((r1,r2),_) = sc.find{case ((r1,r2),p) => r1 != r2}.get
+                val q1 @ ((r1,r2),_) = sc.find{case ((r1,r2),_) => r1 != r2}.get
                 val q2 @ (_,p0) = sc.find{case ((r3,r4),_) => r3 == r1 && r4 == r1}.get
                 val path1 = g2.getPath(q2,q1).get
                 val path2 = g2.getPath(q1,q2).get
@@ -418,10 +418,11 @@ class PairDT0L[A,R,P](
     }
 
     val (growthRate, pumps) = calcGrowthRate()
-    (growthRate, generateWitness(pumps), pumps.lastOption.map(_._3))
+    (growthRate, generateWitness(pumps), pumps.lastOption.map(_._3), graph.nodes.size)
   }
 
-  def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q]) = {
+  // without optimized
+  def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q], Int) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
       val labeledEdges = morphs.flatMap{ case (a,morph) =>
         morph.flatMap{ case (q,qs) =>
@@ -450,9 +451,7 @@ class PairDT0L[A,R,P](
         ("number of strong components", scs.size)
       )
 
-      val alpha = morphs.keys.toSeq
       val reachableMapScGraph = scGraph.reachableMapDAG()
-      // val reachableMapScGraphRev = scGraph.reverse().reachableMapDAG()
       val labeledAdj = graph.labeledEdges.groupBy(_._2).mapValues{
         Analysis.checkInterrupted("preparing for calculate growth rate")
         _.map{case (q1,_,q2) => (q1,q2)}
@@ -486,17 +485,22 @@ class PairDT0L[A,R,P](
       }
 
       lazy val g2 = constructG2()
+      Debug.info("g2 info") (
+        ("number of nodes", g2.nodes.size),
+        ("number of edges", g2.edges.size)
+      )
       lazy val g2scs = g2.calcStrongComponents()
 
+      lazy val edaMap = g2scs.collect{ case sc
+        if sc.exists{case ((r1,r2),_) => r1 == r2} &&
+        sc.exists{case ((r1,r2),_) => r1 != r2} =>
+          val sames = sc.collect{case ((r1,r2),p) if r1 == r2 => (r1,p)}
+          val diff = sc.find{case ((r1,r2),_) => r1 != r2}.get
+          sames.map(_ -> diff)
+      }.flatten.toMap
 
       def constructG3(): LabeledGraph[((R,R,R),P),A] = {
-        // val labeledAdjStart = scPairLabeledAdj((start,start))
-        // val passage = reachableMapScGraph(start) & reachableMapScGraphRev(end)
-        // val labeledAdjPassage = for (sc1 <- passage; sc2 <- passage) yield scPairLabeledAdj((sc1,sc2))
-        // val labeledAdjEnd = scPairLabeledAdj((end,end))
-
         val e3 = for (
-          a <- alpha;
           (a,es) <- labeledAdj.toSeq;
           ((r11,p11),(r12,p12)) <- es;
           ((r21,p21),(r22,p22)) <- es;
@@ -524,10 +528,29 @@ class PairDT0L[A,R,P](
       lazy val g3WithBack = new LabeledGraph(e3WithBack)
       lazy val g3WithBackscs = g3WithBack.calcStrongComponents()
 
+      Debug.info("g3 info") (
+        ("number of nodes", g3.nodes.size),
+        ("number of edges", g3.edges.size)
+      )
+
+      lazy val idas = g3WithBackscs.collect{ case sc =>
+        var starts = Set[((R,R,R),P)]()
+        var ends = Set[((R,R,R),P)]()
+        sc.foreach{ case q @ ((r1,r2,r3),p) =>
+          if (r1 == r2 && r2 != r3) {
+            starts += q
+          } else if (r1 != r2 && r2 == r3) {
+            ends += q
+          }
+        }
+        starts.collect{ case ((r1,_,r2),p)
+          if ends.contains(((r1,r2,r2),p)) => (r1,r2,p)
+        }
+      }.flatten
 
       def checkEDA(): Option[Pump] = {
         def checkEDA(sc: Set[Q]): Option[Pump] = {
-          Analysis.checkInterrupted("EDA")
+          Analysis.checkInterrupted("checking EDA")
           val labeledAdjSc = scPairLabeledAdj((sc,sc))
           labeledAdjSc.find{case (_,es) => es.length != es.distinct.length} match {
             case Some((a,es)) =>
@@ -535,16 +558,13 @@ class PairDT0L[A,R,P](
               val back = graph.getPath(q2,q1).get
               Some((q1, a +: back, q1))
             case None =>
-              g2scs.find( sc1 =>
-                sc1.exists{case ((r1,r2),p) => r1 == r2 && sc.contains((r1,p))} &&
-                sc1.exists{case ((r1,r2),_) => r1 != r2}
-              ).map{ case sc =>
-                val q1 @ ((r1,r2),_) = sc.find{case ((r1,r2),p) => r1 != r2}.get
-                val q2 @ (_,p0) = sc.find{case ((r3,r4),_) => r3 == r1 && r4 == r1}.get
-                val path1 = g2.getPath(q2,q1).get
-                val path2 = g2.getPath(q1,q2).get
-                ((r1,p0), path1 ++ path2, (r1,p0))
+              val q1 @ (r1,p1) = sc.head
+              edaMap.get(q1).map{ case q2 =>
+                val path1 = g2.getPath(((r1,r1),p1),q2).get
+                val path2 = g2.getPath(q2,((r1,r1),p1)).get
+                (q1, path1 ++ path2, q1)
               }
+
           }
         }
 
@@ -553,17 +573,11 @@ class PairDT0L[A,R,P](
 
       def calcDegree(): (Int, Seq[Pump]) = {
         def checkIDA(start: Set[Q], end: Set[Q]): Option[Pump] = {
-          g3WithBackscs.toStream.map{ sc =>
-            sc.collect{
-              case ((r1,r2,r3),p) if r1 == r2 && r2 != r3 && start.contains((r1,p)) && end.contains((r3,p)) => (r1,r3,p)
-            }.find{
-              case (r11,r12,p1) => sc.exists{
-                case ((r21,r22,r23),p2) => r21 == r11 && r22 == r12 && r23 == r12 && p1 == p2
-              }
-            }.map{
-              case (r11,r12,p1) => ((r11,p1),g3.getPath(((r11,r11,r12),p1),((r11,r12,r12),p1)).get,(r12,p1))
-            }
-          }.find(_.isDefined).map(_.get)
+          start.flatMap{ case (r1,p1) =>
+            end.collect{case (r2,p2) if p1 == p2 => (r1,r2,p1)}
+          }.find(idas).map{ case (r1,r2,p) =>
+            ((r1,p),g3.getPath(((r1,r1,r2),p),((r1,r2,r2),p)).get,(r2,p))
+          }
         }
 
         var result = Map[Set[Q], (Int,Seq[Pump])]()
@@ -620,7 +634,7 @@ class PairDT0L[A,R,P](
     }
 
     val (growthRate, pumps) = calcGrowthRate()
-    (growthRate, generateWitness(pumps), pumps.lastOption.map(_._3))
+    (growthRate, generateWitness(pumps), pumps.lastOption.map(_._3), graph.nodes.size)
   }
 }
 
@@ -629,7 +643,7 @@ class IndexedDT0L[A,Q,P](
   indices: Set[P],
   indexedMorphs: Map[(P,P), Map[A, Map[Q,Seq[Q]]]]
 ) {
-  def calcGrowthRate(initials: Set[(Q,P)], lookaheadDFA: DFA[P,A]): (Option[Int], Witness[A], Option[P]) = {
+  def calcGrowthRate(initials: Set[(Q,P)]): (Option[Int], Witness[A], Option[P], Int) = {
     def toPairDT0L(): PairDT0L[(A,P),Q,P] = {
       val statesDT0L = for (state <- states; index <- indices) yield (state, index)
 
@@ -652,10 +666,10 @@ class IndexedDT0L[A,Q,P](
       toPairDT0L()
     }
 
-    val (growthRate, witness, last) = Debug.time("calculate growth rate") {
+    val (growthRate, witness, last, size) = Debug.time("calculate growth rate") {
       pairDT0L.calcGrowthRate(initials)
     }
 
-    (growthRate, convertWitness(witness), last.map(_._2))
+    (growthRate, convertWitness(witness), last.map(_._2), size)
   }
 }

@@ -186,6 +186,55 @@ object RegExp {
     }
   }
 
+  def checkSupported[A](r: RegExp[A], inLookAhead: Boolean = false): Unit = {
+    def isBounded(r: RegExp[A]): Unit = {
+      r match {
+        case StarExp(_,_) | PlusExp(_,_) | BackReferenceExp(_,_) =>
+          throw RegExp.InvalidRegExpException(
+            s"lookbehind with unbounded matching length is unsupported.")
+        case ConcatExp(r1, r2) => isBounded(r1); isBounded(r2)
+        case AltExp(r1, r2) => isBounded(r1); isBounded(r2)
+        case OptionExp(r,_) => isBounded(r)
+        case RepeatExp(r,_,max,_) => if (max.isDefined) {
+          isBounded(r)
+        } else {
+          throw RegExp.InvalidRegExpException(
+            s"lookbehind with unbounded matching length is unsupported.")
+        }
+        case GroupExp(r,_,_) => isBounded(r)
+        case LookaheadExp(r,_) => isBounded(r)
+        case LookbehindExp(r,_) => isBounded(r)
+        case _ => // NOP
+      }
+    }
+
+    r match {
+      case ConcatExp(r1,r2) => checkSupported(r1, inLookAhead); checkSupported(r2, inLookAhead)
+      case AltExp(r1,r2) => checkSupported(r1, inLookAhead); checkSupported(r2, inLookAhead)
+      case StarExp(r,_) => checkSupported(r, inLookAhead)
+      case PlusExp(r,_) => checkSupported(r, inLookAhead)
+      case OptionExp(r,_) => checkSupported(r, inLookAhead)
+      case RepeatExp(r,_,_,_) => checkSupported(r, inLookAhead)
+      case GroupExp(r,_,_) => checkSupported(r, inLookAhead)
+      case BackReferenceExp(_,_) if inLookAhead =>
+        throw RegExp.InvalidRegExpException(
+          s"back reference in lookahead is unsupported.")
+      case LookaheadExp(r,_) => checkSupported(r, true)
+      case LookbehindExp(r,_) => if (inLookAhead) {
+          throw RegExp.InvalidRegExpException(
+            s"lookbehind in lookahead is unsupported.")
+        } else {
+          checkSupported(r, inLookAhead); isBounded(r)
+        }
+      case IfExp(_,_,_) => throw RegExp.InvalidRegExpException(
+          s"conditional expression is unsupported.")
+      case BoundaryExp() if inLookAhead =>
+        throw RegExp.InvalidRegExpException(
+          s"word boundary in lookahead is unsupported.")
+      case _ => // NOP
+    }
+  }
+
   def modifyRegExp[A](r: RegExp[A]): (RegExp[A], Boolean) = {
     var approximated = false
 
@@ -201,55 +250,6 @@ object RegExp {
         case LookaheadExp(r,positive) => LookaheadExp(f(r),positive)
         case LookbehindExp(r,positive) => LookbehindExp(f(r),positive)
         case _ => r
-      }
-    }
-
-    def checkSupported(r: RegExp[A], inLookAhaed: Boolean = false): Unit = {
-      def isBounded(r: RegExp[A]): Unit = {
-        r match {
-          case StarExp(_,_) | PlusExp(_,_) | BackReferenceExp(_,_) =>
-            throw RegExp.InvalidRegExpException(
-              s"lookbehind with unbounded matching length is unsupported.")
-          case ConcatExp(r1, r2) => isBounded(r1); isBounded(r2)
-          case AltExp(r1, r2) => isBounded(r1); isBounded(r2)
-          case OptionExp(r,_) => isBounded(r)
-          case RepeatExp(r,_,max,_) => if (max.isDefined) {
-            isBounded(r)
-          } else {
-            throw RegExp.InvalidRegExpException(
-              s"lookbehind with unbounded matching length is unsupported.")
-          }
-          case GroupExp(r,_,_) => isBounded(r)
-          case LookaheadExp(r,_) => isBounded(r)
-          case LookbehindExp(r,_) => isBounded(r)
-          case _ => // NOP
-        }
-      }
-
-      r match {
-        case ConcatExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
-        case AltExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
-        case StarExp(r,_) => checkSupported(r, inLookAhaed)
-        case PlusExp(r,_) => checkSupported(r, inLookAhaed)
-        case OptionExp(r,_) => checkSupported(r, inLookAhaed)
-        case RepeatExp(r,_,_,_) => checkSupported(r, inLookAhaed)
-        case GroupExp(r,_,_) => checkSupported(r, inLookAhaed)
-        case BackReferenceExp(_,_) if inLookAhaed =>
-          throw RegExp.InvalidRegExpException(
-            s"back reference in lookahead is unsupported.")
-        case LookaheadExp(r,_) => checkSupported(r, true)
-        case LookbehindExp(r,_) => if (inLookAhaed) {
-            throw RegExp.InvalidRegExpException(
-              s"lookbehind in lookahead is unsupported.")
-          } else {
-            checkSupported(r, inLookAhaed); isBounded(r)
-          }
-        case IfExp(_,_,_) => throw RegExp.InvalidRegExpException(
-            s"conditional expression is unsupported.")
-        case BoundaryExp() if inLookAhaed =>
-          throw RegExp.InvalidRegExpException(
-            s"word boundary in lookahead is unsupported.")
-        case _ => // NOP
       }
     }
 
@@ -413,7 +413,7 @@ object RegExp {
     r: RegExp[Char],
     options: PCREOptions,
     method: Option[BacktrackMethod]
-  ): (Option[Int], Witness[Char], Boolean, Int) // (degree, witness, approximated?, size of transducer)
+  ): (Option[Int], Witness[Char], Boolean, Int) // (degree, witness, approximated?, size of graph)
   = {
     def convertWitness(w: Witness[Option[Char]]): Witness[Char] = {
       val charForNone = '\u25AE'
@@ -426,11 +426,80 @@ object RegExp {
       constructTransducer(rm, options)
     }.rename()
 
-    val (growthRate, witness) = method match {
+    val (growthRate, witness, size) = method match {
       case Some(method) => transducer.calcGrowthRateBacktrack(method)
       case None => transducer.calcGrowthRate()
     }
-    (growthRate, convertWitness(witness), approximated, transducer.deltaDet.size)
+    (growthRate, convertWitness(witness), approximated, size)
+  }
+
+  def hasOnlyLookahead(r: RegExp[Char]): Boolean = {
+    r match {
+      case LookaheadExp(_,_) => true
+      case ConcatExp(r1,r2) =>
+        (hasOnlyLookahead(r1) && !hasLookbehind(r2) && !hasBackReference(r2) && !hasBoundary(r2)) ||
+        (hasOnlyLookahead(r2) && !hasLookbehind(r1) && !hasBackReference(r1) && !hasBoundary(r1))
+      case AltExp(r1,r2) =>
+        (hasOnlyLookahead(r1) && !hasLookbehind(r2) && !hasBackReference(r2) && !hasBoundary(r2)) ||
+        (hasOnlyLookahead(r2) && !hasLookbehind(r1) && !hasBackReference(r1) && !hasBoundary(r1))
+      case StarExp(r,_) => hasOnlyLookahead(r)
+      case PlusExp(r,_) => hasOnlyLookahead(r)
+      case OptionExp(r,_) => hasOnlyLookahead(r)
+      case RepeatExp(r,_,_,_) => hasOnlyLookahead(r)
+      case GroupExp(r,_,_) => hasOnlyLookahead(r)
+      case _ => false
+    }
+  }
+
+  def hasLookbehind(r: RegExp[Char]): Boolean = {
+    r match {
+      case LookbehindExp(_,_) => true;
+      case ConcatExp(r1,r2) =>
+        (hasLookbehind(r1) && !hasBoundary(r2)) ||
+        (hasLookbehind(r2) && !hasBoundary(r1))
+      case AltExp(r1,r2) =>
+        (hasLookbehind(r1) && !hasBoundary(r2)) ||
+        (hasLookbehind(r2) && !hasBoundary(r1))
+      case StarExp(r,_) => hasLookbehind(r)
+      case PlusExp(r,_) => hasLookbehind(r)
+      case OptionExp(r,_) => hasLookbehind(r)
+      case RepeatExp(r,_,_,_) => hasLookbehind(r)
+      case GroupExp(r,_,_) => hasLookbehind(r)
+      case _ => false
+    }
+  }
+
+  def hasBackReference(r: RegExp[Char]): Boolean = {
+    r match {
+      case BackReferenceExp(_,_) => true;
+      case ConcatExp(r1,r2) =>
+        (hasBackReference(r1) && !hasBoundary(r2)) ||
+        (hasBackReference(r2) && !hasBoundary(r1))
+      case AltExp(r1,r2) =>
+        (hasBackReference(r1) && !hasBoundary(r2)) ||
+        (hasBackReference(r2) && !hasBoundary(r1))
+      case StarExp(r,_) => hasBackReference(r)
+      case PlusExp(r,_) => hasBackReference(r)
+      case OptionExp(r,_) => hasBackReference(r)
+      case RepeatExp(r,_,_,_) => hasBackReference(r)
+      case GroupExp(r,_,_) => hasBackReference(r)
+      case _ => false
+    }
+  }
+
+  def hasBoundary(r: RegExp[Char]): Boolean = {
+    r match {
+      case BoundaryExp() => true;
+      case ConcatExp(r1,r2) => hasBoundary(r1) || hasBoundary(r2)
+      case AltExp(r1,r2) => hasBoundary(r1) || hasBoundary(r2)
+      case StarExp(r,_) => hasBoundary(r)
+      case PlusExp(r,_) => hasBoundary(r)
+      case OptionExp(r,_) => hasBoundary(r)
+      case RepeatExp(r,_,_,_) => hasBoundary(r)
+      case GroupExp(r,_,_) => hasBoundary(r)
+      case LookbehindExp(r,_) => hasBoundary(r)
+      case _ => false
+    }
   }
 }
 
