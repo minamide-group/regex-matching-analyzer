@@ -204,7 +204,7 @@ object RegExp {
       }
     }
 
-    def checkSupported(r: RegExp[A], inLookAhaed: Boolean = false): Unit = {
+    def checkSupported(r: RegExp[A], inLookAhead: Boolean = false): Unit = {
       def isBounded(r: RegExp[A]): Unit = {
         r match {
           case StarExp(_,_) | PlusExp(_,_) | BackReferenceExp(_,_) =>
@@ -227,26 +227,26 @@ object RegExp {
       }
 
       r match {
-        case ConcatExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
-        case AltExp(r1,r2) => checkSupported(r1, inLookAhaed); checkSupported(r2, inLookAhaed)
-        case StarExp(r,_) => checkSupported(r, inLookAhaed)
-        case PlusExp(r,_) => checkSupported(r, inLookAhaed)
-        case OptionExp(r,_) => checkSupported(r, inLookAhaed)
-        case RepeatExp(r,_,_,_) => checkSupported(r, inLookAhaed)
-        case GroupExp(r,_,_) => checkSupported(r, inLookAhaed)
-        case BackReferenceExp(_,_) if inLookAhaed =>
+        case ConcatExp(r1,r2) => checkSupported(r1, inLookAhead); checkSupported(r2, inLookAhead)
+        case AltExp(r1,r2) => checkSupported(r1, inLookAhead); checkSupported(r2, inLookAhead)
+        case StarExp(r,_) => checkSupported(r, inLookAhead)
+        case PlusExp(r,_) => checkSupported(r, inLookAhead)
+        case OptionExp(r,_) => checkSupported(r, inLookAhead)
+        case RepeatExp(r,_,_,_) => checkSupported(r, inLookAhead)
+        case GroupExp(r,_,_) => checkSupported(r, inLookAhead)
+        case BackReferenceExp(_,_) if inLookAhead =>
           throw RegExp.InvalidRegExpException(
             s"back reference in lookahead is unsupported.")
         case LookaheadExp(r,_) => checkSupported(r, true)
-        case LookbehindExp(r,_) => if (inLookAhaed) {
+        case LookbehindExp(r,_) => if (inLookAhead) {
             throw RegExp.InvalidRegExpException(
               s"lookbehind in lookahead is unsupported.")
           } else {
-            checkSupported(r, inLookAhaed); isBounded(r)
+            checkSupported(r, inLookAhead); isBounded(r)
           }
         case IfExp(_,_,_) => throw RegExp.InvalidRegExpException(
             s"conditional expression is unsupported.")
-        case BoundaryExp() if inLookAhaed =>
+        case BoundaryExp() if inLookAhead =>
           throw RegExp.InvalidRegExpException(
             s"word boundary in lookahead is unsupported.")
         case _ => // NOP
