@@ -81,14 +81,20 @@ object Main {
         case Raw => (RegExpParser(regExpStr), new PCREOptions())
         case PCRE => RegExpParser.parsePCRE(regExpStr)
       }
-      runWithLimit(settings.timeout) {
-        calcTimeComplexity(r,options,settings.method)
-      } match {
-        case (Analysis.Success((growthRate, witness, approximated, ruleSize)),time) =>
-          Success(growthRate, witness, approximated, ruleSize, time)
-        case (Analysis.Failure(message),_) => Skipped(message)
-        case (Analysis.Timeout(_),_) => Timeout
+      try {
+        checkSupported(r)
+        Success(Some(0), Witness.empty, false, 0, 0)
+      } catch {
+        case e: RegExp.InvalidRegExpException => Skipped(e.message)
       }
+      // runWithLimit(settings.timeout) {
+      //   calcTimeComplexity(r,options,settings.method)
+      // } match {
+      //   case (Analysis.Success((growthRate, witness, approximated, size)),time) =>
+      //     Success(growthRate, witness, approximated, size, time)
+      //   case (Analysis.Failure(message),_) => Skipped(message)
+      //   case (Analysis.Timeout(_),_) => Timeout
+      // }
     } catch {
       case e: RegExpParser.ParseException => Error(e.message)
     }
@@ -124,6 +130,12 @@ object Main {
     val resultListFile = IO.createFile(s"${dirName}/list.txt")
     val summaryFile = IO.createFile(s"${dirName}/summary.txt")
     val timeFile = IO.createFile(s"${dirName}/time.txt")
+
+    val lookaheadFile = IO.createFile(s"${dirName}/lookahead.txt")
+    val boundaryFile = IO.createFile(s"${dirName}/boundary.txt")
+    val lookbehindFile = IO.createFile(s"${dirName}/lookbehind.txt")
+    val backreferenceFile = IO.createFile(s"${dirName}/backreference.txt")
+    val mixedFile = IO.createFile(s"${dirName}/mixed.txt")
 
     val detailDirNames = List(
       "constant",
@@ -189,6 +201,22 @@ object Main {
       result match {
         case s: Success =>
           timeFile.writeln(s.getTime())
+          val (r,_) = RegExpParser.parsePCRE(regExpStr)
+          if (hasOnlyLookahead(r)) {
+            lookaheadFile.writeln(regExpStr)
+          } else if (hasBoundary(r)) {
+            boundaryFile.writeln(regExpStr)
+          } else {
+            val lookbehind = hasLookbehind(r)
+            val backReference = hasBackReference(r)
+            if (lookbehind && backReference) {
+              mixedFile.writeln(regExpStr)
+            } else if (lookbehind) {
+              lookbehindFile.writeln(regExpStr)
+            } else if (backReference) {
+              backreferenceFile.writeln(regExpStr)
+            }
+          }
         case _ => // NOP
       }
 
@@ -287,5 +315,11 @@ object Main {
     detailListFiles.values.foreach(_.close())
     degreeFiles.values.foreach(_.close())
     degreeListFiles.values.foreach(_.close())
+
+    lookaheadFile.close()
+    boundaryFile.close()
+    lookbehindFile.close()
+    backreferenceFile.close()
+    mixedFile.close()
   }
 }
