@@ -1,0 +1,75 @@
+/^.*?(?:[^\x3E]*?t\x00e\x00x\x00t\x00(\s\x00)*\x3D\x00(\s\x00)*(\x27\x00(?!(..){0,500}\x27\x00)|\x22\x00(?!(..){0,500}\x22\x00)|(?!(..){0,500}\s\x00))).*$/s
+/^(?:.{38}\x0a\x00..(?!(\x40\x1f|\x11\x2b|\x80\x3e|\x22\x56)\x00\x00)).*$/s
+/^(?:(?=[abchimoprswx])(acs|bin|c(ap|ls)|h(di|ms|tb)|iex|m(oo|tx|ws)|opn|pwr|rst|s(h[di]|ms|tb|wm)|wrd|xls)\x7C).*$/s
+/^.*?(?:String\x2EfromCharCode\s*\x28(?=[^\x29]*?0x\d+)[^\x29]*?\d{2}).*$/s
+/^.*?(?:\x23define\s*(?=[\S]{57})\S*\x5Fwidth).*$/s
+/^(?:MDTM(?!\n)\s[^\n]{100}).*$/s
+/^(?:XMKD(?!\n)\s[^\n]{200}).*$/s
+/^(?:NLST(?!\n)\s[^\n]{200}).*$/s
+/^(?:ALLO(?!\n)\s[^\n]{200}).*$/s
+/^(?:RNTO(?!\n)\s[^\n]{200}).*$/s
+/^(?:APPE(?!\n)\s[^\n]{200}).*$/s
+/^(?:RETR(?!\n)\s[^\n]{200}).*$/s
+/^(?:STOR(?!\n)\s[^\n]{200}).*$/s
+/^(?:CEL(?!\n)\s[^\n]{100}).*$/s
+/^(?:XCWD(?!\n)\s[^\n]{100}).*$/s
+/^(?:CWD(?!\n)\s[^\n]{180}).*$/s
+/^(?:CMD(?!\n)\s[^\n]{200}).*$/s
+/^(?:STAT(?!\n)\s[^\n]{190}).*$/s
+/^(?:SITE(?!\n)\s[^\n]{100}).*$/s
+/^(?:USER(?!\n)\s[^\n]{100}).*$/s
+/^(?:PASS(?!\n)\s[^\n]{100}).*$/s
+/^(?:RMDIR(?!\n)\s[^\n]{100}).*$/s
+/^(?:MKD(?!\n)\s[^\n]{150}).*$/s
+/^(?:REST(?!\n)\s[^\n]{100}).*$/s
+/^(?:DELE(?!\n)\s[^\n]{100}).*$/s
+/^(?:RMD(?!\n)\s[^\n]{100}).*$/s
+/^(?:SYST(?!\n)\s[^\n]{100}).*$/s
+/^(?:LIST(?!\n)\s[^\n]{120}).*$/s
+/^(?:SIZE(?!\n)\s+[\x2F\x5C][^\x2F\x3A\x5C\n][^\n]{526}).*$/s
+/^(?:HELP(?!\n)\s[^\n]{200}).*$/s
+/^(?:PASV(?!\n)\s[^\n]{493}).*$/s
+/^(?:ACCT(?!\n)\s[^\n]{200}).*$/s
+/^(?:XMD5(?!\n)\s[^\n]{200}).*$/s
+/^(?:XCRC(?!\n)\s[^\n]{200}).*$/s
+/^.*?(?:\x2fDecodeParms\s*\x3c{2}\s*(?=[^\x3e]*\/Predictor\s+0*(1\d{1}|[2-9]))([^\x3e]*\x2fBitsPerComponent\s+\d{3}|[^\x3e]*\x2fColumns\s+(\d{5}|[6-9]\d{3})|[^\x3e]*\x2fColors\s+(\d{5}|[6-9]\d{3}))).*$/s
+/^.*?(?:\x3C{2}(?=[^\x3E]*\x2F(Height|Width)\s*\d{6})(?=[^\x3E]*\x2FFlateDecode)[^\x3E]*\x2FSubtype\s*\x2FImage).*$/s
+/^.*?(?:submitForm\s*\x28[^\x3b]+cURL\s*\x3a\s*[\x22\x27]\s*url\s*\x3a\s*(?!https?)[^\x27\x22\x23]*?\x23).*$/s
+/^.*?(?:__LASTFOCUS=(?!([_a-z]\w*|)([\x26\x3B]|$))).*$/s
+/^.*?(?:<window\s+version\s*=\s*(?!(1\.[02456]))).*$/s
+/^.*?(?:trak.{4}tkhd.{40}(?=.{20})(?!\x00\x01\x00\x00.{12}\x00\x01\x00\x00)).*$/s
+/^(?:\s*\=\s*(?![\x22\x27]?http(|s|1|s1)\x3a\x2f{2})(\x22[^\x22]{449}|\x27[^\x27]{449}|\S{449})).*$/s
+/^.*?(?:\x09033\x3a(?=[^\s]+\x40[^\s]+)[^\x20\x09]{33}).*$/s
+/^.*?(?:rra_id=(?!(\d+|all|)([\x26\s]|$))).*$/s
+/^.*?(?:local_graph_id=(?!(\d+|)([\x26\s]|$))).*$/s
+/^.*?(?:graph_(start|end|height|width)=(?!(\d+|)[\x26\s])).*$/s
+/^(?:X-MICROSOFT-CDO-MODPROPS\x3A[^\n]*(?P<prop>\w+),[^\n]*(?=prop)).*$/s
+/^(?:(?!RFB).[^\x01]+).*$/s
+/^(?:GET \x2F[^\r\n\x3F]+\.(?=[abcdehijlmnoprsvwx])(a(d[ep]|s[dfx])|c([ho]m|li|md|pp)|d(iz|ll|ot)|e(m[fl]|xe)|h(lp|sq|ta)|jse?|m(d[abew]|s[ip])|p(p[st]|if|[lm]|ot)|r(eg|tf)|s(cr|[hy]s|wf)|v(b[es]?|cf|xd)|w(m[dfsz]|p[dmsz]|s[cfh])|xl[tw]|bat|ini|lnk|nws|ocx)[\x27\x22\n\r\s]).*$/s
+/^.*?(?:filename\s*=\s*.*?\.(?=[abcdehijlmnoprsvwx])(a(d[ep]|s[dfx])|c([ho]m|li|md|pp)|d(iz|ll|ot)|e(m[fl]|xe)|h(lp|sq|ta)|jse?|m(d[abew]|s[ip])|p(p[st]|if|[lm]|ot)|r(eg|tf)|s(cr|[hy]s|wf)|v(b[es]?|cf|xd)|w(m[dfsz]|p[dmsz]|s[cfh])|xl[tw]|bat|ini|lnk|nws|ocx)[\x27\x22\n\r\s]).*$/s
+/^.*?(?:\x2f(?=[abdefijoqrsuvwxz])(d(ixqshv\x2fqzccs|yddznydqir\x2fevi)|f(seqepagqfphv\x2fsfd|ulmxct\x2fmqoyc)|i(ohgdhkzfhdzo\x2fuwp|yxegtd\x2fefcwg)|j((bevgezfmegwy\x2fnt|mqnqgijmng\x2foj)a|hjhgquqssq\x2fpjm|pjpoptwql\x2frlnj)|s(mtmeihf\x2fhiuxz|vclxatmlhavj\x2fvsy)|(aohobygi\x2fzwiw|rprpgbnrppb\x2fci)f|bnymomspyo\x2fzowy|eveocczmthmmq\x2fomzl|ocllceclbhs\x2fgth|(qlqqlbojvii\x2fgt|xbqyosoe\x2fcpvm)i|urfiqileuq\x2ftjzu|(vvvjkhmbgnbbw\x2fqbn|wjpropqmlpohj\x2flo)q|zzzvmkituktgr\x2fetie)\.exe).*$/s
+/^.*?(?:\x2f(?=[defghilmnoqrstwz])(m(ookflolfctm\x2fnmot\.fmu|clvompycem\x2fcen\.vcn)|e(etbuviaebe\x2feqv\.bvv|mcndvwoemn\x2flvv\.jde)|s(fhfksjzsfu\x2fahm\.uqs|rvziadzvzr\x2fsaei\.vvt)|n(kxlvcob\x2fkmpk\.ibl|pgwtjgxwthx\x2fbyb\.xky|hirmvtg\x2fggqh\.kqh)|(wlpgskmv\x2flwzo\.qv|gdvsotuqwsg\x2fdxt\.hd)g|(twfofrfzlugq\x2feve\.qd|doarauzeraqf\x2fvvv\.ul|qisezhin\x2fiqor\.ym)v|fowclxccdxn\x2fuxwn\.ddy|lnzzlnbk\x2fpkrm\.fin|iufilfwulmfi\x2friuf\.lio|(hsdszhmoshh\x2flhr\.cn|oakmanympnw\x2flnkd\.pk)h|riggiymd\x2fwdhi\.vhi|zmnjgmomgbdz\x2fzzmw\.gzt)).*$/s
+/^(?:If-Modified-Since\x3a (?!((Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9 ]?[0-9] (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} ([ECMP]S|GM)T|(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day, [0-9]{2}[- ](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[- ]([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} ([ECMP]S|GM)T|(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9 ][0-9] [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} [0-9]{4}|(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]?[0-9] (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2}))).*$/s
+/^(?:Last-Modified\x3a (?!((Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9 ]?[0-9] (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} ([ECMP]S|GM)T|(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day, [0-9]{2}[- ](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[- ]([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} ([ECMP]S|GM)T|(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9 ][0-9] [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} [0-9]{4}|(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]?[0-9] (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2}))).*$/s
+/^(?:Date\x3a (?!((Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9 ]?[0-9] (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} ([ECMP]S|GM)T|(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day, [0-9]{2}[- ](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[- ]([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} ([ECMP]S|GM)T|(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9 ][0-9] [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2} [0-9]{4}|(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]?[0-9] (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{2}|[0-9]{4}) [0-9]{2}\x3A[0-9]{2}\x3A[0-9]{2}))).*$/s
+/^(?:((Messngr|Alerter)\x00|(?!.*\x00))).*$/s
+/^(?:SIP\/2\.0\s+(?!\d{3})).*$/s
+/^.*?(?:\x3Cframe([^\x3E]+scrolling\s*\x3D(?!\s*(\x22|\x27)?\s*(yes|no|auto))){2}).*$/s
+/^(?:\x00.{3}\xffSMB[\x02\x03\x06\x07\x08\x09\x0f\x29\x2a\x2d\x82\x83\x84\xa2\xa5].{61}[\x5c\x2f]\x00?(.\x00?)+?[\x5c\x2f]\x00?(.\x00?){5}\x7e\x00?(.\x00?){2}\x2E\x00?(.\x00?){3}(?!\x00\x00?)).*$/s
+/^(?:Content-Length\x3a(?!\x0d\x0a\x0d\x0a).*?^Content-Length\x3a).*$/s
+/^(?:COPY(?!\n)\s[^\n]{200}).*$/s
+/^(?:Via\x3A\s+(?!SIP\x2F2\x2E0)).*$/s
+/^(?:(?=.{10}[\x01\x04\x08\x16\x24\x32]\x00)(.{3}[\x55-\xFF]|.{31}[\x80-\xFF])).*$/s
+/^(?:RCPT TO\x3A[^\r\n\x3C]*\x3C(?=[^\r\n\x3E]*\x3A)[^\r\n\x3E]{460}).*$/s
+/^.*?(?:IHDR(?!.*?PLTE).*?tRNS).*$/s
+/^.*?(?:\xFC\x02[\x08\x06]\x00.{4}(?!\x00\x00)).*$/s
+/^(?:0{8}(?=[0-9A-F]+$)((1[89]|2[0-9]|3[01]).{17}|(3[2-9]|4[0-7]).{33}|(4[89]|5[0-9]|6[0-3]).{49}|(6[4-9]7[0-9]).{65}|8[0-6].{81})0).*$/s
+/^(?:.{9}\x00\x00\x00\x01(?!\x00\x00\x00[\x00\x01\x02])).*$/s
+/^(?:Content-Type\x3a\s*(?=[av])(video\/x\-ms\-(w[vm]x|asf)|a(udio\/x\-ms\-w(m[av]|ax)|pplication\/x\-ms\-wm[zd]))).*$/s
+/^(?:(?!GET|PUT|HEAD|POST)[^\x00\r\n]{128}).*$/s
+/^.*?(?:\x3Cobject(?![^\x3E]+?src)[^\x3E]+?data\s*\x3D\s*\x22\x22).*$/s
+/^.*?(?:\x3Cobject(?![^\x3E]+?src)[^\x3E]+?data\s*\x3D\s*\x27\x27).*$/s
+/^(?:(?=[^\x29]*\x5c{2}[\x22\x27])[^\x29]*\x5b[^\x5d]*\x5c{2}[\x22\x27]).*$/s
+/^(?:[\x0c\x13]([\x00-\x7f]|\x81.|\x82.{2})\x28(?=[^\x29]*\x7e)[^\x29]*\x7c).*$/s
+/^.*?(?:<tree .*tree(?!children).*<treechildren.*<treechildren).*$/s
+/^.*?(?:({(?=\d+}[^\n]*?\sAUTH)|AUTH\s[^\n]*?{(?=\d+}))).*$/s

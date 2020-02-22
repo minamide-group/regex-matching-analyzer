@@ -81,20 +81,20 @@ object Main {
         case Raw => (RegExpParser(regExpStr), new PCREOptions())
         case PCRE => RegExpParser.parsePCRE(regExpStr)
       }
-      try {
-        checkSupported(r)
-        Success(Some(0), Witness.empty, false, 0, 0)
-      } catch {
-        case e: RegExp.InvalidRegExpException => Skipped(e.message)
-      }
-      // runWithLimit(settings.timeout) {
-      //   calcTimeComplexity(r,options,settings.method)
-      // } match {
-      //   case (Analysis.Success((growthRate, witness, approximated, size)),time) =>
-      //     Success(growthRate, witness, approximated, size, time)
-      //   case (Analysis.Failure(message),_) => Skipped(message)
-      //   case (Analysis.Timeout(_),_) => Timeout
+      // try {
+      //   checkSupported(r)
+      //   Success(Some(0), Witness.empty, false, 0, 0)
+      // } catch {
+      //   case e: RegExp.InvalidRegExpException => Skipped(e.message)
       // }
+      runWithLimit(settings.timeout) {
+        calcTimeComplexity(r,options,settings.method)
+      } match {
+        case (Analysis.Success((growthRate, witness, approximated, size)),time) =>
+          Success(growthRate, witness, approximated, size, time)
+        case (Analysis.Failure(message),_) => Skipped(message)
+        case (Analysis.Timeout(_),_) => Timeout
+      }
     } catch {
       case e: RegExpParser.ParseException => Error(e.message)
     }
@@ -201,22 +201,22 @@ object Main {
       result match {
         case s: Success =>
           timeFile.writeln(s.getTime())
-          val (r,_) = RegExpParser.parsePCRE(regExpStr)
-          if (hasOnlyLookahead(r)) {
-            lookaheadFile.writeln(regExpStr)
-          } else if (hasBoundary(r)) {
-            boundaryFile.writeln(regExpStr)
-          } else {
-            val lookbehind = hasLookbehind(r)
-            val backReference = hasBackReference(r)
-            if (lookbehind && backReference) {
-              mixedFile.writeln(regExpStr)
-            } else if (lookbehind) {
-              lookbehindFile.writeln(regExpStr)
-            } else if (backReference) {
-              backreferenceFile.writeln(regExpStr)
-            }
-          }
+          // val (r,_) = RegExpParser.parsePCRE(regExpStr)
+          // if (hasOnlyLookahead(r)) {
+          //   lookaheadFile.writeln(regExpStr)
+          // } else if (hasBoundary(r)) {
+          //   boundaryFile.writeln(regExpStr)
+          // } else {
+          //   val lookbehind = hasLookbehind(r)
+          //   val backReference = hasBackReference(r)
+          //   if (lookbehind && backReference) {
+          //     mixedFile.writeln(regExpStr)
+          //   } else if (lookbehind) {
+          //     lookbehindFile.writeln(regExpStr)
+          //   } else if (backReference) {
+          //     backreferenceFile.writeln(regExpStr)
+          //   }
+          // }
         case _ => // NOP
       }
 

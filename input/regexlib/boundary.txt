@@ -1,0 +1,104 @@
+/^.*?(?:([\d\w-.]+?\.(a[cdefgilmnoqrstuwz]|b[abdefghijmnorstvwyz]|c[acdfghiklmnoruvxyz]|d[ejkmnoz]|e[ceghrst]|f[ijkmnor]|g[abdefghilmnpqrstuwy]|h[kmnrtu]|i[delmnoqrst]|j[emop]|k[eghimnprwyz]|l[abcikrstuvy]|m[acdghklmnopqrstuvwxyz]|n[acefgilopruz]|om|p[aefghklmnrstwy]|qa|r[eouw]|s[abcdeghijklmnortuvyz]|t[cdfghjkmnoprtvwz]|u[augkmsyz]|v[aceginu]|w[fs]|y[etu]|z[amw]|aero|arpa|biz|com|coop|edu|info|int|gov|mil|museum|name|net|org|pro)(\b|\W(?<!&|=)(?!\.\s|\.{3}).*?))(\s|$)).*$/s
+/^.*?(?:\b[A-z0-9._%-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b).*$/s
+/^((([hH][tT][tT][pP][sS]?|[fF][tT][pP])\:\/\/)?([\w\.\-]+(\:[\w\.\&%\$\-]+)*@)?((([^\s\(\)\<\>\\\"\.\[\]\,@;:]+)(\.[^\s\(\)\<\>\\\"\.\[\]\,@;:]+)*(\.[a-zA-Z]{2,4}))|((([01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}([01]?\d{1,2}|2[0-4]\d|25[0-5])))(\b\:(6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3}|0)\b)?((\/[^\/][\w\.\,\?\'\\\/\+&%\$#\=~_\-@]*)*[^\.\,\?\"\'\(\)\[\]!;<>{}\s\x7F-\xFF])?)$/s
+/^.*?(?:\b([0]?[1-9]|[1,2]\d|3[0,1])[-/]([0]?[1-9]|[1][0,1,2])[-/](\d{1,2}|[1][9]\d\d|[2][0]\d\d)\b).*$/s
+/^.*?(?:(\s(\bon[a-zA-Z][a-z]+)\s?\=\s?[\'\"]?(javascript\:)?[\w\(\),\' ]*;?[\'\"]?)+).*$/s
+/^.*?(?:\b(?!000)(?!666)(?!9)[0-9]{3}[ -]?(?!00)[0-9]{2}[ -]?(?!0000)[0-9]{4}\b).*$/s
+/^\b\d{2,3}-*\d{7}\b$/s
+/^.*?(?:.*?((?:\b|\+)\d[\d \-\(\)]+\d)\b.*).*$/s
+/^.*?(?:\b([A-CEGHJ-PR-TW-Z]{1}[A-CEGHJ-NPR-TW-Z]{1}(?<!BG|GB|NK|KN|TN|NT|ZZ))[0-9]{6}[A-DFM]{1}\b).*$/s
+/^.*?(?:\b[P|p]*(OST|ost)*\.*\s*[O|o|0]*(ffice|FFICE)*\.*\s*[B|b][O|o|0][X|x]\b).*$/s
+/^.*?(?:((?!(This|It|He|She|[MTWFS][a-z]+day|[JF][a-z]+ary|March|April|May|June|July|August|[SOND][a-z]+ber))(?:[A-Z]+\.\s?)*(?:(?:[a-zA-Z]+-?)?[A-Z][a-zA-Z]+)(?:(\b\s?((?:[a-zA-Z]+-?)?[A-Z][a-zA-Z]+|[A-Z]+\.|on|of|the|von|der|van|de|bin|and))*(?:\s*(?:[a-zA-Z]+-?)?[A-Z][a-zA-Z]+))?)).*$/s
+/^.*?(?:s/\b(\w+)\b/ucfirst($1)/ge).*$/s
+/^.*?(?:([^\w]+)|([^A-Za-z])|(\b[^aeiouy]+\b)|(\b(\w{2})\b)).*$/s
+/^.*?(?:(\b)(\w+(\b|\n|\s)){3}).*$/s
+/^((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))$/s
+/^.*?(?:\b[A-Z0-9]{5}\d{1}[01567]\d{1}([0][1-9]|[12][0-9]|[3][0-1])\d{1}[A-Z0-9]{3}[A-Z]{2}\b).*$/s
+/^.*?(?:\b([Jj](([Aa][Nn][Uu][Aa][Rr][Yy]|[Aa][Nn])|([Uu][Nn][Ee]|[Uu][Nn])|([Uu][Ll][Yy]|[Uu][Ll])))\b|\b((([Ss][Ee][Pp][Tt]|[Nn][Oo][Vv]|[Dd][Ee][Cc])[Ee][Mm])|[Oo][Cc][Tt][Oo])[Bb][Ee][Rr]|([Ss][Ee][Pp]|[Nn][Oo][Vv]|[Dd][Ee][Cc]|[Oo][Cc][Tt])\b|\b([Mm][Aa]([Yy]|([Rr][Cc][Hh]|[Rr])))\b|\b[Aa](([Pp][Rr][Ii][Ll]|[Pp][Rr])|([Uu][Gg][Uu][Ss][Tt]|[Uu][Gg]))\b|\b[Ff]([Ee][Bb][Rr][Uu][Aa][Rr][Yy]|[Ee][Bb])\b).*$/s
+/^.*?(?:(\b\w+\b)\s+\1).*$/s
+/^.*?(?:\b((?:0[1-46-9]\d{3})|(?:[1-357-9]\d{4})|(?:[4][0-24-9]\d{3})|(?:[6][013-9]\d{3}))\b).*$/s
+/^.*?(?:\.([A-Za-z0-9]{2,5}($|\b\?))).*$/s
+/^.*?(?:\b[1-9]{1}[0-9]{1,5}-\d{2}-\d\b).*$/s
+/^.*?(?:([A-Zäöü0-9\/][^a-z\:\,\(\)]*[A-Zäöü0-9])($|[\.\:\,\;\)\-\ \+]|s\b)).*$/s
+/^.*?(?:\b(((\S+)?)(@|mailto\:|(news|(ht|f)tp(s?))\://)\S+)\b).*$/s
+/^.*?(?:<[^>\s]*\bauthor\b[^>]*>).*$/s
+/^.*?(?:[0-9]{1,2}[:|°][0-9]{1,2}[:|'](?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+\b)"?[N|S|E|W]).*$/s
+/^.*?(?:\b(?:1[0-2]?|[2-9])\b).*$/s
+/^.*?(?:\b(get)\b.*\{).*$/s
+/^.*?(?:\bfor\b.*[A-Za-z][<> ][\d]).*$/s
+/^.*?(?:\b(byte|char|short|long|float|int|double|decimal|bool|string)\b.*\s[a-zA-Z](?=;)).*$/s
+/^.*?(?:(\bprotected\b.*(public))|(\bprivate\b.*(protected))|(\bprivate\b.*(public))).*$/s
+/^.*?(?:\b(\w+).\1).*$/s
+/^.*?(?:\b(public|private|protected|internal)\b.*(byte|char|short|long|float|int|double|decimal|bool|string)\b.*(?=,)).*$/s
+/^.*?(?:((\bm_[a-zA-Z\d]*\b)|(\bin_[a-zA-Z\d]*\b)|(\bin _[a-zA-Z\d]*\b))).*$/s
+/^.*?(?:\binterface\b.*(\bI[_]\w*\b)).*$/s
+/^.*?(?:\b(((20)((0[0-9])|(1[0-1])))|(([1][^0-8])?\d{2}))((0[1-9])|1[0-2])((0[1-9])|(2[0-9])|(3[01]))[-+]?\d{4}[,.]?\b).*$/s
+/^.*?(?:\b(([01]?\d?\d|2[0-4]\d|25[0-5])\.){3}([01]?\d?\d|2[0-4]\d|25[0-5])\b).*$/s
+/^.*?(?:\b(\w+)\s+\1\b).*$/s
+/^.*?(?:(\bR(\.|)R(\.|)|RURAL\s{0,}(ROUTE|RT(\.|)))\s{0,}\d{1,}(,|)\s{1,}\bBOX\s{0,}\d).*$/s
+/^.*?(?:\b(?<KEYWORD>abstract|event|new|struct|as|explicit|null|switch|base|extern|object|this|bool|false|operator|throw|break|finally|out|true|byte|fixed|override|try|case|float|params|typeof|catch|for|private|uint|char|foreach|protected|ulong|checked|goto|public|unchecked|class|if|readonly|unsafe|const|implicit|ref|ushort|continue|in|return|using|decimal|int|sbyte|virtual|default|interface|sealed|volatile|delegate|internal|short|void|do|is|sizeof|while|double|lock|stackalloc|else|long|static|enum|namespace|string)\b).*$/s
+/^.*?(?:(^\b\d+-\d+$\b)|(^\b\d+$\b)).*$/s
+/^.*?(?:\b(?:a(?:[nst]|re|nd)?|b[ey]|f(?:or|rom)|i[nst]?|o[fnr]|t(?:o|hat|he|his)|w(?:as|h(?:at|en|ere|ich|o)|i(?:th|ll)))\b).*$/s
+/^.*?(?:\b[P|p]?(OST|ost)?\.?\s*[O|o|0]?(ffice|FFICE)?\.?\s*[B|b][O|o|0]?[X|x]?\.?\s+[#]?(\d+)\b).*$/s
+/^.*?(?:\b([0-1]?\d{1,2}|2[0-4]\d|25[0-5])(\.([0-1]?\d{1,2}|2[0-4]\d|25[0-5])){3}\b).*$/s
+/^\b(29[0-9]|2[0-9][0-9]|[01]?[0-9][0-9]?)\\/(29[0-9]|2[0-9][0-9]|[01]?[0-9][0-9]?)$/s
+/^.*?(?:\b([a-z]+)(?:(?<=emphas|fantas)|(?<!ba|ma|pr|se|s))([iy])z(a(?:bl[ey]|tion(?:|al(?:|ly)|s))|es?|ed|ers?|ing)\b).*$/s
+/^.*?(?:\b([a-z]+)(?:(?<=ic|[ai]m|[^a-z]pr|[eiou][tr])|(?<![rd]a|c|gu|m|parad|o|p|r|[acrs]t|v|w))([iy])s(a(?:bl[ey]|tion(?:|al(?:|ly)|s))|e|ed|ers?|(?<!ys)es|ing)\b).*$/s
+/^.*?(?:\b(0?[1-9]|1[0-2])(\/)(0?[1-9]|1[0-9]|2[0-9]|3[0-1])(\/)(0[0-8])\b).*$/s
+/^.*?(?:\b(0?[1-9]|1[0-2])(\-)(0?[1-9]|1[0-9]|2[0-9]|3[0-1])(\-)(0[0-8])\b).*$/s
+/^.*?(?:\b(0[0-9]|1[0-9]|2[0-3])(\:)(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])(\:)(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])\b).*$/s
+/^.*?(?:\b(0[0-9]|1[0-1])(\:)(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])(\:)(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])\b).*$/s
+/^.*?(?:\b(0[0-9]|1[0-1])(\:)(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])(\:)(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])\s*(AM|PM|A|P)\b).*$/s
+/^.*?(?:\b(((J(ANUARY|UNE|ULY))|FEBRUARY|MARCH|(A(PRIL|UGUST))|MAY|(SEPT|NOV|DEC)EMBER|OCTOBER))\s*(0?[1-9]|1[0-9]|2[0-9]|3[0-1])\s*(\,)\s*(200[0-9])\b).*$/s
+/^.*?(?:\b(((J(ANUARY|UNE|ULY))|FEBRUARY|MARCH|(A(PRIL|UGUST))|MAY|(SEPT|NOV|DEC)EMBER|OCTOBER))\s*(0?[1-9]|1[0-9]|2[0-9]|3[0-1])\s*(\,)\s*(0[0-9])\b).*$/s
+/^.*?(?:\b((J(AN|UN|UL))|FEB|MAR|(A(PR|UG))|MAY|SEP|NOV|DEC|OCT)\s*(0?[1-9]|1[0-9]|2[0-9]|3[0-1])\s*(\,)\s*(200[0-9])\b).*$/s
+/^.*?(?:\b((J(AN|UN|UL))|FEB|MAR|(A(PR|UG))|MAY|SEP|NOV|DEC|OCT)\s*(0?[1-9]|1[0-9]|2[0-9]|3[0-1])\s*(\,)\s*(0[0-9])\b).*$/s
+/^.*?(?:\b(0?[1-9]|1[0-2])(\/)(0?[1-9]|1[0-9]|2[0-9]|3[0-1])(\/)(200[0-8])\b).*$/s
+/^.*?(?:\b(0?[1-9]|1[0-2])(\-)(0?[1-9]|1[0-9]|2[0-9]|3[0-1])(\-)(200[0-8])\b).*$/s
+/^.*?(?:(\$\s*[\d,]+\.\d{2})\b).*$/s
+/^.*?(?:\b[1-9]\b).*$/s
+/^.*?(?:\b4[0-9]\b).*$/s
+/^.*?(?:(\b(1|2|3|4|5|6|7|8|9)?[0-9]\b)).*$/s
+/^.*?(?:(\b(10|11|12|13|14|15|16|17|18|19)[0-9]\b)).*$/s
+/^.*?(?:\b\w+\b).*$/s
+/^.*?(?:<.*\b(bgcolor\s*=\s*[\"|\']*(\#\w{6})[\"|\']*).*>).*$/s
+/^.*?(?:\b(((((one|t((en)|(wo)|(hree)|(welve)|(hirteen))|(evelen)|(f((our)|(ive))|s((ix)|(even))|eight|nine)(teen)?))\b(\s+hundred\s*)?)| ((t((wen)|(hir))|f((or)|(if))|s((ix)|(even))|eigh|nin)ty)(-(one|t((wo)|(hree))|f((our)|(ive))|s((ix)|(even))|eight|nine))?) (\s*(hundred|thousand|((([mb]|(t|quad)r))illion))\s*(and\s+)?)?)+).*$/s
+/^.*?(?:\b-?[1-9](?:\.\d+)?[Ee][-+]?\d+\b).*$/s
+/^.*?(?:(<\b(\w*)\b[^>/]*>)(?<content>.*?)(</\2>)).*$/s
+/^.*?(?:[p|P][\s]*[o|O][\s]*[b|B][\s]*[o|O][\s]*[x|X][\s]*[a-zA-Z0-9]*|\b[P|p]+(OST|ost|o|O)?\.?\s*[O|o|0]+(ffice|FFICE)?\.?\s*[B|b][O|o|0]?[X|x]+\.?\s+[#]?(\d+)*(\D+)*\b).*$/s
+/^.*?(?:[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+(?:\.)+(?:[A-Z]{2}|aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|xxx|us)\b).*$/s
+/^.*?(?:\b(((?!\d\d\d)\d+|1\d\d|2[0-4]\d|25[0-5])(\b|\.)){4}).*$/s
+/^.*?(?:\b[\w]+[\w.-][\w]+@[\w]+[\w.-]\.[\w]{2,4}\b).*$/s
+/^.*?(?:\b[^aeiou]+[aeiou][^aeiou]+\b).*$/s
+/^.*?(?:\b((?<!["'>])(?:https?://)?(?<![-@>])(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])\.)+(?:com|org|net|gov|mil|biz|info|name|aero|mobi|jobs|museum|[A-Z]{2})(?:/[-A-Z0-9\/_.]+)?(?:\?[-A-Z0-9&\._%=,]+)?(?!['"<]))\b).*$/s
+/^.*?(?:\bCOPY\b\s*\b(\w*(-)?\w*)*\b).*$/s
+/^.*?(?:</?(a|abbr|acronym|address|applet|area|b|base|basefont|bdo|big|blockquote|body|br|button|caption|center|cite|code|col|colgroup|dd|del|dir|div|dfn|dl|dt|em|fieldset|font|form|frame|frameset|h[1-6]|head|hr|html|i|iframe|img|input|ins|isindex|kbd|label|legend|li|link|map|menu|meta|noframes|noscript|object|ol|optgroup|option|p|param|pre|q|s|samp|script|select|small|span|strike|strong|style|sub|sup|table|tbody|td|textarea|tfoot|th|thead|title|tr|tt|u|ul|var|xmp)\b((\"[^\"]*\"|\'[^\']*\')*|[^\"\'>])*>).*$/s
+/^.*?(?:\b(?:AB|ALB|Alta|alberta|BC|CB|British Columbia|LB|Labrador|MB|Man|Manitoba|N[BLTSU]|Nfld|NF|Newfoundland|NWT|Northwest Territories|Nova Scotia|New Brunswick|Nunavut|ON|ONT|Ontario|PE|PEI|IPE|Prince Edward Island|QC|PC|QUE|QU|Quebec|SK|Sask|Saskatchewan|YT|Yukon|Yukon Territories)\b).*$/s
+/^.*?(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:[A-Z]{2}|com|org|net|gov|biz|info|name|aero|biz|info|jobs|museum)\b).*$/s
+/^.*?(?:\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b).*$/s
+/^.*?(?:\b([\d\w\.\/\+\-\?\:]*)((ht|f)tp(s|)\:\/\/|[\d\d\d|\d\d]\.[\d\d\d|\d\d]\.|www\.|\.tv|\.ac|\.com|\.edu|\.gov|\.int|\.mil|\.net|\.org|\.biz|\.info|\.name|\.pro|\.museum|\.co)([\d\w\.\/\%\+\-\=\&\?\:\\\"\'\,\|\~\;]*)\b).*$/s
+/^.*?(?:\b(1(?!27\.0\.0\.1)\d{1,2}|2[0-4][0-9]|25[0-4]|\d{1,2})\.(?:\d{1,3}\.){2}(25[0-5]|2[0-4][0-9]|1\d{2}|\d{2}|[1-9])\b).*$/s
+/^.*?(?:[\\""=/>](25[0-4]|2[0-4][0-9]|1\d{2}|\d{2})\.((25[0-4]|2[0-4][0-9]|1\d{2}|\d{1,2})\.){2}(25[0-4]|2[0-4][0-9]|1\d{2}|\d{2}|[1-9])\b[\\""=:;,/<]).*$/s
+/^(?:[2-9]{1}[0-9]{1}((?<!1)[1]|[0]|[2-9]){1}\b).*$/s
+/^.*?(?:\b(((0[13578]|1[02])[\/\.-]?(0[1-9]|[12]\d|3[01])[\/\.-]?(19|20)?(\d{2}))|(0[13456789]|1[012])[\/\.-]?(0[1-9]|[12]\d|30)[\/\.-]?(19|20)?(\d{2}))|(02[\/\.-]?(0[1-9]|1\d|2[0-8])[\/\.-]?(19|20)?(\d{2}))|(02[\/\.-]?29[\/\.-]?(19|20)?((0[48]|[2468][048]|[13579][26])|(00)))\b).*$/s
+/^.*?(?:\b(?:\d{1,3}\.){3}\d{1,3}\b).*$/s
+/^.*?(?:[a-z0-9]+([-+._][a-z0-9]+){0,2}@.*?(\.(a(?:[cdefgilmnoqrstuwxz]|ero|(?:rp|si)a)|b(?:[abdefghijmnorstvwyz]iz)|c(?:[acdfghiklmnoruvxyz]|at|o(?:m|op))|d[ejkmoz]|e(?:[ceghrstu]|du)|f[ijkmor]|g(?:[abdefghilmnpqrstuwy]|ov)|h[kmnrtu]|i(?:[delmnoqrst]|n(?:fo|t))|j(?:[emop]|obs)|k[eghimnprwyz]|l[abcikrstuvy]|m(?:[acdeghklmnopqrstuvwxyz]|il|obi|useum)|n(?:[acefgilopruz]|ame|et)|o(?:m|rg)|p(?:[aefghklmnrstwy]|ro)|qa|r[eosuw]|s[abcdeghijklmnortuvyz]|t(?:[cdfghjklmnoprtvwz]|(?:rav)?el)|u[agkmsyz]|v[aceginu]|w[fs]|y[etu]|z[amw])\b){1,2}).*$/s
+/^public\b\s+?\w+?\s+?(?<propertyname>\w+)[^{]+?{[\s\S]*?get\s*?{[\s\S]*?}[\s\S]*?(?:set??[\s\S]*?{[\s\S]*?})?[\s\S]*?}$/s
+/^.*?(?:\b(((["'/,&%\:\(\)\$\+\-\*\w\000-\032])|(-*\d+\.\d+[%]*))+[\s]+)+\b[\w"',%\(\)]+[.!?](['"\s]|$)).*$/s
+/^.*?(?:\b ?(a|A)ppoint(s|ing|ment(s)?|ed)?| ?(J|j)oin(s|ed|ing)| ?(R)?recruit(s|ed|ing(s)?)?| (H|h)(is|er)(on)? dut(y|ies)?| ?(R)?replace(s|d|ment)?| (H)?hire(s|d)?| ?(P|p)romot(ed|es|e|ing)?| ?(D|d)esignate(s|d)| (N)?names(d)?| (his|her)? (P|p)osition(ed|s)?| re(-)?join(ed|s)|(M|m)anagement Changes|(E|e)xecutive (C|c)hanges| reassumes position| has appointed| appointment of| was promoted to| has announced changes to| will be headed| will succeed| has succeeded| to name| has named| was promoted to| has hired| bec(a|o)me(s)?| (to|will) become| reassumes position| has been elevated| assumes the additional (role|responsibilit(ies|y))| has been elected| transferred| has been given the additional| in a short while| stepp(ed|ing) down| left the company| (has)? moved| (has)? retired| (has|he|she)? resign(s|ing|ed)| (D|d)eceased| ?(T|t)erminat(ed|s|ing)| ?(F|f)ire(s|d|ing)| left abruptly| stopped working| indict(ed|s)| in a short while| (has)? notified| will leave| left the| agreed to leave| (has been|has)? elected| resignation(s)?).*$/s
+/^.*?(?:\b([A-Za-z0-9]+)(-|_|\.)?(\w+)?@\w+\.(\w+)?(\.)?(\w+)?(\.)?(\w+)?\b).*$/s
+/^.*?(?:\b([A-Za-z0-9]+)( )([A-Za-z0-9]+)\b).*$/s
+/^.*?(?:\b([A-Za-z]+) +\1\b).*$/s
+/^.*?(?:\b([0-9]+) +\1\b).*$/s
+/^.*?(?:\b([A-Za-z0-9]+) +\1\b).*$/s
+/^.*?(?:\b([A-Za-z0-9]+) +\1\b   replacement string--->$1).*$/s
+/^.*?(?:\b([A-Za-z]+) +(\1\b)).*$/s
+/^.*?(?:\b[A-Za-z]{2}(?=([0-9]*[1-9]){1,})\d{1,5}\b).*$/s
+/^.*?(?:\b[1-9]\d{3}\ +[A-Z]{2}\b).*$/s
+/^.*?(?:(?:\([2-9][0-8]\d\)\ ?|[2-9][0-8]\d[\-\ \.\/]?)[2-9]\d{2}[- \.\/]?\d{4}\b).*$/s
+/^.*?(?:\b(ht|f)tp[s]?://[^\s\n\r\t\<\>]+(?=[\b\s\n\r\t\<])).*$/s
+/^.*?(?:\b((https?|ftp|file)://)?([a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(com\b|edu\b|biz\b|gov\b|in(?:t|fo)\b|mil\b|net\b|org\b|[a-z][a-z]\b)(:\d+)?(/[-a-z0-9_:\@&?=+,.!/~*'%\$]*)*(?<![.,?!])(?!((?!(?:<a )).)*?(?:</a>))(?!((?!(?:<!--)).)*?(?:-->))).*$/s
+/^.*?(?:(?:\b\w*(\w\w?)\1{2,}\w*\b)).*$/s
+/^.*?(?:(?:\b(([0-2]\d|3[01])|\d)\.[ ]?(?:jan|feb|mar|apr|máj|jún|júl|aug|sep|okt|nov|dec|január\w{0,2}|február\w{0,2}|mar\w{0,2}|apríl\w{0,2}|máj\w{0,2}|jún\w{0,2}|júl\w{0,2}|august\w{0,2}|septemb\w{0,2}|októb\w{0,2}|novemb\w{0,2}|decemb\w{0,2})[ ][12][0-9]\d\d\b)).*$/s
+/^.*?(?:(?:youtu\.be\/|youtube.com\/(?:watch\?.*\bv=|embed\/|v\/)|ytimg\.com\/vi\/)(.+?)(?:[^-a-zA-Z0-9]|$)).*$/s
+/^.*?(?:[0-9]{1,2}[:|°|º][0-9]{1,2}[:|'](?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+\b)"?[N|S|E|W]).*$/s

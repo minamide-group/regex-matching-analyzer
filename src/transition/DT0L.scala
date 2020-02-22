@@ -223,7 +223,7 @@ class PairDT0L[A,R,P](
   type Q = (R,P)
   type Pump = (Q,Seq[A],Q)
 
-  def calcGrowthRate1(initials: Set[Q]): (Option[Int], Witness[A], Option[Q], Int) = {
+  def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q], Int) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
       val labeledEdges = morphs.flatMap{ case (a,morph) =>
         morph.flatMap{ case (q,qs) =>
@@ -422,7 +422,7 @@ class PairDT0L[A,R,P](
   }
 
   // without optimized
-  def calcGrowthRate(initials: Set[Q]): (Option[Int], Witness[A], Option[Q], Int) = {
+  def calcGrowthRateSlow(initials: Set[Q]): (Option[Int], Witness[A], Option[Q], Int) = {
     def toLabeledGraph(initials: Set[Q]): LabeledGraph[Q,A] = {
       val labeledEdges = morphs.flatMap{ case (a,morph) =>
         morph.flatMap{ case (q,qs) =>
