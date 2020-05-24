@@ -14,7 +14,6 @@ The conditions of matching below are assumed.
 We recommend to use sbt.
 The commands below should be input to the sbt shell.
 
-There are two ways to run the code.
 - Input expressions from a command line
 ```
 run [options]
@@ -24,7 +23,7 @@ run [options]
 run <input file> [options]
 ```
 
-example：
+Example:
 ```
 run path/to/your_file.txt --style PCRE --timeout 5
 ```
@@ -46,7 +45,7 @@ e.g.) `^a*|b`
 Write expressions in `/.../` .
 Some [modifiers](#Modifiers-in-PCRE-Style) are available.  
 e.g.) `/^a*|b/s`  
-Using other characters as delimiters are supported.
+You can use any character, like `#` , `~` as delimiters.
 It also supports bracket style delimiters such as `(...)` , `{...}` , `[...]` , and `<...>` .
 
 ### Input File Format
@@ -71,17 +70,17 @@ The output also contains following information:
 ### Output Files
 If the analysis is performed on expressions from an input file, the output files are generated in the directory `output/<input file>_<timestamp>` ,
 which contains the following files:
-- `summary.txt` : The summary of results
-- `list.txt` : A list of all analyzed expressions
-- `result.txt` : A list of results
-- `<result>/...` : A list of expressions and results whose result is `<result>` (In `polynomial/...` , files for each degree of polynomial will also be generated.)
+- `summary.txt` : The summary of results.
+- `list.txt` : A list of all analyzed expressions.
+- `result.txt` : A list of results.
+- `<result>/...` : A list of expressions and results whose result is `<result>` . (In `polynomial/...` , files for each degree of polynomial will also be generated.)
 - `approximated/<result>/...` : A list of expressions and results whose result is `<result>` by [overapproximation](#Overapproximation).
 
 
 ## Regular Expression Parser
 Here is the list of supported features.
 All characters that do not appear in the following list will become a expression just matches the character itself.
-- `∅` : Never matches to any character.
+- `∅` : Never matches to any character
 - `ε` : The empty string
 - `r1|r2` : `r1` or `r2`
 - `\unnnn` : A character with hexadecimal code `nnnn`
@@ -122,7 +121,7 @@ All characters that do not appear in the following list will become a expression
   + `\w` : Any word character ( `[a-zA-Z0-9_]` )
   + `\W` : Any non-word character ( `[^a-zA-Z0-9_]` )
   + `\R` : Line breaks ( `[\r\n]` )
-- anchors
+- Anchors
   + `^` : Start of string
   + `$` : End of string
   + `\b` : word boundary
@@ -178,18 +177,19 @@ Parse digits as a decimal number.
 
 ### Modifiers in PCRE Style
 The following modifiers are supported:
-- `i` : Ignore the case of letters
-- `s` : Make `.` to match newline characters
-- `U` : Reverse greediness of repetitions
+- `i` : Ignore the case of letters.
+- `s` : Make `.` to match newline characters.
+- `U` : Reverse greediness of repetitions.
 
 
 ## Supported Expressions
 The expressions below are unsupported for analyzer, and its result will be `skipped` .
-- Conditional expressions
-- Groups whose name are duplicated
-- Lookbehind with unbounded matching length
-- lookbehind/back reference/word boundary in lookahead
-- back reference with cyclic dependency
+- Conditional expressions.
+- Groups whose name are duplicated.
+- Lookbehind with unbounded matching length.
+- lookbehind/back reference/word boundary in lookahead.
+- Capturing group in positive lookahead/lookbehind.
+- Back reference with cyclic dependency.
 
 ### Overapproximation
 If the given expression contains lookbehind, back references or word boundary,
