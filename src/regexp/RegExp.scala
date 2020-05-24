@@ -280,6 +280,21 @@ object RegExp {
       }
     }
 
+    def collectGroupsInPositiveLookAround(r: RegExp[A]): Set[Int] = {
+      r match {
+        case GroupExp(r,_,_) => collectGroupsInPositiveLookAround(r)
+        case ConcatExp(r1, r2) => collectGroupsInPositiveLookAround(r1) ++ collectGroupsInPositiveLookAround(r2)
+        case AltExp(r1, r2) => collectGroupsInPositiveLookAround(r1) ++ collectGroupsInPositiveLookAround(r2)
+        case StarExp(r,_) => collectGroupsInPositiveLookAround(r)
+        case PlusExp(r,_) => collectGroupsInPositiveLookAround(r)
+        case OptionExp(r,_) => collectGroupsInPositiveLookAround(r)
+        case RepeatExp(r,_,_,_) => collectGroupsInPositiveLookAround(r)
+        case LookaheadExp(r,positive) if positive => getGroupMap(r).keySet
+        case LookbehindExp(r,positive) if positive => getGroupMap(r).keySet
+        case _ => Set()
+      }
+    }
+
     def collectBackReferences(r: RegExp[A]): Set[Int] = {
       r match {
         case ConcatExp(r1,r2) => collectBackReferences(r1) | collectBackReferences(r2)
@@ -324,6 +339,15 @@ object RegExp {
 
     // simulates suffix match
     val r1 = if (isStartAnchorHead(r)) r else ConcatExp(StarExp(DotExp(), false), r)
+
+    // check back reference to group in positive lookaround
+    val groupsInPositiveLookAround = collectGroupsInPositiveLookAround(r1)
+    val backReferences = collectBackReferences(r1)
+
+    if ((groupsInPositiveLookAround & backReferences).nonEmpty) {
+      throw RegExp.InvalidRegExpException(
+        s"back reference to group in positive lookaround is unsupported.")
+    }
 
     // check dependencies of back references
     val groupMap = getGroupMap(r1).withDefaultValue(EmptyExp())

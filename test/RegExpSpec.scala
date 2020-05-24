@@ -111,6 +111,7 @@ class RegExpSpec extends FlatSpec with Matchers {
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(?=\b)"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?<=a*)"))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("(?<!a+)"))}
+    a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(?=(a))\1"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a)(?=\1)"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a|\1)"""))}
     a [InvalidRegExpException] should be thrownBy {modifyRegExp(RegExpParser("""(a\2)(\1|b\1)"""))}
