@@ -316,7 +316,13 @@ class PairDT0L[A,R,P](
           def constructG3(): LabeledGraph[((R,R,R),P),A] = {
             val labeledAdjStart = scPairLabeledAdj((start,start))
             val passage = reachableMapScGraph(start) & reachableMapScGraphRev(end)
-            val labeledAdjPassage = for (sc1 <- passage; sc2 <- passage) yield scPairLabeledAdj((sc1,sc2))
+            val labeledAdjPassage = for (
+              sc1 <- passage;
+              sc2 <- passage
+            ) yield {
+              Analysis.checkInterrupted("construct G3")
+              scPairLabeledAdj((sc1,sc2))
+            }
             val labeledAdjEnd = scPairLabeledAdj((end,end))
 
             val e3 = for (
